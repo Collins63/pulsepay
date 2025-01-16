@@ -1,11 +1,14 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pulsepay/common/app_bar.dart';
 import 'package:pulsepay/common/custom_button.dart';
+import 'package:pulsepay/forms/add_user.dart';
+import 'package:pulsepay/forms/manage_users.dart';
 import 'package:pulsepay/home/home_page.dart';
 
-class Users extends StatelessWidget{
-  const Users({super.key});
+class UsersPage extends StatelessWidget{
+  const UsersPage({super.key});
 
   @override
   Widget build(BuildContext context){
@@ -46,7 +49,7 @@ class Users extends StatelessWidget{
                 color: const Color.fromARGB(255, 14, 19, 29),
                 color2:const Color.fromARGB(255, 14, 19, 29) ,
                 onTap: (){
-          
+                  Get.to(()=> const ManageUsers());
                 },
                 height: 50,
               ),
@@ -56,7 +59,7 @@ class Users extends StatelessWidget{
                 color: const Color.fromARGB(255, 14, 19, 29),
                 color2:const Color.fromARGB(255, 14, 19, 29) ,
                 onTap: (){
-          
+                  Get.to(()=> const AddUser());
                 },
                 height: 50,
               ),

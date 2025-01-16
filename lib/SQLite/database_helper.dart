@@ -6,7 +6,7 @@ class DatabaseHelper {
   final databaseName = "pulse.db";
 
   String users = 
-    "create table users(userId INTEGER PRIMARY KEY AUTOINCREMENT, userName TEXT UNIQUE , userPassword TEXT)";
+    "create table users(userId INTEGER PRIMARY KEY AUTOINCREMENT,realName TEXT , userName TEXT UNIQUE , userPassword TEXT , dateCreated TEXT , isAdmin INTEGER DEFAULT 0 ,isCashier INTEGER DEFAULT 0 , isActive INTEGER DEFAULT 1)";
   
   String products =
     "create table products(productid INTEGER PRIMARY KEY AUTOINCREMENT, productName TEXT UNIQUE , barcode TEXT , costPrice REAL , sellingPrice REAL , sellqty REAL , tax TEXT)";
@@ -16,7 +16,9 @@ class DatabaseHelper {
 
   String sales = 
     "CREATE TABLE sales (saleId INTEGER PRIMARY KEY AUTOINCREMENT,invoiceId INTEGER,productId INTEGER,quantity INTEGER,sellingPrice REAL,tax REAL,FOREIGN KEY(invoiceId) REFERENCES invoices(invoiceId),FOREIGN KEY(productId) REFERENCES products(productid))";
-
+  
+  String customers =
+    "CREATE TABLE customer(customerID INTEGER PRIMARY KEY AUTOINCREMENT , tradeName TEXT , tinNumber REAL , vatNumber REAL , address TEXT , email TEXT)";
   // vat zero ex
 
   Future<Database> initDB() async {
@@ -29,6 +31,7 @@ class DatabaseHelper {
       await db.execute(products);
       await db.execute(invoices);
       await db.execute(sales);
+      await db.execute(customers);
     }  , onUpgrade: (db ,oldVersion , newVersion) async {
       if(oldVersion > 2){
         await db.execute(products);
@@ -56,6 +59,23 @@ class DatabaseHelper {
   Future<int> addProduct(Products product) async{
     final Database db = await initDB();
     return db.insert('products', product.toMap());
+  }
+
+  //Add Customer 
+
+  Future<int> addCustomer(Customer customer) async{
+    final Database db = await initDB();
+    return db.insert('customer', customer.toMap());
+  }
+
+  //search for customer
+  Future<List<Map<String, dynamic>>> searchCustomer(String query) async {
+    final Database db = await initDB();
+    return db.query(
+      'customer',
+      where: 'tradeName LIKE ?',
+      whereArgs: ['%$query%'],
+    );
   }
 
   //search for products
@@ -141,9 +161,58 @@ class DatabaseHelper {
           GROUP BY invoices.invoiceId
           ORDER BY invoices.date DESC
           ''';
+      return await db.rawQuery(query);
+      }
 
-  return await db.rawQuery(query);
-}
 
+    Future<List<Map<String, dynamic>>> searchInvoicesByNumber(String invoiceNumber) async {
+      final db = await initDB();
+      final query = '''
+        SELECT 
+        invoices.invoiceId,
+        invoices.date,
+        COUNT(sales.productId) AS totalItems,
+        SUM(sales.quantity * sales.sellingPrice) AS totalPrice
+        FROM invoices
+        INNER JOIN sales ON invoices.invoiceId = sales.invoiceId
+        WHERE invoices.invoiceId LIKE ?
+        GROUP BY invoices.invoiceId
+        ''';
+
+      return await db.rawQuery(query, ['%$invoiceNumber%']);
+    }
+
+    Future<void> cancelInvoice(int invoiceId) async {
+      final db = await initDB();
+      await db.delete(
+        'invoices', 
+        where: 'invoiceId = ?', 
+        whereArgs: [invoiceId],
+      );
+      await db.delete(
+        'sales',
+        where: 'invoiceId = ?',
+        whereArgs: [invoiceId],
+      );
+    }
+
+    Future<List<Map<String, dynamic>>> getSalesByInvoice(int invoiceId) async {
+      final db = await initDB(); // Initialize the database
+        return await db.rawQuery('''
+          SELECT sales.*, products.productName 
+          FROM sales
+          INNER JOIN products ON sales.productId = products.productId
+          WHERE sales.invoiceId = ?
+        ''', [invoiceId]);
+    }
+
+    Future<List<Map<String, dynamic>>> getAllUsers() async {
+      final db = await initDB(); // Initialize the database
+        return await db.rawQuery('''
+          SELECT users.*
+          FROM users
+        ''');
+    }
+    
 
 }

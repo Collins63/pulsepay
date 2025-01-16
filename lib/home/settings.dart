@@ -5,19 +5,18 @@ import 'package:pulsepay/forms/sales.dart';
 import 'package:pulsepay/forms/sales_invoices.dart';
 import 'package:pulsepay/forms/users.dart';
 import 'package:pulsepay/forms/view_invoices.dart';
-import 'package:pulsepay/home/fiscal_page.dart';
-import 'package:pulsepay/home/settings.dart';
+import 'package:pulsepay/home/home_page.dart';
 import 'package:pulsepay/pointOfSale/pos.dart';
 //import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 
-class HomePage extends StatefulWidget{
-  const HomePage({super.key});
+class Settings extends StatefulWidget{
+  const Settings({super.key});
   @override
-  State<HomePage> createState() => _HomePageState();
+  State<Settings> createState() => _SettingsState();
 }
 
-class _HomePageState extends State<HomePage>{
+class _SettingsState extends State<Settings>{
   @override
   Widget build(BuildContext context){
     return  Scaffold(
@@ -53,7 +52,7 @@ class _HomePageState extends State<HomePage>{
               const SizedBox(height: 20,),
               const Padding(
                 padding: EdgeInsets.all(16.0),
-                child: Text("Quick Navigation" ,style: TextStyle(fontWeight: FontWeight.bold , fontSize: 24.0 , color: Colors.white ),),
+                child: Text("Settings" ,style: TextStyle(fontWeight: FontWeight.bold , fontSize: 24.0 , color: Colors.white ),),
               ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -66,14 +65,14 @@ class _HomePageState extends State<HomePage>{
                       borderRadius: BorderRadius.circular(15.0)
                     ),
                     child: TextButton(onPressed: (){
-                      Get.to(() => const InvoicesPage());
+                      Get.to(() => const UsersPage());
                     },
                     child: const Padding(
                       padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
                       child: Column(
                         children: [
-                          Icon(Icons.monetization_on , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
-                          Text('Sales' ,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
+                          Icon(Icons.person , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
+                          Text('User Management', textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
                         ],
                       ),
                     )),
@@ -91,7 +90,7 @@ class _HomePageState extends State<HomePage>{
                       child: Column(
                         children: [
                           Icon(Icons.shopping_bag_sharp , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
-                          Text('Stock' ,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
+                          Text('Categories',textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
                         ],
                       ),
                     )),
@@ -111,8 +110,8 @@ class _HomePageState extends State<HomePage>{
                       padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
                       child: Column(
                         children: [
-                          Icon(Icons.add_box_rounded , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
-                          Text('Add Product' ,textAlign: TextAlign.center,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
+                          Icon(Icons.settings , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
+                          Text('General Settings' ,textAlign: TextAlign.center,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
                         ],
                       ),
                     )),
@@ -137,8 +136,8 @@ class _HomePageState extends State<HomePage>{
                       padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
                       child: Column(
                         children: [
-                          Icon(Icons.remove_red_eye , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
-                          Text('View Invoices' ,textAlign: TextAlign.center,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
+                          Icon(Icons.arrow_downward_rounded , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
+                          Text('Discounts' ,textAlign: TextAlign.center,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
                         ],
                       ),
                     )),
@@ -155,8 +154,8 @@ class _HomePageState extends State<HomePage>{
                       padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
                       child: Column(
                         children: [
-                          Icon(Icons.cancel , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
-                          Text('Cancel Invoice' ,textAlign: TextAlign.center,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
+                          Icon(Icons.card_membership_sharp , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
+                          Text('Company Details' ,textAlign: TextAlign.center,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
                         ],
                       ),
                     )),
@@ -173,68 +172,8 @@ class _HomePageState extends State<HomePage>{
                       padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
                       child: Column(
                         children: [
-                          Icon(Icons.monetization_on , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
-                          Text('Sales' ,textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
-                        ],
-                      ),
-                    )),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 15,),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  Container(
-                    height: 100,
-                    width: 100,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(15.0)
-                    ),
-                    child: TextButton(onPressed: (){},
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
-                      child: Column(
-                        children: [
-                          Icon(Icons.monetization_on , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
-                          Text('Sales',textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
-                        ],
-                      ),
-                    )),
-                  ),
-                  Container(
-                    height: 100,
-                    width: 100,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(15.0)
-                    ),
-                    child: TextButton(onPressed: (){},
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
-                      child: Column(
-                        children: [
-                          Icon(Icons.monetization_on , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
-                          Text('Sales',textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
-                        ],
-                      ),
-                    )),
-                  ),
-                  Container(
-                    height: 100,
-                    width: 100,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(15.0)
-                    ),
-                    child: TextButton(onPressed: (){},
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
-                      child: Column(
-                        children: [
-                          Icon(Icons.monetization_on , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
-                          Text('Sales',textAlign: TextAlign.center,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
+                          Icon(Icons.print_rounded , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
+                          Text('Printer Settings' ,textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
                         ],
                       ),
                     )),
@@ -257,8 +196,68 @@ class _HomePageState extends State<HomePage>{
                       padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
                       child: Column(
                         children: [
-                          Icon(Icons.light_mode_sharp , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
-                          Text('Reports',textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
+                          Icon(Icons.check , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
+                          Text('Account Terms',textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
+                        ],
+                      ),
+                    )),
+                  ),
+                  Container(
+                    height: 100,
+                    width: 100,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(15.0)
+                    ),
+                    child: TextButton(onPressed: (){},
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
+                      child: Column(
+                        children: [
+                          Icon(Icons.rotate_left , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
+                          Text('Shifts',textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
+                        ],
+                      ),
+                    )),
+                  ),
+                  Container(
+                    height: 100,
+                    width: 100,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(15.0)
+                    ),
+                    child: TextButton(onPressed: (){},
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
+                      child: Column(
+                        children: [
+                          Icon(Icons.storage , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
+                          Text('Backup',textAlign: TextAlign.center,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
+                        ],
+                      ),
+                    )),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 15,),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  Container(
+                    height: 100,
+                    width: 100,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(15.0)
+                    ),
+                    child: TextButton(onPressed: (){},
+                    child: const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
+                      child: Column(
+                        children: [
+                          Icon(Icons.badge_outlined , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
+                          Text('License',textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
                         ],
                       ),
                     )),
@@ -278,8 +277,8 @@ class _HomePageState extends State<HomePage>{
                       padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
                       child: Column(
                         children: [
-                          Icon(Icons.person_2 , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
-                          Text('Users',textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
+                          Icon(Icons.email , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
+                          Text('Email',textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
                         ],
                       ),
                     )),
@@ -296,8 +295,8 @@ class _HomePageState extends State<HomePage>{
                       padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
                       child: Column(
                         children: [
-                          Icon(Icons.print_rounded , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
-                          Text('Printer Settings' ,  textAlign: TextAlign.center,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
+                          Icon(Icons.question_mark_outlined , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
+                          Text('About Us' ,  textAlign: TextAlign.center,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
                         ],
                       ),
                     )),
@@ -318,7 +317,7 @@ class _HomePageState extends State<HomePage>{
                 },
                 icon: const Column(
                   children: [
-                    Icon(Icons.home, color: Colors.black,),
+                    Icon(Icons.home, color: Colors.grey,),
                     Text(
                         "Home",
                         style: TextStyle(fontSize: 10),
@@ -332,13 +331,12 @@ class _HomePageState extends State<HomePage>{
                   //context,
                   //MaterialPageRoute(builder: (context) => MyAccount()),
                 //);
-                Get.to(()=> const FiscalPage());
               },
               icon: const Column(
                 children: [
                   Icon(Icons.list_alt, color: Colors.grey),
                   Text(
-                    "Fiscal",
+                    "Fiscalization",
                     style: TextStyle(fontSize: 10),
                   )
                 ],
@@ -381,11 +379,10 @@ class _HomePageState extends State<HomePage>{
                  // context,
                  // MaterialPageRoute(builder: (context) => Profile()),
                // );
-               Get.to(()=> const Settings());
               },
               icon: const Column(
                 children: [
-                  Icon(Icons.settings, color: Colors.grey),
+                  Icon(Icons.settings, color: Colors.black),
                   Text(
                     "Settings",
                     style: TextStyle(fontSize: 10),

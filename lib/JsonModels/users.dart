@@ -12,25 +12,46 @@ String usersToMap(Users data) => json.encode(data.toMap());
 
 class Users {
   final int? userId;
+  final String? realName;
   final String userName;
   final String userPassword;
+  final String? dateCreated;
+  final int? isAdmin;
+  final int? isCashier;
+  final int? isActive;
+
 
   Users({
     this.userId,
+    this.realName,
     required this.userName,
     required this.userPassword,
+    this.dateCreated,
+    this.isAdmin,
+    this.isCashier,
+    this.isActive
   });
 
   factory Users.fromMap(Map<String, dynamic> json) => Users(
     userId: json["userID"],
+    realName: json["realName"],
     userName: json["userName"],
     userPassword: json["userPassword"],
+    dateCreated: json["dateCreated"],
+    isAdmin: json["isAdmin"],
+    isCashier: json["isCashier"],
+    isActive: json["isActive"]
   );
 
   Map<String, dynamic> toMap() => {
     "userID": userId,
+    "realName": realName,
     "userName": userName,
     "userPassword": userPassword,
+    "dateCreated": dateCreated,
+    "isAdmin": isAdmin,
+    "isCashier": isCashier,
+    "isActive": isActive
   };
 }
 
@@ -159,5 +180,48 @@ class Sales {
     "quantity": quantity,
     "sellingPrice":sellingPrice,
     "tax":tax,
+  };
+}
+
+
+///CustomerDetailsModel//////
+///////////////////////////////////////////////////////
+Customer customerFromMap(String str) => Customer.fromMap(json.decode(str));
+
+String customerToMap(Customer data) => json.encode(data.toMap());
+
+class Customer {
+  final int? customerID;
+  final String tradeName;
+  final int tinNumber;
+  final int vatNumber;
+  final String address;
+  final String email;
+
+  Customer({
+    this.customerID,
+    required this.tradeName,
+    required this.tinNumber,
+    required this.vatNumber,
+    required this.address,
+    required this.email
+  });
+
+  factory Customer.fromMap(Map<String, dynamic> json) => Customer(
+    customerID: json["customerID"],
+    tradeName: json["tradeName"],
+    tinNumber: json["tinNumber"],
+    vatNumber: json["vatNumber"],
+    address: json["address"],
+    email: json["email"]
+  );
+
+  Map<String, dynamic> toMap() => {
+    "customerID": customerID,
+    "tradeName": tradeName,
+    "tinNumber": tinNumber,
+    "vatNumber": vatNumber,
+    "address": address,
+    "email": email,
   };
 }

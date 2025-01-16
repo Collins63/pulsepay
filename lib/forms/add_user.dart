@@ -1,22 +1,25 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pulsepay/JsonModels/users.dart';
 import 'package:pulsepay/SQLite/database_helper.dart';
 import 'package:pulsepay/authentication/login.dart';
+import 'package:pulsepay/common/app_bar.dart';
+import 'package:pulsepay/common/reusable_text.dart';
+import 'package:pulsepay/forms/users.dart';
 
-class Signup extends StatefulWidget{
-  const Signup ({super.key});
+class AddUser extends StatefulWidget{
+  const AddUser ({super.key});
 
   @override
-  State<Signup> createState() => _SignupState();
+  State<AddUser> createState() => _AddUserState();
 }
 
-class _SignupState extends State<Signup>{
+class _AddUserState extends State<AddUser>{
   final username = TextEditingController();
   final password = TextEditingController();
-  final confirmPassword = TextEditingController();
   final realname = TextEditingController();
-  final String date = DateTime.now().toIso8601String();
+  final confirmPassword = TextEditingController();
 
   bool isVisible = false;
   bool isAdmin = false;
@@ -24,36 +27,82 @@ class _SignupState extends State<Signup>{
 
   final db = DatabaseHelper();
   final formKey = GlobalKey<FormState>();
+
+  Future<void> saveUser() async {
+    final usernameEntered = username.text.trim();
+    final passwordEntered = password.text.trim();
+    final realnameEntered = realname.text;
+    final String date = DateTime.now().toIso8601String();
+
+    if (usernameEntered.isEmpty || passwordEntered.isEmpty || (!isAdmin && !isCashier)){
+      Get.snackbar(
+        'Failed',
+        'Please fill all the fiels and select a role.',
+        backgroundColor: Colors.red,
+        icon:const Icon(Icons.error),
+        colorText: Colors.white,
+        snackPosition: SnackPosition.TOP
+      );
+      return;
+    }
+
+    final user ={
+      'realName': realnameEntered,
+      'userName':usernameEntered,
+      'userPassword': passwordEntered,
+      'isAdmin': isAdmin ? 1 : 0,
+      'isCashier': isCashier ? 1 : 0,
+      'dateCreated': date,
+    };
+
+    final db = await DatabaseHelper().initDB();
+    await db.insert('users', user);
+    Get.snackbar(
+        'Success',
+        'User Saved;',
+        backgroundColor: Colors.green,
+        icon:const Icon(Icons.error),
+        colorText: Colors.white,
+        snackPosition: SnackPosition.TOP
+      );
+    
+    setState(() {
+      username.clear();
+      realname.clear();
+      password.clear();
+      confirmPassword.clear();
+      isAdmin =false;
+      isCashier =false;
+    });
+
+  }
+
   @override
   Widget build(BuildContext context){
     return Scaffold(
+      appBar: PreferredSize(
+        preferredSize: const Size.fromHeight(50),
+        child: CustomAppBar(
+          text: "User Management",
+          child: GestureDetector(
+            onTap: (){
+              Get.to(()=> const UsersPage());
+            },
+            child: const Icon(CupertinoIcons.arrow_left),
+          )
+        )
+      ),
       backgroundColor: const Color.fromARGB(255,255,255,255),
-      body: Center(
-        child: SingleChildScrollView(
+      body: SingleChildScrollView(
+        scrollDirection: Axis.vertical,
           child: Padding(
-            padding:  const EdgeInsets.symmetric(horizontal: 24.0),
+            padding:  const EdgeInsets.symmetric(horizontal: 10.0),
             child: Form(
               key: formKey,
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Center(
-                    child: Image.asset(
-                      'assets/Pay.png',
-                      height: 120,
-                    ),
-                  ),
-                  const SizedBox(height: 15),
-                  const Text(
-                    "Welcome To PuslePay!!",
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold ,
-                    ),
-                  ),
-                  const SizedBox(height: 8,),
                   Text(
                     "Enter Details Below To Register Account",
                     style: TextStyle(
@@ -63,9 +112,9 @@ class _SignupState extends State<Signup>{
                   ),
                   const SizedBox(height: 24,),
                   TextFormField(
-                    controller: realname  ,
+                    controller: realname,
                     decoration: InputDecoration(
-                        labelText: 'Real name',
+                        labelText: 'Real Name',
                         labelStyle: TextStyle(color:Colors.grey.shade600 ),
                         filled: true,
                         fillColor: Colors.grey.shade300,
@@ -74,14 +123,8 @@ class _SignupState extends State<Signup>{
                             borderSide: BorderSide.none
                         )
                     ),
-                    style: const TextStyle(color: Colors.black),
-                    validator: (value){
-                      if(value!.isEmpty){
-                        return "Realname is Required";
-                      }return null;
-                    },
                   ),
-                  const SizedBox(height: 16,),
+                  SizedBox(height: 16,),
                   //email address field
                   TextFormField(
                     controller: username,
@@ -162,7 +205,7 @@ class _SignupState extends State<Signup>{
                       return null;
                     },
                   ),
-                  SizedBox(height: 16,),
+                  const SizedBox(height: 16),
                   CheckboxListTile(
                         title: const Text("Admin"),
                         value: isAdmin,
@@ -184,43 +227,14 @@ class _SignupState extends State<Signup>{
                           });
                         },
                       ),
-                  const SizedBox(height: 16),
+
                   // Signup Button
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
                       onPressed: () {
                         if(formKey.currentState!.validate()){
-                          final db = DatabaseHelper();
-                          final enteredRealname = realname.text;
-                          final enteredUsername = username.text.trim();
-                          final enteredPassword = password.text.trim();
-                          if(enteredRealname.isEmpty || enteredUsername.isEmpty || enteredPassword.isEmpty || (!isAdmin && !isCashier) ){
-                            Get.snackbar(
-                              'Failed',
-                              'Please fill all the fiels and select a role.',
-                              backgroundColor: Colors.red,
-                              icon:const Icon(Icons.error),
-                              colorText: Colors.white,
-                              snackPosition: SnackPosition.TOP
-                            );
-                          }else{
-                            db.signup(Users(
-                            realName: realname.text ,
-                            userName: username.text,
-                            userPassword: password.text,
-                            dateCreated: date,
-                            isAdmin: isAdmin? 1 : 0,
-                            isCashier: isCashier? 1 :0,
-                            )
-                            )
-                            .whenComplete((){
-                              Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (context) => const Login()));
-                            });
-                          }
-                          
+                          saveUser();
                         }
                       },
                       style: ElevatedButton.styleFrom(
@@ -231,32 +245,14 @@ class _SignupState extends State<Signup>{
                         ),
                       ),
                       child: const Text(
-                        'Signup',
+                        'Register User',
                         style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
                       ),
                     ),
                   ),
                   const SizedBox(height: 16),
                   // Don't have an account
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        "Already have an account? ",
-                        style: TextStyle(color: Colors.grey.shade400),
-                      ),
-                      GestureDetector(
-                        onTap: () {
-                          Navigator.push(context,
-                           MaterialPageRoute(builder: (context) =>const Login()));
-                        },
-                        child: const Text(
-                          "LogIn",
-                          style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ],
-                  ),
+                  
                   const SizedBox(height: 16),
                   // Continue as Guest
                 ],
@@ -264,7 +260,7 @@ class _SignupState extends State<Signup>{
             ),
           ),
         ),
-      ),
+    
     ); 
   }
 }
