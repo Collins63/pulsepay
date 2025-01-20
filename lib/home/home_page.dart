@@ -3,6 +3,7 @@ import 'package:pulsepay/authentication/login.dart';
 import 'package:pulsepay/forms/add_product.dart';
 import 'package:pulsepay/forms/sales.dart';
 import 'package:pulsepay/forms/sales_invoices.dart';
+import 'package:pulsepay/forms/stock_management.dart';
 import 'package:pulsepay/forms/users.dart';
 import 'package:pulsepay/forms/view_invoices.dart';
 import 'package:pulsepay/home/fiscal_page.dart';
@@ -22,290 +23,295 @@ class _HomePageState extends State<HomePage>{
   Widget build(BuildContext context){
     return  Scaffold(
       backgroundColor: const Color.fromARGB(255, 14, 19, 29),
-      body: SafeArea(
-        bottom: false,
-          child:  Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Row(
-                    children: [
-                       const Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text("Welcome Back!",
-                            style: TextStyle(color: Colors.white),
-                          ),
-                          Text("User",
-                            style: TextStyle(color: Colors.white, fontSize: 24 , fontWeight: FontWeight.bold),
-                          ),
-                        ],
+      body: SingleChildScrollView(
+        scrollDirection: Axis.vertical,
+        child: SafeArea(
+          bottom: false,
+            child:  Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Row(
+                      children: [
+                         const Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text("Welcome Back!",
+                              style: TextStyle(color: Colors.white),
+                            ),
+                            Text("User",
+                              style: TextStyle(color: Colors.white, fontSize: 24 , fontWeight: FontWeight.bold),
+                            ),
+                          ],
+                        ),
+                        const Spacer(),
+                        IconButton.outlined(onPressed: (){
+                          Navigator.push(context,
+                          MaterialPageRoute(builder: (context)=> const Login()));
+                        }, icon: const Icon(Icons.logout_rounded , color: Colors.white,))
+                      ],
+                    ),
+                ),
+                const SizedBox(height: 20,),
+                const Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: Text("Quick Navigation" ,style: TextStyle(fontWeight: FontWeight.bold , fontSize: 24.0 , color: Colors.white ),),
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    Container(
+                      height: 100,
+                      width: 100,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(15.0)
                       ),
-                      const Spacer(),
-                      IconButton.outlined(onPressed: (){
+                      child: TextButton(onPressed: (){
+                        Get.to(() => const InvoicesPage());
+                      },
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
+                        child: Column(
+                          children: [
+                            Icon(Icons.monetization_on , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
+                            Text('Sales' ,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
+                          ],
+                        ),
+                      )),
+                    ),
+                    Container(
+                      height: 100,
+                      width: 100,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(15.0)
+                      ),
+                      child: TextButton(onPressed: (){
+                        Get.to(()=> const StockManagement());
+                      },
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
+                        child: Column(
+                          children: [
+                            Icon(Icons.shopping_bag_sharp , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
+                            Text('Stock' ,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
+                          ],
+                        ),
+                      )),
+                    ),
+                    Container(
+                      height: 100,
+                      width: 100,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(15.0)
+                      ),
+                      child: TextButton(onPressed: (){
                         Navigator.push(context,
-                        MaterialPageRoute(builder: (context)=> const Login()));
-                      }, icon: const Icon(Icons.logout_rounded , color: Colors.white,))
-                    ],
-                  ),
-              ),
-              const SizedBox(height: 20,),
-              const Padding(
-                padding: EdgeInsets.all(16.0),
-                child: Text("Quick Navigation" ,style: TextStyle(fontWeight: FontWeight.bold , fontSize: 24.0 , color: Colors.white ),),
-              ),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  Container(
-                    height: 100,
-                    width: 100,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(15.0)
+                        MaterialPageRoute(builder: (context) => const AddProduct()  ));
+                      },
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
+                        child: Column(
+                          children: [
+                            Icon(Icons.add_box_rounded , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
+                            Text('Add Product' ,textAlign: TextAlign.center,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
+                          ],
+                        ),
+                      )),
                     ),
-                    child: TextButton(onPressed: (){
-                      Get.to(() => const InvoicesPage());
-                    },
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
-                      child: Column(
-                        children: [
-                          Icon(Icons.monetization_on , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
-                          Text('Sales' ,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
-                        ],
+                  ],
+                ),
+                const SizedBox(height: 15,),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    Container(
+                      height: 100,
+                      width: 100,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(15.0)
                       ),
-                    )),
-                  ),
-                  Container(
-                    height: 100,
-                    width: 100,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(15.0)
+                      child: TextButton(onPressed: (){
+                        Get.to(()=> const ViewInvoices());
+                      },
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
+                        child: Column(
+                          children: [
+                            Icon(Icons.remove_red_eye , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
+                            Text('View Invoices' ,textAlign: TextAlign.center,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
+                          ],
+                        ),
+                      )),
                     ),
-                    child: TextButton(onPressed: (){},
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
-                      child: Column(
-                        children: [
-                          Icon(Icons.shopping_bag_sharp , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
-                          Text('Stock' ,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
-                        ],
+                    Container(
+                      height: 100,
+                      width: 100,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(15.0)
                       ),
-                    )),
-                  ),
-                  Container(
-                    height: 100,
-                    width: 100,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(15.0)
+                      child: TextButton(onPressed: (){},
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
+                        child: Column(
+                          children: [
+                            Icon(Icons.cancel , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
+                            Text('Cancel Invoice' ,textAlign: TextAlign.center,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
+                          ],
+                        ),
+                      )),
                     ),
-                    child: TextButton(onPressed: (){
-                      Navigator.push(context,
-                      MaterialPageRoute(builder: (context) => const AddProduct()  ));
-                    },
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
-                      child: Column(
-                        children: [
-                          Icon(Icons.add_box_rounded , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
-                          Text('Add Product' ,textAlign: TextAlign.center,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
-                        ],
+                    Container(
+                      height: 100,
+                      width: 100,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(15.0)
                       ),
-                    )),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 15,),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  Container(
-                    height: 100,
-                    width: 100,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(15.0)
+                      child: TextButton(onPressed: (){},
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
+                        child: Column(
+                          children: [
+                            Icon(Icons.monetization_on , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
+                            Text('Sales' ,textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
+                          ],
+                        ),
+                      )),
                     ),
-                    child: TextButton(onPressed: (){
-                      Get.to(()=> const ViewInvoices());
-                    },
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
-                      child: Column(
-                        children: [
-                          Icon(Icons.remove_red_eye , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
-                          Text('View Invoices' ,textAlign: TextAlign.center,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
-                        ],
+                  ],
+                ),
+                const SizedBox(height: 15,),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    Container(
+                      height: 100,
+                      width: 100,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(15.0)
                       ),
-                    )),
-                  ),
-                  Container(
-                    height: 100,
-                    width: 100,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(15.0)
+                      child: TextButton(onPressed: (){},
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
+                        child: Column(
+                          children: [
+                            Icon(Icons.monetization_on , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
+                            Text('Sales',textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
+                          ],
+                        ),
+                      )),
                     ),
-                    child: TextButton(onPressed: (){},
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
-                      child: Column(
-                        children: [
-                          Icon(Icons.cancel , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
-                          Text('Cancel Invoice' ,textAlign: TextAlign.center,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
-                        ],
+                    Container(
+                      height: 100,
+                      width: 100,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(15.0)
                       ),
-                    )),
-                  ),
-                  Container(
-                    height: 100,
-                    width: 100,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(15.0)
+                      child: TextButton(onPressed: (){},
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
+                        child: Column(
+                          children: [
+                            Icon(Icons.monetization_on , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
+                            Text('Sales',textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
+                          ],
+                        ),
+                      )),
                     ),
-                    child: TextButton(onPressed: (){},
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
-                      child: Column(
-                        children: [
-                          Icon(Icons.monetization_on , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
-                          Text('Sales' ,textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
-                        ],
+                    Container(
+                      height: 100,
+                      width: 100,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(15.0)
                       ),
-                    )),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 15,),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  Container(
-                    height: 100,
-                    width: 100,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(15.0)
+                      child: TextButton(onPressed: (){},
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
+                        child: Column(
+                          children: [
+                            Icon(Icons.monetization_on , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
+                            Text('Sales',textAlign: TextAlign.center,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
+                          ],
+                        ),
+                      )),
                     ),
-                    child: TextButton(onPressed: (){},
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
-                      child: Column(
-                        children: [
-                          Icon(Icons.monetization_on , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
-                          Text('Sales',textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
-                        ],
+                  ],
+                ),
+                const SizedBox(height: 15,),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    Container(
+                      height: 100,
+                      width: 100,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(15.0)
                       ),
-                    )),
-                  ),
-                  Container(
-                    height: 100,
-                    width: 100,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(15.0)
+                      child: TextButton(onPressed: (){},
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
+                        child: Column(
+                          children: [
+                            Icon(Icons.light_mode_sharp , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
+                            Text('Reports',textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
+                          ],
+                        ),
+                      )),
                     ),
-                    child: TextButton(onPressed: (){},
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
-                      child: Column(
-                        children: [
-                          Icon(Icons.monetization_on , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
-                          Text('Sales',textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
-                        ],
+                    Container(
+                      height: 100,
+                      width: 100,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(15.0)
                       ),
-                    )),
-                  ),
-                  Container(
-                    height: 100,
-                    width: 100,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(15.0)
+                      child: TextButton(onPressed: (){
+                        Navigator.push(context,
+                        MaterialPageRoute(builder: (context)=> const UsersPage()));
+                      },
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
+                        child: Column(
+                          children: [
+                            Icon(Icons.person_2 , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
+                            Text('Users',textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
+                          ],
+                        ),
+                      )),
                     ),
-                    child: TextButton(onPressed: (){},
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
-                      child: Column(
-                        children: [
-                          Icon(Icons.monetization_on , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
-                          Text('Sales',textAlign: TextAlign.center,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
-                        ],
+                    Container(
+                      height: 100,
+                      width: 100,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(15.0)
                       ),
-                    )),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 15,),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  Container(
-                    height: 100,
-                    width: 100,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(15.0)
+                      child: TextButton(onPressed: (){},
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
+                        child: Column(
+                          children: [
+                            Icon(Icons.print_rounded , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
+                            Text('Printer Settings' ,  textAlign: TextAlign.center,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
+                          ],
+                        ),
+                      )),
                     ),
-                    child: TextButton(onPressed: (){},
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
-                      child: Column(
-                        children: [
-                          Icon(Icons.light_mode_sharp , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
-                          Text('Reports',textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
-                        ],
-                      ),
-                    )),
-                  ),
-                  Container(
-                    height: 100,
-                    width: 100,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(15.0)
-                    ),
-                    child: TextButton(onPressed: (){
-                      Navigator.push(context,
-                      MaterialPageRoute(builder: (context)=> const UsersPage()));
-                    },
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
-                      child: Column(
-                        children: [
-                          Icon(Icons.person_2 , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
-                          Text('Users',textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
-                        ],
-                      ),
-                    )),
-                  ),
-                  Container(
-                    height: 100,
-                    width: 100,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(15.0)
-                    ),
-                    child: TextButton(onPressed: (){},
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
-                      child: Column(
-                        children: [
-                          Icon(Icons.print_rounded , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
-                          Text('Printer Settings' ,  textAlign: TextAlign.center,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
-                        ],
-                      ),
-                    )),
-                  ),
-                ],
-              )
-            ],
-          )
+                  ],
+                )
+              ],
+            )
+        ),
       ),
       bottomNavigationBar: BottomAppBar(
         color: Colors.white,
@@ -338,7 +344,7 @@ class _HomePageState extends State<HomePage>{
                 children: [
                   Icon(Icons.list_alt, color: Colors.grey),
                   Text(
-                    "Fiscal",
+                    "Fiscalization",
                     style: TextStyle(fontSize: 10),
                   )
                 ],

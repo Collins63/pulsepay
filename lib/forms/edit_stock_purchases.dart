@@ -1,39 +1,40 @@
 import 'package:flutter/material.dart';
 import 'package:pulsepay/SQLite/database_helper.dart';
+import 'package:pulsepay/common/constants.dart';
 import 'package:pulsepay/common/custom_button.dart';
 
-class ManageUsers extends StatefulWidget {
-  const ManageUsers({super.key});
+class EditStockPurchases extends StatefulWidget {
+  const EditStockPurchases({super.key});
   @override
-  State<ManageUsers> createState() => _ManageUsersState();
+  State<EditStockPurchases> createState() => _editStockPurchasesState();
 }
 
-class _ManageUsersState extends State<ManageUsers> {
+class _editStockPurchasesState extends State<EditStockPurchases> {
   final DatabaseHelper dbHelper = DatabaseHelper();
-  List<Map<String, dynamic>> users = [];
-  List<int> selectedUsers = [];
+  List<Map<String, dynamic>> purchases = [];
+  List<int> selectedPurchase = [];
   bool isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    fetchUsers();
+    fetchPurchases();
   }
 
-  Future<void> fetchUsers() async {
-    List<Map<String, dynamic>> data = await dbHelper.getAllUsers();
+  Future<void> fetchPurchases() async {
+    List<Map<String, dynamic>> data = await dbHelper.getAllStockPurchases();
     setState(() {
-      users = data;
+      purchases = data;
       isLoading = false;
     });
   }
 
-  void toggleSelection(int userId) {
+  void toggleSelection(int purchaseId) {
     setState(() {
-      if (selectedUsers.contains(userId)) {
-        selectedUsers.remove(userId);
+      if (selectedPurchase.contains(purchaseId)) {
+        selectedPurchase.remove(purchaseId);
       } else {
-        selectedUsers.add(userId);
+        selectedPurchase.add(purchaseId);
       }
     });
   }
@@ -42,7 +43,8 @@ class _ManageUsersState extends State<ManageUsers> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Users'),
+        title: const Text('Products'),
+        centerTitle: true,
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -53,29 +55,35 @@ class _ManageUsersState extends State<ManageUsers> {
                   scrollDirection: Axis.horizontal,
                   child: SingleChildScrollView(
                     child: DataTable(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10)
+                      ),
+                      
                       columns: const [
-                        DataColumn(label: Text('Select')),
-                        DataColumn(label: Text('Real Name')),
-                        DataColumn(label: Text('Username')),
-                        DataColumn(label: Text('DateCreated')),
-                        DataColumn(label: Text('IsActive')),
+                        DataColumn(label: Text("Select")),
+                        DataColumn(label: Text('Date')),
+                        DataColumn(label: Text('Product')),
+                        DataColumn(label: Text('Quantity')),
+                        DataColumn(label: Text('Pay Method')),
+                        DataColumn(label: Text("Supplier")),
                       ],
-                      rows: users
+                      rows: purchases
                           .map(
-                            (user) {
-                              final userId = user['userId'];
+                            (purchase) {
+                              final purchaseId = purchase['purchaseId'];
                               return DataRow(
                               cells: [
                                 DataCell(
                                   Checkbox(
-                                    value: selectedUsers.contains(userId),
-                                    onChanged: (_) => toggleSelection(userId),
+                                    value: selectedPurchase.contains(purchaseId),
+                                    onChanged: (_) => toggleSelection(purchaseId),
                                   ),
                                 ),
-                                DataCell(Text(user['realName'].toString())),
-                                DataCell(Text(user['userName'].toString())),
-                                DataCell(Text(user['dateCreated'].toString())),
-                                DataCell(Text(user['isActive'].toString())),
+                                DataCell(Text(purchase['date'].toString())),
+                                DataCell(Text(purchase['productid'].toString())),
+                                DataCell(Text(purchase['quantity'].toString())),
+                                DataCell(Text(purchase['payMethod'].toString())),
+                                DataCell(Text(purchase['supplier'].toString())),
                               ],
                             );
                           })
@@ -84,7 +92,7 @@ class _ManageUsersState extends State<ManageUsers> {
                   ),
                 ),
                 const SizedBox(height: 50,),
-                if (selectedUsers.isNotEmpty)
+                if (selectedPurchase.isNotEmpty)
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [

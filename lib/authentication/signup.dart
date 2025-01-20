@@ -162,7 +162,7 @@ class _SignupState extends State<Signup>{
                       return null;
                     },
                   ),
-                  SizedBox(height: 16,),
+                  const SizedBox(height: 16,),
                   CheckboxListTile(
                         title: const Text("Admin"),
                         value: isAdmin,
@@ -173,7 +173,7 @@ class _SignupState extends State<Signup>{
                           });
                         },
                       ),
-                  SizedBox(height: 16,),
+                  const SizedBox(height: 16,),
                   CheckboxListTile(
                         title: const Text("Cashier"),
                         value: isCashier,

@@ -5,21 +5,46 @@ import 'package:pulsepay/JsonModels/users.dart';
 class DatabaseHelper {
   final databaseName = "pulse.db";
 
+  /////=========TABLES=========//////////
+  ///
+  
+
+  //String dailyReports=
+    //"create table dailyReports(ID INTEGER PRIMARY KEY AUTOINCREMENT, reportDate TEXT , reportTime TEXT , FiscalDayNo INTEGER , SaleByTaxUSD REAL , SaleByTaxZWG REAL , SaleTaxByTaxUSD REAL , SaleTaxByTaxZWG REAL , CreditNoteByTaxUSD REAL , CreditNoteByTaxZWG REAL , CreditNoteTaxByTaxUSD REAL , CreditNoteTaxByTaxZWG REAL, BalanceByMoneyTypeCashUSD REAL , BalanceByMoneyTypeCashZWG REAL , BalanceByMoneyTypeCardUSD REAL , BalanceByMoneyTypeCardZWG REAL , BalanceByMoneyTypeMobileWalletUSD REAl , BalanceByMoneyTypeMobileWalletZWG REAL , BalanceByMoneyTypeCouponUSD REAL , BalanceByMoneyTypeCouponZWG REAL , BalanceByMoneyTypeInvoiceUSD REAL , BalanceByMoneyTypeInvoiceZWG REAL , BalanceByMoneyTypeBankTransferUSD REAL , BalanceByMoneyTypeBankTransferZWG REAL , BalanceByMoneyTypeOtherUSD REAL ,BalanceByMoneyTypeOtherZWG REAL ,reportHash TEXT , reportSignature TEXT , reportJsonBody TEXT , fiscalDayStatus TEXT)";
+  
+  //String openDay= 
+   // "create table openDay(ID INTEGER PRIMARY KEY AUTOINCREMENT , FiscalDayNo INTEGER , StatusOfFirstReceipt TEXT , FiscalDayOpened TEXT , FiscalDayClosed TEXT , TaxExempt INTEGER , TaxZero INTEGER , Tax15 INTEGER , TaxWT INTEGER )";
+
+  //String submittedReceipts=
+   // "create table submittedReceipts(receiptGlobalNo INTEGER PRIMARY KEY AUTOINCREMENT , receiptCounter INTEGER ,  FiscalDayNo INTEGER , InvoiceNo INTEGER , receiptID INTEGER , receiptType TEXT , receiptCurrency TEXT , moneyType TEXT , receiptDate TEXT, receiptDate TEXT , recei ptTime TEXT , receiptTotal REAL , taxCode TEXT , taxPercent TEXT , taxAmount REAL , SalesAmountwithTax REAL, receiptHash TEXT , receiptJsonbody TEXT , StatustoFDMS TEXT , qrurl TEXT , receiptServerSignature TEXT , submitReceiptServerresponseJSON TEXT, Total15VAT TEXT , TotalNonVAT REAL , TotalExempt REAL , TotalWT REAL  )";
+
   String users = 
     "create table users(userId INTEGER PRIMARY KEY AUTOINCREMENT,realName TEXT , userName TEXT UNIQUE , userPassword TEXT , dateCreated TEXT , isAdmin INTEGER DEFAULT 0 ,isCashier INTEGER DEFAULT 0 , isActive INTEGER DEFAULT 1)";
   
   String products =
-    "create table products(productid INTEGER PRIMARY KEY AUTOINCREMENT, productName TEXT UNIQUE , barcode TEXT , costPrice REAL , sellingPrice REAL , sellqty REAL , tax TEXT)";
+    "create table products(productid INTEGER PRIMARY KEY AUTOINCREMENT, productName TEXT UNIQUE , barcode TEXT,hsCode INTEGER , costPrice REAL , sellingPrice REAL , sellqty REAL , tax TEXT , stockQty INTEGER DEFAULT 0)";
 
   String invoices =
-    "create table invoices (invoiceId INTEGER PRIMARY KEY AUTOINCREMENT,date TEXT,totalAmount REAL,totalTax REAL)";
+    "create table invoices (invoiceId INTEGER PRIMARY KEY AUTOINCREMENT,date TEXT,totalAmount REAL,totalTax REAL , currency TEXT)";
+
+  String stockPurchases =
+    "create table stockPurchases ( purchaseId INTEGER PRIMARY KEY AUTOINCREMENT , date TEXT , productid INTEGER , quantity INTEGER , payMethod TEXT, supplier TEXT ,FOREIGN KEY(productid) REFERENCES products(productid))";
 
   String sales = 
-    "CREATE TABLE sales (saleId INTEGER PRIMARY KEY AUTOINCREMENT,invoiceId INTEGER,productId INTEGER,quantity INTEGER,sellingPrice REAL,tax REAL,FOREIGN KEY(invoiceId) REFERENCES invoices(invoiceId),FOREIGN KEY(productId) REFERENCES products(productid))";
+    "CREATE TABLE sales (saleId INTEGER PRIMARY KEY AUTOINCREMENT,invoiceId INTEGER,customerID INTEGER,productId INTEGER,quantity INTEGER,sellingPrice REAL,tax REAL , currency TEXT ,FOREIGN KEY(invoiceId) REFERENCES invoices(invoiceId),FOREIGN KEY(productId) REFERENCES products(productid), FOREIGN KEY(customerID) REFERENCES customers(customerID) )";
   
   String customers =
-    "CREATE TABLE customer(customerID INTEGER PRIMARY KEY AUTOINCREMENT , tradeName TEXT , tinNumber REAL , vatNumber REAL , address TEXT , email TEXT)";
+    "CREATE TABLE customer(customerID INTEGER PRIMARY KEY AUTOINCREMENT , tradeName TEXT , tinNumber INT , vatNumber INT , address TEXT , email TEXT)";
   // vat zero ex
+
+  String companyDetails =
+    "create table companyDetails(companyID INTEGER PRIMARY KEY AUTOINCREMENT , company TEXT , logo TEXT , address, TEXT , tel TEXT , branchName TEXT , tel2 TEXT , email TEXT , tinNumber TEXT, vatNumber TEXT ,vendorNumber TEXT , website TEXT , bank TEXT ,bankBranch TEXT , bankAcntName TEXT , bankAcntNo TEXT , baseCurreny , backUpLocation TEXT , baseTaxPercentage REAL)";
+
+  String paymentMethods =
+    "create table paymentMethods (payMethodId INTEGER PRIMARY KEY AUTOINCREMENT, description TEXT , rate REAL , fiscalGroup INTEGER , currency TEXT , vatNumber TEXT , tinNumber TEXT)";
+
+  //====DATABASE FUNCTIONS =======/////////
+
 
   Future<Database> initDB() async {
     final databasePath = await getDatabasesPath();
@@ -32,6 +57,12 @@ class DatabaseHelper {
       await db.execute(invoices);
       await db.execute(sales);
       await db.execute(customers);
+      await db.execute(stockPurchases);
+      await db.execute(companyDetails);
+      await db.execute(paymentMethods);
+      //await db.execute(openDay);
+      //await db.execute(submittedReceipts);
+      //await db.execute(dailyReports);
     }  , onUpgrade: (db ,oldVersion , newVersion) async {
       if(oldVersion > 2){
         await db.execute(products);
@@ -59,6 +90,18 @@ class DatabaseHelper {
   Future<int> addProduct(Products product) async{
     final Database db = await initDB();
     return db.insert('products', product.toMap());
+  }
+
+  //add products
+  Future<int> addPayMethod(PaymentMethod paymentMethod) async{
+    final Database db = await initDB();
+    return db.insert('paymentMethods', paymentMethod.toMap());
+  }
+
+  //Add Stock Purchase
+  Future<int> addStockPurchase(StockPurchase stockPurchase) async{
+    final Database db = await initDB();
+    return db.insert('stockPurchases', stockPurchase.toMap());
   }
 
   //Add Customer 
@@ -97,7 +140,7 @@ class DatabaseHelper {
   }
 
   //save sale
-  Future<void> saveSale(List<Map<String, dynamic>> cartItems, double totalAmount, double totalTax , double indiTax) async {
+  Future<void> saveSale(List<Map<String, dynamic>> cartItems, double totalAmount, double totalTax , double indiTax , int customerID) async {
   final db = await initDB();
   final int invoiceId = await getNextInvoiceId();
   final String date = DateTime.now().toIso8601String();
@@ -116,6 +159,7 @@ class DatabaseHelper {
     for (var item in cartItems) {
       await txn.insert('sales', {
         'invoiceId': invoiceId,
+        'customerID': customerID,
         'productId': item['productid'],
         'quantity': item['sellqty'],
         'sellingPrice': item['sellingPrice'],
@@ -164,7 +208,7 @@ class DatabaseHelper {
       return await db.rawQuery(query);
       }
 
-
+    ///Search Invoices By Invoice Number
     Future<List<Map<String, dynamic>>> searchInvoicesByNumber(String invoiceNumber) async {
       final db = await initDB();
       final query = '''
@@ -181,7 +225,8 @@ class DatabaseHelper {
 
       return await db.rawQuery(query, ['%$invoiceNumber%']);
     }
-
+    
+    ///Cancel Invoice
     Future<void> cancelInvoice(int invoiceId) async {
       final db = await initDB();
       await db.delete(
@@ -196,6 +241,8 @@ class DatabaseHelper {
       );
     }
 
+
+    ////Get Sales By Invoice
     Future<List<Map<String, dynamic>>> getSalesByInvoice(int invoiceId) async {
       final db = await initDB(); // Initialize the database
         return await db.rawQuery('''
@@ -206,6 +253,17 @@ class DatabaseHelper {
         ''', [invoiceId]);
     }
 
+    ///Get Product By ID
+    Future<List<Map<String, dynamic>>> getProductById(int productid) async{
+      final db = await initDB();
+      return await db.rawQuery('''
+        SELECT products.*
+        FROM products
+        WHERE products.productid = ?
+      ''' , [productid]);
+    }
+
+    ///Get All Users From DB
     Future<List<Map<String, dynamic>>> getAllUsers() async {
       final db = await initDB(); // Initialize the database
         return await db.rawQuery('''
@@ -215,4 +273,42 @@ class DatabaseHelper {
     }
     
 
+    //////Update Product Stock Quantity
+    Future<void> updateProductStockQty(int productid , int newStockQty) async{
+      final db = await initDB();
+      await db.update(
+        'products',
+        {'stockQty': newStockQty},
+        where: 'productid = ?',
+        whereArgs: [productid]
+      );
+    }
+
+
+    ///// Get all Products
+    Future<List<Map<String, dynamic>>> getAllProducts() async{
+      final db = await initDB();
+      return await db.rawQuery('''
+        SELECT products.*
+        FROM products
+      ''');
+    }
+
+    //// Get Stock Purchases
+    Future<List<Map<String ,dynamic>>> getAllStockPurchases() async{
+      final db = await initDB();
+      return await db.rawQuery('''
+        SELECT stockPurchases.*
+        FROM stockPurchases
+      ''');
+    }
+
+    //// Get Payment Methods
+    Future<List<Map<String ,dynamic>>> getPaymentMethods() async{
+      final db = await initDB();
+      return await db.rawQuery('''
+        SELECT paymentMethods.*
+        FROM paymentMethods
+      ''');
+    }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pulsepay/JsonModels/users.dart';
 import 'package:pulsepay/SQLite/database_helper.dart';
 //import 'package:pulsepay/authentication/login.dart';
@@ -15,11 +16,23 @@ class AddProduct extends StatefulWidget{
 class _AddproductState extends State<AddProduct>{
   final productname = TextEditingController();
   final barcode = TextEditingController();
+  final hsCodeController = TextEditingController();
   final costprice = TextEditingController();
   final sellingprice = TextEditingController();
   final vatBracket  = TextEditingController();
+  final initStockController = TextEditingController();
 
   bool isVisible = false;
+
+  void clearFields(){
+    productname.clear();
+    barcode.clear();
+    hsCodeController.clear();
+    costprice.clear();
+    sellingprice.clear();
+    vatBracket.clear();
+    initStockController.clear();
+  }
 
   final db = DatabaseHelper();
   final formKey = GlobalKey<FormState>();
@@ -98,6 +111,26 @@ class _AddproductState extends State<AddProduct>{
                       ),
                       const SizedBox(height: 16),
                       TextFormField(
+                        controller: hsCodeController,
+                        decoration: InputDecoration(
+                          labelText: 'HsCode',
+                          labelStyle:  TextStyle(color: Colors.grey.shade600),
+                          filled: true,
+                          fillColor: Colors.grey.shade300,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12.0),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                        style: const TextStyle(color: Colors.black),
+                        validator: (value){
+                          if(value!.isEmpty){
+                            return "Hs Code Required";
+                          }return null;
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
                         controller: costprice,
                         decoration: InputDecoration(
                           labelText: 'Cost Price',
@@ -156,7 +189,26 @@ class _AddproductState extends State<AddProduct>{
                           }return null;
                         },
                       ),
-        
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: initStockController,
+                        decoration: InputDecoration(
+                          labelText: 'Stock Quantity',
+                          labelStyle:  TextStyle(color: Colors.grey.shade600),
+                          filled: true,
+                          fillColor: Colors.grey.shade300,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12.0),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                        style: const TextStyle(color: Colors.black),
+                        validator: (value){
+                          if(value!.isEmpty){
+                            return "Put Zero dont leave blank";
+                          }return null;
+                        },
+                      ),
                       const SizedBox(height: 20,),
                       // Signup Button
                       SizedBox(
@@ -168,20 +220,27 @@ class _AddproductState extends State<AddProduct>{
                                 final db = DatabaseHelper();
                                 await db.addProduct(Products(
                                   productName: productname.text,
+                                  hsCode:int.parse(hsCodeController.text),
                                   barcode: barcode.text,
                                   sellingPrice: double.parse(sellingprice.text),
                                   costPrice: double.parse(costprice.text),
-                                  tax: vatBracket.text
+                                  tax: vatBracket.text,
+                                  stockQty: int.parse(initStockController.text)
                                 ));
                                 // Navigate to the HomePage after successful product addition
                                 Navigator.push(
                                   context,
-                                  MaterialPageRoute(builder: (context) => const HomePage()),
+                                  MaterialPageRoute(builder: (context) => const ViewProducts()),
                                 );
+                                clearFields();
                                 } catch (e) {
-                                  // Show an error message or log the exception
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(content: Text('Error adding product: $e')),
+                                  Get.snackbar(
+                                    "Error",
+                                    "Error adding product: $e",
+                                    icon:const Icon(Icons.error),
+                                    colorText: Colors.white,
+                                    backgroundColor: Colors.red,
+                                    snackPosition: SnackPosition.TOP
                                   );
                                 }
                             }

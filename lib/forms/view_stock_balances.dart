@@ -2,16 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:pulsepay/SQLite/database_helper.dart';
 import 'package:pulsepay/common/custom_button.dart';
 
-class ManageUsers extends StatefulWidget {
-  const ManageUsers({super.key});
+class ViewStockBalances extends StatefulWidget {
+  const ViewStockBalances({super.key});
   @override
-  State<ManageUsers> createState() => _ManageUsersState();
+  State<ViewStockBalances> createState() => _viewStockBalanceState();
 }
 
-class _ManageUsersState extends State<ManageUsers> {
+class _viewStockBalanceState extends State<ViewStockBalances> {
   final DatabaseHelper dbHelper = DatabaseHelper();
-  List<Map<String, dynamic>> users = [];
-  List<int> selectedUsers = [];
+  List<Map<String, dynamic>> products = [];
+  List<int> selectedProduct = [];
   bool isLoading = true;
 
   @override
@@ -21,19 +21,19 @@ class _ManageUsersState extends State<ManageUsers> {
   }
 
   Future<void> fetchUsers() async {
-    List<Map<String, dynamic>> data = await dbHelper.getAllUsers();
+    List<Map<String, dynamic>> data = await dbHelper.getAllProducts();
     setState(() {
-      users = data;
+      products = data;
       isLoading = false;
     });
   }
 
-  void toggleSelection(int userId) {
+  void toggleSelection(int productId) {
     setState(() {
-      if (selectedUsers.contains(userId)) {
-        selectedUsers.remove(userId);
+      if (selectedProduct.contains(productId)) {
+        selectedProduct.remove(productId);
       } else {
-        selectedUsers.add(userId);
+        selectedProduct.add(productId);
       }
     });
   }
@@ -42,7 +42,8 @@ class _ManageUsersState extends State<ManageUsers> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Users'),
+        title: const Text('Products'),
+        centerTitle: true,
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -54,28 +55,26 @@ class _ManageUsersState extends State<ManageUsers> {
                   child: SingleChildScrollView(
                     child: DataTable(
                       columns: const [
-                        DataColumn(label: Text('Select')),
-                        DataColumn(label: Text('Real Name')),
-                        DataColumn(label: Text('Username')),
-                        DataColumn(label: Text('DateCreated')),
-                        DataColumn(label: Text('IsActive')),
+                        DataColumn(label: Text("Select")),
+                        DataColumn(label: Text('ProductName')),
+                        DataColumn(label: Text('BarCode')),
+                        DataColumn(label: Text('Stock QTY')),
                       ],
-                      rows: users
+                      rows: products
                           .map(
-                            (user) {
-                              final userId = user['userId'];
+                            (product) {
+                              final productId = product['productid'];
                               return DataRow(
                               cells: [
                                 DataCell(
                                   Checkbox(
-                                    value: selectedUsers.contains(userId),
-                                    onChanged: (_) => toggleSelection(userId),
+                                    value: selectedProduct.contains(productId),
+                                    onChanged: (_) => toggleSelection(productId),
                                   ),
                                 ),
-                                DataCell(Text(user['realName'].toString())),
-                                DataCell(Text(user['userName'].toString())),
-                                DataCell(Text(user['dateCreated'].toString())),
-                                DataCell(Text(user['isActive'].toString())),
+                                DataCell(Text(product['productName'].toString())),
+                                DataCell(Text(product['barcode'].toString())),
+                                DataCell(Text(product["stockQty"].toString()))
                               ],
                             );
                           })
@@ -84,14 +83,14 @@ class _ManageUsersState extends State<ManageUsers> {
                   ),
                 ),
                 const SizedBox(height: 50,),
-                if (selectedUsers.isNotEmpty)
+                if (selectedProduct.isNotEmpty)
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   CustomOutlineBtn(
                     width: 90,
                     height: 50,
-                    text: "View",
+                    text: "View Stock Movement",
                     color:const Color.fromARGB(255, 14, 19, 29),
                     color2: const Color.fromARGB(255, 14, 19, 29),
                     onTap: (){

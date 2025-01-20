@@ -29,28 +29,61 @@ class _PosState extends State<Pos>{
   final TextEditingController searchCustomer = TextEditingController();
   final DatabaseHelper dbHelper  = DatabaseHelper();
 
+  List<Map<String, dynamic>> payMethods = [];
   List<Map<String, dynamic>> searchResults = [];
   List<Map<String, dynamic>> cartItems = [];
   List<Map<String, dynamic>> customerDetails = [];
   List<Map<String, dynamic>> selectedCustomer =[];
+  List<Map<String, dynamic>> selectedPayMethod =[];
+  List<Map<String, dynamic>> productOnSale =[];
   final formKey = GlobalKey<FormState>();
   final paidKey = GlobalKey<FormState>();
   bool isActve = true;
+
+
   //=================FUNCTIONS============================//
   //======================================================//
   void completeSale() async {
-    final double totalAmount = calculateTotalPrice();
+    try {
+      final double totalAmount = calculateTotalPrice();
     final double totalTax = calculateTotalTax();
     final double indiTax = calculateIndividualtax();
-
-    await dbHelper.saveSale(cartItems, totalAmount, totalTax , indiTax );
-
-    // Clear the cart
+    final int customerID;
+    
+    if(selectedCustomer.isEmpty){
+      customerID = 999999;
+      //= selectedCustomer[0]['customerID']
+      await dbHelper.saveSale(cartItems, totalAmount, totalTax , indiTax, customerID );
+      for (var item in cartItems){
+      int sellQty = item['sellqty'];
+      int productid = item['productid'];
+      final product = await dbHelper.getProductById(productid);
+      setState(() {
+        productOnSale = product;
+      });
+      int productOnSaleQty = productOnSale[0]['stockQty'];
+      int remainingStock = productOnSaleQty - sellQty;
+      dbHelper.updateProductStockQty(productid, remainingStock);
+    }
+    }
+    else{
+      customerID = selectedCustomer[0]['customerID'];
+      await dbHelper.saveSale(cartItems, totalAmount, totalTax , indiTax, customerID );
+      for (var item in cartItems){
+      int sellQty = item['sellqty'];
+      int productid = item['productid'];
+      final product = await dbHelper.getProductById(productid);
+      setState(() {
+        productOnSale = product;
+      });
+      int productOnSaleQty = productOnSale[0]['stockQty'];
+      int remainingStock = productOnSaleQty - sellQty;
+      dbHelper.updateProductStockQty(productid, remainingStock);
+    }
+    }
     clearCart();
     paidController.clear();
     selectedCustomer.clear();
-    // Notify user
-    //ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Sale completed!")));
     Get.snackbar(
       'Succes',
       'Sales Done',
@@ -59,6 +92,18 @@ class _PosState extends State<Pos>{
       backgroundColor: Colors.green,
       snackPosition: SnackPosition.TOP,
     );
+    } catch (e) {
+      Get.snackbar(
+        "Error",
+        "Sale Not Done: $e",
+        icon: Icon(Icons.error),
+        colorText: Colors.white,
+        backgroundColor: Colors.red,
+      );
+    }
+    // Clear the cart
+    // Notify user
+    //ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Sale completed!")))
   }
 
   void clearCart(){
@@ -81,6 +126,13 @@ class _PosState extends State<Pos>{
     });
   }
 
+  Future<void> fetchPayMethods() async {
+    List<Map<String, dynamic>> data = await dbHelper.getPaymentMethods();
+    setState(() {
+      payMethods = data;
+    });
+  }
+
   void addToCustomer(Map<String , dynamic> customer){
     selectedCustomer.add(customer);
     Get.snackbar(
@@ -93,9 +145,24 @@ class _PosState extends State<Pos>{
     Navigator.pop(context);
   }
 
+  void addToPayments(Map<String , dynamic> payMethod){
+
+    selectedPayMethod.add(payMethod);
+    Get.snackbar(
+      "Success",
+      "Customer Added",
+      colorText: Colors.white,
+      backgroundColor: Colors.green,
+      snackPosition: SnackPosition.TOP
+    );
+    Navigator.pop(context);
+  }
+
   void addToCart(Map<String, dynamic> product) {
     //double qty = 1;
-    setState(() {
+    int stockQty = product['stockQty'];
+    if (stockQty > 0){
+      setState(() {
 
       int index = cartItems.indexWhere((item) => item['productid']==product['productid']);
       if(index != -1){
@@ -105,19 +172,18 @@ class _PosState extends State<Pos>{
         updatedProduct['sellqty'] = 1;
         cartItems.add(updatedProduct);
       }
-      //if (cartItems.contains(product)){
-        //qty += 1;
-        //Map<String , dynamic> updatedProduct = {...product};
-        //updatedProduct['sellqty'] = qty;
-        //cartItems[cartItems.indexOf(product)] = updatedProduct;
-      //}else{
-        //Map<String , dynamic> updatedProduct = {...product};
-        //updatedProduct['sellqty'] = qty;
-        //cartItems.add(updatedProduct); //our line
-        
-     // }
-      
     });
+    }
+    else{
+      Get.snackbar(
+        "No Stock",
+        "Product is now out of stock",
+        colorText: Colors.black,
+        backgroundColor: Colors.amber,
+        icon:const Icon(Icons.error)
+      );
+    }
+    
   }
 
   double calculateTotalTax() {
@@ -167,7 +233,9 @@ class _PosState extends State<Pos>{
 
   double calculateTotalPrice() {
     return cartItems.fold(0.0, (total, item) {
-      return total + (item['sellingPrice']);
+      final double sellingPrice = item['sellingPrice'] ?? 0.0; // Default to 0.0 if null
+      final int sellQty = item['sellqty'] ?? 1.0; // Default to 1.0 if null
+      return total + (sellingPrice * sellQty);
     });
   }
 
@@ -417,9 +485,91 @@ class _PosState extends State<Pos>{
     );
   }
   
+ 
+
+  ///=====PAYMENT METHODS=====//////////
+  //////////////////////////////////////
+  addpaymethod(){
+    return showModalBottomSheet(
+      isScrollControlled: true,
+      isDismissible: false,
+      context: context,
+      builder: (context){
+        return Container(
+          height: 600,
+          child: Padding(
+            padding:  EdgeInsets.only(
+              left: 16.0,
+              right: 16.0,
+              top: 16.0,
+              bottom: MediaQuery.of(context).viewInsets.bottom
+            ),
+            child: Form(
+              key: formKey,
+              child: ListView(
+                scrollDirection: Axis.vertical,
+                  children: [
+                    Center(
+                      child: Container(
+                        height: 5,
+                        width: 100,
+                        decoration: BoxDecoration(
+                          color: kDark,
+                          borderRadius: BorderRadius.circular(20), 
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10,),
+                    Row(
+                      children: [
+                        IconButton(onPressed: (){
+                          Navigator.pop(context);
+                        }, icon:const Icon(Icons.arrow_circle_left_sharp, size: 40, color: kDark,)),
+                        const Center(child: const Text("Payment Methods" , style: TextStyle(color: Colors.black,fontSize: 18, fontWeight: FontWeight.w500),)),
+                      ],
+                    ),
+                    SizedBox(height: 15,),
+                    
+                    SizedBox(height: 10,),
+                    Container(
+                      height: 300,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10.0),
+                        border: Border.all(width: 1 , color: const Color.fromARGB(255, 14, 19, 29)),
+                        color:const Color.fromARGB(255, 14, 19, 29),
+                      ),
+                      child: ListView.builder(
+                        itemCount: payMethods.length,
+                        itemBuilder: (context , index){
+                          final payMethod = payMethods[index];
+                          return Container(
+                            margin: const EdgeInsets.symmetric(vertical: 5.0, horizontal: 10.0),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey, width: 1.0),
+                              borderRadius: BorderRadius.circular(10.0), 
+                              color: Colors.white, 
+                            ),
+                            child: ListTile(
+                              title: Text(payMethod['description']),
+                              subtitle: Text("Rate: ${payMethod['rate']}"),
+                              trailing: IconButton(onPressed: ()=>addToPayments(payMethod), icon:const Icon(Icons.add_circle_outline_sharp)),
+                            ),
+                          );
+                        }
+                      ),
+                    ),
+                  ],
+                
+              ),
+            ),
+          ),
+        );
+      }
+    );
+  }
+  
   //=================END OF FUNCTIONS============================//
   //======================================================//
-
   
 
   @override  Widget build(BuildContext context) {
@@ -462,254 +612,26 @@ class _PosState extends State<Pos>{
           ),
         ),
       ),
-      body: SafeArea(
-        bottom: false,
-        child: Padding(
-          padding:const  EdgeInsets.symmetric(horizontal: 5.0 , vertical: 10.0) ,
-          child: Column(
-            children: [
-              Container(
-                height: 100,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(10.0),
-                  border: Border.all(width: 1 , color: const Color.fromARGB(255, 14, 19, 29)),
-                  color:const Color.fromARGB(255, 14, 19, 29),
-                ),
-                child: ListView.builder(
-                  itemCount: searchResults.length,
-                  itemBuilder: (context , index){
-                    final product = searchResults[index];
-                    return Container(
-                      margin: const EdgeInsets.symmetric(vertical: 5.0, horizontal: 10.0),
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey, width: 1.0),
-                        borderRadius: BorderRadius.circular(10.0), 
-                        color: Colors.white, 
-                      ),
-                      child: ListTile(
-                        title: Text(product['productName']),
-                        subtitle: Text("Price: \$${product['sellingPrice']}"),
-                        trailing: IconButton(onPressed: ()=>addToCart(product), icon:const Icon(Icons.add_circle_outline_sharp)),
-                      ),
-                    );
-                  }
+      body: SingleChildScrollView(
+        scrollDirection: Axis.vertical,
+        child: SafeArea(
+          bottom: false,
+          child: Padding(
+            padding:const  EdgeInsets.symmetric(horizontal: 5.0 , vertical: 10.0) ,
+            child: Column(
+              children: [
+                Container(
+                  height: 100,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(10.0),
+                    border: Border.all(width: 1 , color: const Color.fromARGB(255, 14, 19, 29)),
+                    color:const Color.fromARGB(255, 14, 19, 29),
                   ),
-              ),
-              const SizedBox(height: 10,),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Container(
-                    height: 50 ,
-                    width: 50,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(15.0),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.grey.withOpacity(0.2),
-                          spreadRadius: 3,
-                          blurRadius: 7,
-
-                        )
-                      ] 
-                    ),
-                    child: TextButton(onPressed: (){
-                      
-                    },
-                    child: const Center(
-                      child: Icon(Icons.barcode_reader , size: 25, color: Color.fromARGB(255, 14, 19, 29),),
-                    )),
-                  ),
-                  //////////Button
-                  Container(
-                    height: 50 ,
-                    width: 50,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(15.0),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.grey.withOpacity(0.2),
-                          spreadRadius: 3,
-                          blurRadius: 7,
-
-                        )
-                      ] 
-                    ),
-                    child: TextButton(onPressed: (){
-                      addCustomerDetails();
-                    },
-                    child: const Center(
-                      child: Icon(Icons.person , size: 25, color: Color.fromARGB(255, 14, 19, 29),),
-                    )),
-                  ),
-                  //////////Button
-                  Container(
-                    height: 50 ,
-                    width: 50,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(15.0),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.grey.withOpacity(0.2),
-                          spreadRadius: 3,
-                          blurRadius: 7,
-
-                        )
-                      ] 
-                    ),
-                    child: TextButton(onPressed: (){
-                      
-                    },
-                    child: const Center(
-                      child: Icon(Icons.monetization_on , size: 25, color: Color.fromARGB(255, 14, 19, 29),),
-                    )),
-                  ),
-                  //////////Button
-                  Container(
-                    height: 50 ,
-                    width: 50,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(15.0),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.grey.withOpacity(0.2),
-                          spreadRadius: 3,
-                          blurRadius: 7,
-
-                        )
-                      ] 
-                    ),
-                    child: TextButton(onPressed: (){
-                      
-                    },
-                    child: const Center(
-                      child: Icon(Icons.discount , size: 25, color: Color.fromARGB(255, 14, 19, 29),),
-                    )),
-                  ),
-                  //////////Button
-                  Container(
-                    height: 50 ,
-                    width: 50,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(15.0),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.grey.withOpacity(0.2),
-                          spreadRadius: 3,
-                          blurRadius: 7,
-
-                        )
-                      ] 
-                    ),
-                    child: TextButton(onPressed: (){
-                      
-                    },
-                    child: const Center(
-                      child: Icon(Icons.save , size: 25, color: Color.fromARGB(255, 14, 19, 29),),
-                    )),
-                  ),
-                  //////////Button
-                  Container(
-                    height: 50 ,
-                    width: 50,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(15.0),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.grey.withOpacity(0.2),
-                          spreadRadius: 3,
-                          blurRadius: 7,
-
-                        )
-                      ] 
-                    ),
-                    child: TextButton(onPressed: (){
-                      
-                    },
-                    child: const Center(
-                      child: Icon(Icons.scale , size: 25, color: Color.fromARGB(255, 14, 19, 29),),
-                    )),
-                  ),
-                  
-                ],
-              ),
-              const SizedBox(height: 20,),
-              const Text(
-                "Cart",
-                style: TextStyle(fontSize: 16 , fontWeight: FontWeight.w500),
-              ),
-              Container(
-                height: 250,
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(10.0),
-                  border: Border.all(width: 1 , color: const Color.fromARGB(255, 14, 19, 29)),
-                  color: const Color.fromARGB(255, 14, 19, 29),
-                ),
-                child: ListView.builder(
-                  itemCount: cartItems.length,
-                  itemBuilder: (context , index){
-                    final product = cartItems[index];
-                    return Dismissible(
-                      key: Key(product['productid'].toString()),
-                      background: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.green,
-                          borderRadius: BorderRadius.circular(10.0)
-                        ),
-                        alignment: Alignment.centerLeft,
-                        padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                        child: const Icon(Icons.add, color: Colors.white),
-                      ),
-                      secondaryBackground: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.red,
-                          borderRadius: BorderRadius.circular(10.0)
-                        ),
-                        alignment: Alignment.centerRight,
-                        padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                        child: const Icon(Icons.delete, color: Colors.white),
-                      ),
-                      confirmDismiss: (direction) async {
-                        if (direction == DismissDirection.endToStart) {
-                          // Swipe to the right to delete
-                          bool confirm = await showDialog(
-                            context: context,
-                            builder: (context) => AlertDialog(
-                              title: const Text('Remove Item'),
-                              content: const Text('Are you sure you want to remove this item?'),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.of(context).pop(false),
-                                  child: const Text('Cancel'),
-                                ),
-                                TextButton(
-                                  onPressed: () => Navigator.of(context).pop(true),
-                                  child: const Text('Remove'),
-                                ),
-                              ],
-                            ),
-                          );
-                          return confirm;
-                        } else {
-                            // Swipe to the left to add or subtract
-                            //_showQuantityAdjustmentDialog(product);
-                          return false; // Prevent dismissal
-                        }
-                      },
-                      onDismissed: (direction) {
-                        if (direction == DismissDirection.endToStart) {
-                          setState(() {
-                            cartItems.removeAt(index);
-                          });
-                        }
-                      },
-                      child: Container(
+                  child: ListView.builder(
+                    itemCount: searchResults.length,
+                    itemBuilder: (context , index){
+                      final product = searchResults[index];
+                      return Container(
                         margin: const EdgeInsets.symmetric(vertical: 5.0, horizontal: 10.0),
                         decoration: BoxDecoration(
                           border: Border.all(color: Colors.grey, width: 1.0),
@@ -717,61 +639,298 @@ class _PosState extends State<Pos>{
                           color: Colors.white, 
                         ),
                         child: ListTile(
-                            title: Text(product['productName']),
-                            subtitle: Text("Price: \$${product['sellingPrice']} - Tax: ${product['tax'].toUpperCase()}"),
-                            trailing: IconButton(onPressed: (){}, icon:const Icon(Icons.minimize_outlined)),
-                            leading: Container(
-                              width: 40,
-                              height: 40,
-                              decoration: BoxDecoration(
-                                color: const Color.fromARGB(255, 14, 19, 29),
-                                borderRadius: BorderRadius.circular(50.0)
-                              ),
-                              child:  Center(
-                                child:  Text(
-                                  product['sellqty'].toString(),
-                                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
-                                ),
-                              ),
-
-                            ),
-                          ),
-                      ),
-                    );
-                  }
-                  ),
-              ),
-              const SizedBox(height: 10,),
-              Container(
-                height: 80,
-                decoration: BoxDecoration(
-                  color: const Color.fromARGB(255, 14, 19, 29),
-                  borderRadius: BorderRadius.circular(10.0)
+                          title: Text(product['productName']),
+                          subtitle: Text("Price: \$${product['sellingPrice']}"),
+                          trailing: IconButton(onPressed: ()=>addToCart(product), icon:const Icon(Icons.add_circle_outline_sharp)),
+                        ),
+                      );
+                    }
+                    ),
                 ),
-                child: Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: [
-                        Text("USD: \$${calculateTotalPrice().toStringAsFixed(2)}" , style:const TextStyle(color: Colors.white , fontWeight: FontWeight.bold , fontSize: 20),),
-                        const SizedBox(width: 20),
-                        //Text("\$${calculateTotalPrice().toStringAsFixed(2)}" , style: TextStyle(color: Colors.white , fontWeight: FontWeight.bold , fontSize: 20),),
-                        Text("QTY: ${cartItems.length}" , style:const TextStyle(color: Colors.white , fontWeight: FontWeight.bold , fontSize: 20),),
-                        const SizedBox(width: 20),
-                        //Text("${cartItems.length}" , style: TextStyle(color: Colors.white , fontWeight: FontWeight.bold , fontSize: 20),),
-                        Text("Tax: \$${calculateTotalTax().toStringAsFixed(2)}" , style:const TextStyle(color: Colors.white , fontWeight: FontWeight.bold , fontSize: 20),),
-                        //Text("\$${calculateTotalTax().toStringAsFixed(2)}" , style: TextStyle(color: Colors.white , fontWeight: FontWeight.bold , fontSize: 20),),
-                      ],
+                const SizedBox(height: 10,),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Container(
+                      height: 50 ,
+                      width: 50,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(15.0),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withOpacity(0.2),
+                            spreadRadius: 3,
+                            blurRadius: 7,
+        
+                          )
+                        ] 
+                      ),
+                      child: TextButton(onPressed: (){
+                        
+                      },
+                      child: const Center(
+                        child: Icon(Icons.barcode_reader , size: 25, color: Color.fromARGB(255, 14, 19, 29),),
+                      )),
+                    ),
+                    //////////Button
+                    Container(
+                      height: 50 ,
+                      width: 50,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(15.0),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withOpacity(0.2),
+                            spreadRadius: 3,
+                            blurRadius: 7,
+        
+                          )
+                        ] 
+                      ),
+                      child: TextButton(onPressed: (){
+                        addCustomerDetails();
+                      },
+                      child: const Center(
+                        child: Icon(Icons.person , size: 25, color: Color.fromARGB(255, 14, 19, 29),),
+                      )),
+                    ),
+                    //////////Button
+                    Container(
+                      height: 50 ,
+                      width: 50,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(15.0),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withOpacity(0.2),
+                            spreadRadius: 3,
+                            blurRadius: 7,
+        
+                          )
+                        ] 
+                      ),
+                      child: TextButton(onPressed: (){
+                        try {
+                          fetchPayMethods();
+                          addpaymethod();
+                        } catch (e) {
+                          Get.snackbar("Error","$e", icon: Icon(Icons.error ,) ,colorText: Colors.white, backgroundColor: Colors.red);
+                        }
+                        
+                      },
+                      child: const Center(
+                        child: Icon(Icons.monetization_on , size: 25, color: Color.fromARGB(255, 14, 19, 29),),
+                      )),
+                    ),
+                    //////////Button
+                    Container(
+                      height: 50 ,
+                      width: 50,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(15.0),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withOpacity(0.2),
+                            spreadRadius: 3,
+                            blurRadius: 7,
+        
+                          )
+                        ] 
+                      ),
+                      child: TextButton(onPressed: (){
+                        
+                      },
+                      child: const Center(
+                        child: Icon(Icons.discount , size: 25, color: Color.fromARGB(255, 14, 19, 29),),
+                      )),
+                    ),
+                    //////////Button
+                    Container(
+                      height: 50 ,
+                      width: 50,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(15.0),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withOpacity(0.2),
+                            spreadRadius: 3,
+                            blurRadius: 7,
+        
+                          )
+                        ] 
+                      ),
+                      child: TextButton(onPressed: (){
+                        
+                      },
+                      child: const Center(
+                        child: Icon(Icons.save , size: 25, color: Color.fromARGB(255, 14, 19, 29),),
+                      )),
+                    ),
+                    //////////Button
+                    Container(
+                      height: 50 ,
+                      width: 50,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(15.0),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withOpacity(0.2),
+                            spreadRadius: 3,
+                            blurRadius: 7,
+        
+                          )
+                        ] 
+                      ),
+                      child: TextButton(onPressed: (){
+                        
+                      },
+                      child: const Center(
+                        child: Icon(Icons.scale , size: 25, color: Color.fromARGB(255, 14, 19, 29),),
+                      )),
+                    ),
+                    
+                  ],
+                ),
+                const SizedBox(height: 20,),
+                const Text(
+                  "Cart",
+                  style: TextStyle(fontSize: 16 , fontWeight: FontWeight.w500),
+                ),
+                Container(
+                  height: 250,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(10.0),
+                    border: Border.all(width: 1 , color: const Color.fromARGB(255, 14, 19, 29)),
+                    color: const Color.fromARGB(255, 14, 19, 29),
+                  ),
+                  child: ListView.builder(
+                    itemCount: cartItems.length,
+                    itemBuilder: (context , index){
+                      final product = cartItems[index];
+                      return Dismissible(
+                        key: Key(product['productid'].toString()),
+                        background: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.green,
+                            borderRadius: BorderRadius.circular(10.0)
+                          ),
+                          alignment: Alignment.centerLeft,
+                          padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                          child: const Icon(Icons.add, color: Colors.white),
+                        ),
+                        secondaryBackground: Container(
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            borderRadius: BorderRadius.circular(10.0)
+                          ),
+                          alignment: Alignment.centerRight,
+                          padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                          child: const Icon(Icons.delete, color: Colors.white),
+                        ),
+                        confirmDismiss: (direction) async {
+                          if (direction == DismissDirection.endToStart) {
+                            // Swipe to the right to delete
+                            bool confirm = await showDialog(
+                              context: context,
+                              builder: (context) => AlertDialog(
+                                title: const Text('Remove Item'),
+                                content: const Text('Are you sure you want to remove this item?'),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.of(context).pop(false),
+                                    child: const Text('Cancel'),
+                                  ),
+                                  TextButton(
+                                    onPressed: () => Navigator.of(context).pop(true),
+                                    child: const Text('Remove'),
+                                  ),
+                                ],
+                              ),
+                            );
+                            return confirm;
+                          } else {
+                              // Swipe to the left to add or subtract
+                              //_showQuantityAdjustmentDialog(product);
+                            return false; // Prevent dismissal
+                          }
+                        },
+                        onDismissed: (direction) {
+                          if (direction == DismissDirection.endToStart) {
+                            setState(() {
+                              cartItems.removeAt(index);
+                            });
+                          }
+                        },
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(vertical: 5.0, horizontal: 10.0),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey, width: 1.0),
+                            borderRadius: BorderRadius.circular(10.0), 
+                            color: Colors.white, 
+                          ),
+                          child: ListTile(
+                              title: Text(product['productName']),
+                              subtitle: Text("Price: \$${product['sellingPrice']} - Tax: ${product['tax'].toUpperCase()}"),
+                              trailing: IconButton(onPressed: (){}, icon:const Icon(Icons.minimize_outlined)),
+                              leading: Container(
+                                width: 40,
+                                height: 40,
+                                decoration: BoxDecoration(
+                                  color: const Color.fromARGB(255, 14, 19, 29),
+                                  borderRadius: BorderRadius.circular(50.0)
+                                ),
+                                child:  Center(
+                                  child:  Text(
+                                    product['sellqty'].toString(),
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
+                                  ),
+                                ),
+        
+                              ),
+                            ),
+                        ),
+                      );
+                    }
+                    ),
+                ),
+                const SizedBox(height: 10,),
+                Container(
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: const Color.fromARGB(255, 14, 19, 29),
+                    borderRadius: BorderRadius.circular(10.0)
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          Text("USD: \$${calculateTotalPrice().toStringAsFixed(2)}" , style:const TextStyle(color: Colors.white , fontWeight: FontWeight.bold , fontSize: 20),),
+                          const SizedBox(width: 20),
+                          //Text("\$${calculateTotalPrice().toStringAsFixed(2)}" , style: TextStyle(color: Colors.white , fontWeight: FontWeight.bold , fontSize: 20),),
+                          Text("QTY: ${cartItems.length}" , style:const TextStyle(color: Colors.white , fontWeight: FontWeight.bold , fontSize: 20),),
+                          const SizedBox(width: 20),
+                          //Text("${cartItems.length}" , style: TextStyle(color: Colors.white , fontWeight: FontWeight.bold , fontSize: 20),),
+                          Text("Tax: \$${calculateTotalTax().toStringAsFixed(2)}" , style:const TextStyle(color: Colors.white , fontWeight: FontWeight.bold , fontSize: 20),),
+                          //Text("\$${calculateTotalTax().toStringAsFixed(2)}" , style: TextStyle(color: Colors.white , fontWeight: FontWeight.bold , fontSize: 20),),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-              )
-            ],
+                )
+              ],
+            ),
+            )
           ),
-          )
-        ),
+      ),
         bottomNavigationBar: BottomAppBar(
         color: const Color.fromARGB(255, 14, 19, 29),
         child: Row(
@@ -946,61 +1105,57 @@ class _PosState extends State<Pos>{
                                       child: ElevatedButton(
                                         onPressed: () {
                                           try {
-  // Check if the text input is empty
-  if (paidController.text.isEmpty) {
-    Get.snackbar(
-      "Alert",
-      "Sales cannot complete without amount paid",
-      icon: Icon(Icons.sd_card_alert),
-      colorText: Colors.black,
-      backgroundColor: Colors.amber,
-    );
-    return; // Exit the function
-  }
+                                            // Check if the text input is empty
+                                            if (paidController.text.isEmpty) {
+                                              Get.snackbar(
+                                                "Alert",
+                                                "Sales cannot complete without amount paid",
+                                                icon: Icon(Icons.sd_card_alert),
+                                                colorText: Colors.black,
+                                                backgroundColor: Colors.amber,
+                                              );
+                                              return; // Exit the function
+                                            }
 
-  // Try parsing the input to a double
-  double paid = double.tryParse(paidController.text) ?? 0.0;
-  double price = double.parse(calculateTotalPrice().toString());
+                                            double paid = double.tryParse(paidController.text) ?? 0.0;
+                                            double price = double.parse(calculateTotalPrice().toString());
 
-  // Validate the parsed values
-  if (paid <= 0) {
-    Get.snackbar(
-      "Error",
-      "Invalid amount paid. Please enter a valid number.",
-      icon: Icon(Icons.error),
-      colorText: Colors.white,
-      backgroundColor: Colors.red,
-    );
-    return; // Exit the function
-  }
+                                            // Validate the parsed values
+                                            if (paid <= 0) {
+                                              Get.snackbar(
+                                                "Error",
+                                                "Invalid amount paid. Please enter a valid number.",
+                                                icon: Icon(Icons.error),
+                                                colorText: Colors.white,
+                                                backgroundColor: Colors.red,
+                                              );
+                                              return; // Exit the function
+                                            }
 
-  // Check if the paid amount is less than the total price
-  if (paid < price) {
-    Get.snackbar(
-      "Error",
-      "Amount Paid Is Not Sufficient",
-      icon: Icon(Icons.error),
-      colorText: Colors.white,
-      backgroundColor: Colors.red,
-    );
-    return; // Exit the function
-  }
+                                            if (paid < price) {
+                                              Get.snackbar(
+                                                "Error",
+                                                "Amount Paid Is Not Sufficient",
+                                                icon: Icon(Icons.error),
+                                                colorText: Colors.white,
+                                                backgroundColor: Colors.red,
+                                              );
+                                              return; // Exit the function
+                                            }
 
-  // Complete the sale if all validations pass
-  completeSale();
-  Navigator.pop(context);
-} catch (e) {
-  // Handle any unexpected errors
-  Get.snackbar(
-    "Error",
-    "An error occurred: $e",
-    icon: Icon(Icons.error),
-    colorText: Colors.white,
-    backgroundColor: Colors.red,
-    snackPosition: SnackPosition.TOP,
-  );
-}
-
+                                            // Complete the sale if all validations pass
+                                            completeSale();
+                                            Navigator.pop(context);
+                                            } catch (e) {
+                                              Get.snackbar(
+                                                "Error",
+                                                "An error occurred: $e",
+                                                icon: Icon(Icons.error),
+                                                colorText: Colors.white,
+                                                backgroundColor: Colors.red,
+                                                snackPosition: SnackPosition.TOP,
+                                              );
+                                            }
                                         },
                                         style: ElevatedButton.styleFrom(
                                           backgroundColor: Colors.green,
@@ -1093,8 +1248,6 @@ class _PosState extends State<Pos>{
           ],
         ),
       ),
-    );
-
-    
+    ); 
   }
 }

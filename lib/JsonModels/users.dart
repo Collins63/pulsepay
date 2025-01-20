@@ -2,6 +2,8 @@
 //
 //     final users = usersFromMap(jsonString);
 
+import 'dart:ffi';
+
 import 'package:flutter/material.dart';
 //import 'package:meta/meta.dart';
 import 'dart:convert';
@@ -68,35 +70,43 @@ class Products {
   final int? productid;
   final String productName;
   final String barcode;
+  final int hsCode;
   final double costPrice;
   final double sellingPrice;
   final String tax;
+  final int stockQty;
 
   Products({
     this.productid,
     required this.productName,
     required this.barcode,
+    required this.hsCode,
     required this.costPrice,
     required this.sellingPrice,
-    required this.tax
+    required this.tax,
+    required this.stockQty
   });
 
   factory Products.fromMap(Map<String, dynamic> json) => Products(
     productid: json["productid"],
     productName: json["productName"],
     barcode: json["barcode"],
+    hsCode: json["hsCode"],
     costPrice: json["costPrice"],
     sellingPrice: json["sellingPrice"],
-    tax: json['tax']
+    tax: json["tax"],
+    stockQty: json["stockQty"]
   );
 
   Map<String, dynamic> toMap() => {
     "productid": productid,
     "productName": productName,
     "barcode": barcode,
+    "hsCode": hsCode,
     "costPrice": costPrice,
     "sellingPrice": sellingPrice,
-    "tax": tax
+    "tax": tax,
+    "stockQty": stockQty
   };
 }
 
@@ -150,6 +160,7 @@ String salesToMap(Sales data) => json.encode(data.toMap());
 class Sales {
   final int? saleId;
   final int invoiceId;
+  final int? customerID;
   final int productId;
   final int quantity;
   final double sellingPrice;
@@ -158,6 +169,7 @@ class Sales {
   Sales({
     this.saleId,
     required this.invoiceId,
+    this.customerID,
     required this.productId,
     required this.quantity,
     required this.sellingPrice,
@@ -167,6 +179,7 @@ class Sales {
   factory Sales.fromMap(Map<String, dynamic> json) => Sales(
     saleId: json["salesId"],
     invoiceId: json["invoiceId"],
+    customerID: json["customerID"],
     productId: json["productId"],
     quantity: json["quantity"],
     sellingPrice: json["sellingPrice"],
@@ -176,6 +189,7 @@ class Sales {
   Map<String, dynamic> toMap() => {
     "salesId": saleId,
     "invoiceId": invoiceId,
+    "customerID": customerID,
     "productId": productId,
     "quantity": quantity,
     "sellingPrice":sellingPrice,
@@ -223,5 +237,94 @@ class Customer {
     "vatNumber": vatNumber,
     "address": address,
     "email": email,
+  };
+}
+
+///CustomerDetailsModel//////
+///////////////////////////////////////////////////////
+StockPurchase stockPurchaseFromMap(String str) => StockPurchase.fromMap(json.decode(str));
+
+String stockPurchaseToMap(Customer data) => json.encode(data.toMap());
+
+class StockPurchase {
+  final int? purchaseId;
+  final String date;
+  final int productid;
+  final int quantity;
+  final String payMethod;
+  final String supplier;
+
+  StockPurchase({
+    this.purchaseId,
+    required this.date,
+    required this.productid,
+    required this.quantity,
+    required this.payMethod,
+    required this.supplier
+  });
+
+  factory StockPurchase.fromMap(Map<String, dynamic> json) => StockPurchase(
+    purchaseId: json["purchaseId"],
+    date: json["date"],
+    productid: json["productid"],
+    quantity: json["quantity"],
+    payMethod: json["payMethod"],
+    supplier: json["supplier"]
+  );
+
+  Map<String, dynamic> toMap() => {
+    "purchaseId": purchaseId,
+    "date": date,
+    "productid": productid,
+    "quantity": quantity,
+    "payMethod": payMethod,
+    "supplier": supplier,
+  };
+}
+
+
+///CustomerDetailsModel//////
+///////////////////////////////////////////////////////
+PaymentMethod paymentMethodFromMap(String str) => PaymentMethod.fromMap(json.decode(str));
+
+String paymentMethodToMap(Customer data) => json.encode(data.toMap());
+
+class PaymentMethod{
+  final int? payMethodId;
+  final String description;
+  final double rate;
+  final int fiscalGroup;
+  final String currency;
+  final String? vatNumber;
+  final String? tinNumber;
+
+  PaymentMethod({
+    this.payMethodId,
+    required this.description,
+    required this.rate,
+    required this.fiscalGroup,
+    required this.currency,
+    this.vatNumber,
+    this.tinNumber
+  });
+
+  factory PaymentMethod.fromMap(Map<String, dynamic> json) => PaymentMethod(
+    payMethodId: json["payMethodId"],
+    description: json["description"],
+    rate: json["rate"],
+    fiscalGroup: json["fiscalGroup"],
+    currency: json["currency"],
+    vatNumber: json["vatNumber"],
+    tinNumber: json["tinNumber"]
+  );
+
+  Map<String, dynamic> toMap() => {
+    "payMethodId": payMethodId,
+    "description": description,
+    "rate": rate,
+    "fiscalGroup": fiscalGroup,
+    "currency": currency,
+    "vatNumber": vatNumber,
+    "tinNumber": tinNumber
   };
 }

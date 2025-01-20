@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pulsepay/authentication/login.dart';
 import 'package:pulsepay/forms/add_product.dart';
+import 'package:pulsepay/forms/payment_methods.dart';
 import 'package:pulsepay/forms/sales.dart';
 import 'package:pulsepay/forms/sales_invoices.dart';
 import 'package:pulsepay/forms/users.dart';
@@ -130,14 +131,14 @@ class _SettingsState extends State<Settings>{
                       borderRadius: BorderRadius.circular(15.0)
                     ),
                     child: TextButton(onPressed: (){
-                      Get.to(()=> const ViewInvoices());
+                      Get.to(()=> const PaymentMethods());
                     },
                     child: const Padding(
                       padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
                       child: Column(
                         children: [
-                          Icon(Icons.arrow_downward_rounded , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
-                          Text('Discounts' ,textAlign: TextAlign.center,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
+                          Icon(Icons.monetization_on_outlined , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
+                          Text('Payment Methods' ,textAlign: TextAlign.center,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
                         ],
                       ),
                     )),
