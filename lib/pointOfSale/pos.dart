@@ -2,7 +2,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
-import 'package:pulsepay/JsonModels/users.dart';
+import 'package:pulsepay/JsonModels/json_models.dart';
 //import 'package:flutter_screenutil/flutter_screenutil.dart';
 //import 'package:get/get_connect/sockets/src/socket_notifier.dart';
 import 'package:pulsepay/SQLite/database_helper.dart';
@@ -13,12 +13,21 @@ import 'package:get/get.dart';
 
 class Pos  extends StatefulWidget{
   const Pos({super.key});
-
   @override
   State<Pos> createState() => _PosState();
 }
 
 class _PosState extends State<Pos>{
+  bool isBarcodeEnabled = false;
+  @override
+  void initState() {
+    super.initState();
+    fetchPayMethods();
+    fetchDefaultPayMethod();
+    fetchDefaultCurrency();
+    fetchDefaultRate();
+  }
+
   final TextEditingController controller = TextEditingController();
   final TextEditingController customerNameController = TextEditingController();
   final TextEditingController tinController = TextEditingController();
@@ -29,6 +38,8 @@ class _PosState extends State<Pos>{
   final TextEditingController searchCustomer = TextEditingController();
   final DatabaseHelper dbHelper  = DatabaseHelper();
 
+
+  List<Map<String , dynamic>> defaultPayMethod = [];
   List<Map<String, dynamic>> payMethods = [];
   List<Map<String, dynamic>> searchResults = [];
   List<Map<String, dynamic>> cartItems = [];
@@ -39,10 +50,75 @@ class _PosState extends State<Pos>{
   final formKey = GlobalKey<FormState>();
   final paidKey = GlobalKey<FormState>();
   bool isActve = true;
+  String? defaultCurrency;
+  double? defaultRate;
 
 
   //=================FUNCTIONS============================//
   //======================================================//
+  // Toggle barcode scanner
+  // void toggleBarcodeScanner() {
+  //   setState(() {
+  //     isBarcodeEnabled = !isBarcodeEnabled;
+  //   });
+
+  //   if (isBarcodeEnabled) {
+  //     startBarcodeScan();
+  //   }
+  // }
+
+  // Start barcode scanning
+  // Future<void> startBarcodeScan() async {
+  //   while (isBarcodeEnabled) {
+  //     try {
+  //       String barcode = await FlutterBarcodeScanner.scanBarcode(
+  //         "#ff6666", // Line color for the scanner
+  //         "Cancel", // Text for the cancel button
+  //         true, // Show the flash icon
+  //         ScanMode.BARCODE, // Scan mode (BARCODE or QR)
+  //       );
+
+  //       if (barcode != "-1") {
+  //         await addToCartBarcode(barcode);
+  //       } else {
+  //         // If canceled, stop scanning
+  //         break;
+  //       }
+  //     } catch (e) {
+  //       print("Error while scanning: $e");
+  //       ScaffoldMessenger.of(context).showSnackBar(
+  //         SnackBar(content: Text("Error while scanning barcode.")),
+  //       );
+  //       break;
+  //     }
+  //   }
+  // }
+
+// Add product to cart
+  // Future<void> addToCartBarcode(String barcode) async {
+  //   final product = await dbHelper.getProductByBarcode(barcode);
+
+  //   if (product != null) {
+  //     setState(() {
+  //       int existingIndex = cartItems.indexWhere((item) => item['barcode'] == barcode);
+
+  //       if (existingIndex != -1) {
+  //         cartItems[existingIndex]['quantity']++;
+  //       } else {
+  //         cartItems.add({
+  //           ...product,
+  //           'quantity': 1,
+  //         });
+  //       }
+  //     });
+  //   } else {
+  //     ScaffoldMessenger.of(context).showSnackBar(
+  //       SnackBar(content: Text('Product not found!')),
+  //     );
+  //   }
+  // }
+
+
   void completeSale() async {
     try {
       final double totalAmount = calculateTotalPrice();
@@ -81,9 +157,19 @@ class _PosState extends State<Pos>{
       dbHelper.updateProductStockQty(productid, remainingStock);
     }
     }
+    Get.snackbar(
+      'Fiscalizing',
+      'Processing',
+      icon: const Icon(Icons.check, color: Colors.white,),
+      colorText: Colors.white,
+      backgroundColor: Colors.green,
+      snackPosition: SnackPosition.TOP,
+      showProgressIndicator: true,
+    );
     clearCart();
     paidController.clear();
     selectedCustomer.clear();
+    selectedPayMethod.clear();
     Get.snackbar(
       'Succes',
       'Sales Done',
@@ -133,6 +219,53 @@ class _PosState extends State<Pos>{
     });
   }
 
+  Future<void> fetchDefaultCurrency() async {
+    try {
+      String? currency = await dbHelper.getDefaultCurrency();
+      setState(() {
+        defaultCurrency = currency ?? 'N/A'; // Display 'N/A' if no default currency is found
+      });
+    } catch (e) {
+      print('Error fetching default currency: $e');
+      setState(() {
+        defaultCurrency = 'Error';
+      });
+    }
+
+  }
+
+  Future<void> fetchDefaultRate() async {
+    try {
+      double? rate = await dbHelper.getDefaultRate();
+      setState(() {
+        defaultRate = rate ?? 1.0; // Default to 0.0 if no rate is found
+      });
+    } catch (e) {
+      print('Error fetching default rate: $e');
+      setState(() {
+        defaultRate = null; // Handle error by setting rate to null
+      });
+    }
+  }
+
+  Future<void> fetchDefaultPayMethod() async {
+  int defaultTag = 1;
+  try {
+    List<Map<String, dynamic>> data = await dbHelper.getDefaultPayMethod(defaultTag);
+    if (data.isNotEmpty) {
+      defaultPayMethod = data;
+      print('Default payment method fetched: $defaultPayMethod');
+    } else {
+      print('No default payment method found for defaultTag: $defaultTag');
+      defaultPayMethod = [];
+    }
+  } catch (e) {
+    print('Error fetching default payment method: $e');
+    defaultPayMethod = []; // Optional: Handle this scenario based on your application logic
+  }
+}
+
+
   void addToCustomer(Map<String , dynamic> customer){
     selectedCustomer.add(customer);
     Get.snackbar(
@@ -146,8 +279,8 @@ class _PosState extends State<Pos>{
   }
 
   void addToPayments(Map<String , dynamic> payMethod){
-
     selectedPayMethod.add(payMethod);
+
     Get.snackbar(
       "Success",
       "Customer Added",
@@ -156,6 +289,17 @@ class _PosState extends State<Pos>{
       snackPosition: SnackPosition.TOP
     );
     Navigator.pop(context);
+  }
+
+  String returnCurrency() {
+    if (selectedPayMethod.isNotEmpty) {
+      String selectedCurrency = selectedPayMethod[0]['currency'];
+      print(selectedCurrency);
+      return selectedCurrency;
+      
+    } else {
+      return defaultCurrency ?? 'N/A';
+    }
   }
 
   void addToCart(Map<String, dynamic> product) {
@@ -188,7 +332,7 @@ class _PosState extends State<Pos>{
 
   double calculateTotalTax() {
     double totalTax = 0.0;
-
+    
     for (var item in cartItems) {
       final taxType = item['tax']; // e.g., 'vat', 'zero', 'ex'
       final sellingPrice = item['sellingPrice'];
@@ -202,8 +346,14 @@ class _PosState extends State<Pos>{
         taxRate = 0.0; // Zero-rated or exempted
       }
 
+      if(selectedPayMethod.isEmpty){
+        totalTax += sellingPrice * quantity*taxRate;
+      }
+      else{
+        double rate  = selectedPayMethod[0]['rate'];
+        totalTax += sellingPrice * quantity * taxRate *rate;
+      }
       // Calculate the tax for this item
-      totalTax += sellingPrice * quantity * taxRate;
     }
     return totalTax;
   }
@@ -232,10 +382,17 @@ class _PosState extends State<Pos>{
  
 
   double calculateTotalPrice() {
+
     return cartItems.fold(0.0, (total, item) {
       final double sellingPrice = item['sellingPrice'] ?? 0.0; // Default to 0.0 if null
       final int sellQty = item['sellqty'] ?? 1.0; // Default to 1.0 if null
-      return total + (sellingPrice * sellQty);
+      if(selectedPayMethod.isEmpty){
+        return total + (sellingPrice * sellQty);
+      }else{
+        double rate  = selectedPayMethod[0]['rate'];
+        return total + (sellingPrice * sellQty * rate);
+      }
+      
     });
   }
 
@@ -552,7 +709,10 @@ class _PosState extends State<Pos>{
                             child: ListTile(
                               title: Text(payMethod['description']),
                               subtitle: Text("Rate: ${payMethod['rate']}"),
-                              trailing: IconButton(onPressed: ()=>addToPayments(payMethod), icon:const Icon(Icons.add_circle_outline_sharp)),
+                              trailing: IconButton(onPressed: (){
+                                addToPayments(payMethod);
+                                returnCurrency();
+                              }, icon:const Icon(Icons.add_circle_outline_sharp)),
                             ),
                           );
                         }
@@ -568,7 +728,7 @@ class _PosState extends State<Pos>{
     );
   }
   
-  //=================END OF FUNCTIONS============================//
+  //=================END OF FUNCTIONS============================//a
   //======================================================//
   
 
@@ -655,7 +815,7 @@ class _PosState extends State<Pos>{
                       height: 50 ,
                       width: 50,
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: isBarcodeEnabled?  Colors.green : Colors.white,
                         borderRadius: BorderRadius.circular(15.0),
                         boxShadow: [
                           BoxShadow(
@@ -667,10 +827,19 @@ class _PosState extends State<Pos>{
                         ] 
                       ),
                       child: TextButton(onPressed: (){
-                        
+                        //toggleBarcodeScanner;
+                        if(isBarcodeEnabled){
+                          setState(() {
+                            isBarcodeEnabled = false;
+                          });
+                        }else{
+                          setState(() {
+                            isBarcodeEnabled = true;
+                          });
+                        }
                       },
-                      child: const Center(
-                        child: Icon(Icons.barcode_reader , size: 25, color: Color.fromARGB(255, 14, 19, 29),),
+                      child: Center(
+                        child: isBarcodeEnabled? const Icon(Icons.barcode_reader , size: 25, color: Colors.white) : const Icon(Icons.barcode_reader , size: 25, color: Color.fromARGB(255, 14, 19, 29),) ,
                       )),
                     ),
                     //////////Button
@@ -913,7 +1082,13 @@ class _PosState extends State<Pos>{
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
-                          Text("USD: \$${calculateTotalPrice().toStringAsFixed(2)}" , style:const TextStyle(color: Colors.white , fontWeight: FontWeight.bold , fontSize: 20),),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.start,
+                            children: [
+                              Text(defaultCurrency != null && selectedPayMethod.isEmpty ? '$defaultCurrency' : returnCurrency() , style:const TextStyle(color: Colors.white , fontWeight: FontWeight.bold , fontSize: 20),),
+                              Text(":\$${calculateTotalPrice().toStringAsFixed(2)}" , style:const TextStyle(color: Colors.white , fontWeight: FontWeight.bold , fontSize: 20),),
+                            ],
+                          ),
                           const SizedBox(width: 20),
                           //Text("\$${calculateTotalPrice().toStringAsFixed(2)}" , style: TextStyle(color: Colors.white , fontWeight: FontWeight.bold , fontSize: 20),),
                           Text("QTY: ${cartItems.length}" , style:const TextStyle(color: Colors.white , fontWeight: FontWeight.bold , fontSize: 20),),
@@ -1027,7 +1202,13 @@ class _PosState extends State<Pos>{
                                     const Text("Customer: Cash" , style: TextStyle(color: Colors.black , fontWeight: FontWeight.w500 , fontSize: 18),):
                                     Text("Customer: ${ selectedCustomer[0]['tradeName']}" , style:const TextStyle(color: Colors.black , fontWeight: FontWeight.w500 , fontSize: 18),),
                                     const SizedBox(width: 20),
-                                    Text("USD: \$${calculateTotalPrice().toStringAsFixed(2)}" , style:const TextStyle(color: Colors.black , fontWeight: FontWeight.w500 , fontSize: 18),),
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.start,
+                                        children: [
+                                          Text(defaultCurrency != null && selectedPayMethod.isEmpty ? '$defaultCurrency' : returnCurrency() , style:const TextStyle(color: Colors.black , fontWeight: FontWeight.bold , fontSize: 20),),
+                                          Text(":\$${calculateTotalPrice().toStringAsFixed(2)}" , style:const TextStyle(color: Colors.black , fontWeight: FontWeight.bold , fontSize: 20),),
+                                        ],
+                                    ),
                                     const SizedBox(width: 20),
                                     //Text("\$${calculateTotalPrice().toStringAsFixed(2)}" , style: TextStyle(color: Colors.white , fontWeight: FontWeight.bold , fontSize: 20),),
                                     Text("Items: ${cartItems.length}" , style:const TextStyle(color: Colors.black , fontWeight: FontWeight.w500 , fontSize: 18),),
@@ -1142,7 +1323,6 @@ class _PosState extends State<Pos>{
                                               );
                                               return; // Exit the function
                                             }
-
                                             // Complete the sale if all validations pass
                                             completeSale();
                                             Navigator.pop(context);

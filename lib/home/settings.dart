@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:pulsepay/authentication/login.dart';
+import 'package:pulsepay/fiscalization/fiscal_tables.dart';
 import 'package:pulsepay/forms/add_product.dart';
+import 'package:pulsepay/forms/companyDetails.dart';
 import 'package:pulsepay/forms/payment_methods.dart';
 import 'package:pulsepay/forms/sales.dart';
 import 'package:pulsepay/forms/sales_invoices.dart';
@@ -85,13 +87,15 @@ class _SettingsState extends State<Settings>{
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(15.0)
                     ),
-                    child: TextButton(onPressed: (){},
+                    child: TextButton(onPressed: (){
+                      Get.to(()=> const FiscalTables());
+                    },
                     child: const Padding(
                       padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
                       child: Column(
                         children: [
-                          Icon(Icons.shopping_bag_sharp , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
-                          Text('Categories',textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
+                          Icon(Icons.table_chart , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
+                          Text('Fiscal Tables',textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
                         ],
                       ),
                     )),
@@ -150,7 +154,9 @@ class _SettingsState extends State<Settings>{
                       color: Colors.white,
                       borderRadius: BorderRadius.circular(15.0)
                     ),
-                    child: TextButton(onPressed: (){},
+                    child: TextButton(onPressed: (){
+                      Get.to(()=> const Companydetails());
+                    },
                     child: const Padding(
                       padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
                       child: Column(
@@ -394,34 +400,6 @@ class _SettingsState extends State<Settings>{
           ],
         ),
       ),
-    );
-  }
-}
-
-class QuickServiceButton extends StatelessWidget{
-  final IconData icon;
-  final String label;
-
-  const QuickServiceButton({
-    required this.icon,
-    required this.label
-  });
-
-  @override
-  Widget build(BuildContext context){
-    return Column(
-      children: [
-        CircleAvatar(
-          backgroundColor: Colors.grey.shade800,
-          radius: 30,
-          child: Icon(icon, color: Colors.white,size: 30, ),
-        ),
-        const SizedBox(height: 8,),
-        Text(
-          label,
-          style: const TextStyle(color: Colors.white),
-        )
-      ],
     );
   }
 }

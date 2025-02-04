@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pulsepay/JsonModels/users.dart';
+import 'package:pulsepay/JsonModels/json_models.dart';
 import 'package:pulsepay/SQLite/database_helper.dart';
 import 'package:pulsepay/common/constants.dart';
 import 'package:pulsepay/common/custom_button.dart';
@@ -250,6 +250,29 @@ class _PaymentMethodsState extends State<PaymentMethods> {
     );
   }
 
+  void setDefaultCurrency(int methodId){
+    int defaultTag =1;
+    try {
+      dbHelper.setDefaultCurrency(methodId, defaultTag);
+      Get.snackbar(
+        "Success", "Default Currency Set",
+        icon:const Icon(Icons.check),
+        colorText: Colors.white,
+        backgroundColor: Colors.green,
+        snackPosition: SnackPosition.TOP,
+        showProgressIndicator: true,
+      );
+    } catch (e) {
+      Get.snackbar(
+        "Error", "$e",
+        icon: Icon(Icons.error),
+        colorText: Colors.white,
+        backgroundColor: Colors.red,
+        snackPosition: SnackPosition.TOP
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -289,7 +312,8 @@ class _PaymentMethodsState extends State<PaymentMethods> {
                             DataColumn(label: Text("Fiscal Group")),
                             DataColumn(label: Text("Currency")),
                             DataColumn(label: Text("VAT Number")),
-                            DataColumn(label: Text("TIN Number"))
+                            DataColumn(label: Text("TIN Number")),
+                            DataColumn(label: Text("default"))
                           ],
                           rows: payMethods.map((paymentMethod){
                             final methodId = paymentMethod['payMethodId'];
@@ -306,7 +330,8 @@ class _PaymentMethodsState extends State<PaymentMethods> {
                                 DataCell(Text(paymentMethod['fiscalGroup'].toString())),
                                 DataCell(Text(paymentMethod['currency'].toString())),
                                 DataCell(Text(paymentMethod['vatNumber'].toString())),
-                                DataCell(Text(paymentMethod['tinNumber'].toString()))
+                                DataCell(Text(paymentMethod['tinNumber'].toString())),
+                                DataCell(Text(paymentMethod['defaultMethod'].toString()))
                               ]
                             );
                           }).toList(),
@@ -319,9 +344,9 @@ class _PaymentMethodsState extends State<PaymentMethods> {
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
                   CustomOutlineBtn(
-                    width: 90,
-                    height: 50,
-                    text: "View",
+                    width: 100,
+                    height: 45,
+                    text: "Edit",
                     color:const Color.fromARGB(255, 14, 19, 29),
                     color2: const Color.fromARGB(255, 14, 19, 29),
                     onTap: (){
@@ -330,9 +355,9 @@ class _PaymentMethodsState extends State<PaymentMethods> {
                     },
                   ),
                   CustomOutlineBtn(
-                    width: 90,
-                    height: 50,
-                    text: "Cancel",
+                    width: 100,
+                    height: 45,
+                    text: "Delete",
                     color:const Color.fromARGB(255, 14, 19, 29),
                     color2: const Color.fromARGB(255, 14, 19, 29) ,
                     onTap: (){
@@ -340,12 +365,14 @@ class _PaymentMethodsState extends State<PaymentMethods> {
                     },
                   ),
                   CustomOutlineBtn(
-                    width: 90,
-                    height: 50,
-                    text: "Edit",
+                    width: 100,
+                    height: 45,
+                    text: "Set Default",
                     color:const Color.fromARGB(255, 14, 19, 29),
                     color2: const Color.fromARGB(255, 14, 19, 29),
                     onTap: (){
+                      final methodId = selectedMethod[0];
+                      setDefaultCurrency(methodId);
                     },
                   ),
                 ],

@@ -1,6 +1,6 @@
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
-import 'package:pulsepay/JsonModels/users.dart';
+import 'package:pulsepay/JsonModels/json_models.dart';
 
 class DatabaseHelper {
   final databaseName = "pulse.db";
@@ -12,11 +12,11 @@ class DatabaseHelper {
   //String dailyReports=
     //"create table dailyReports(ID INTEGER PRIMARY KEY AUTOINCREMENT, reportDate TEXT , reportTime TEXT , FiscalDayNo INTEGER , SaleByTaxUSD REAL , SaleByTaxZWG REAL , SaleTaxByTaxUSD REAL , SaleTaxByTaxZWG REAL , CreditNoteByTaxUSD REAL , CreditNoteByTaxZWG REAL , CreditNoteTaxByTaxUSD REAL , CreditNoteTaxByTaxZWG REAL, BalanceByMoneyTypeCashUSD REAL , BalanceByMoneyTypeCashZWG REAL , BalanceByMoneyTypeCardUSD REAL , BalanceByMoneyTypeCardZWG REAL , BalanceByMoneyTypeMobileWalletUSD REAl , BalanceByMoneyTypeMobileWalletZWG REAL , BalanceByMoneyTypeCouponUSD REAL , BalanceByMoneyTypeCouponZWG REAL , BalanceByMoneyTypeInvoiceUSD REAL , BalanceByMoneyTypeInvoiceZWG REAL , BalanceByMoneyTypeBankTransferUSD REAL , BalanceByMoneyTypeBankTransferZWG REAL , BalanceByMoneyTypeOtherUSD REAL ,BalanceByMoneyTypeOtherZWG REAL ,reportHash TEXT , reportSignature TEXT , reportJsonBody TEXT , fiscalDayStatus TEXT)";
   
-  //String openDay= 
-   // "create table openDay(ID INTEGER PRIMARY KEY AUTOINCREMENT , FiscalDayNo INTEGER , StatusOfFirstReceipt TEXT , FiscalDayOpened TEXT , FiscalDayClosed TEXT , TaxExempt INTEGER , TaxZero INTEGER , Tax15 INTEGER , TaxWT INTEGER )";
+  String openDay= 
+   "create table openDay(ID INTEGER PRIMARY KEY AUTOINCREMENT , FiscalDayNo INTEGER , StatusOfFirstReceipt TEXT , FiscalDayOpened TEXT , FiscalDayClosed TEXT , TaxExempt INTEGER , TaxZero INTEGER , Tax15 INTEGER , TaxWT INTEGER )";
 
-  //String submittedReceipts=
-   // "create table submittedReceipts(receiptGlobalNo INTEGER PRIMARY KEY AUTOINCREMENT , receiptCounter INTEGER ,  FiscalDayNo INTEGER , InvoiceNo INTEGER , receiptID INTEGER , receiptType TEXT , receiptCurrency TEXT , moneyType TEXT , receiptDate TEXT, receiptDate TEXT , recei ptTime TEXT , receiptTotal REAL , taxCode TEXT , taxPercent TEXT , taxAmount REAL , SalesAmountwithTax REAL, receiptHash TEXT , receiptJsonbody TEXT , StatustoFDMS TEXT , qrurl TEXT , receiptServerSignature TEXT , submitReceiptServerresponseJSON TEXT, Total15VAT TEXT , TotalNonVAT REAL , TotalExempt REAL , TotalWT REAL  )";
+  String submittedReceipts=
+   "create table submittedReceipts(receiptGlobalNo INTEGER PRIMARY KEY AUTOINCREMENT , receiptCounter INTEGER ,  FiscalDayNo INTEGER , InvoiceNo INTEGER , receiptID INTEGER , receiptType TEXT , receiptCurrency TEXT , moneyType TEXT , receiptDate TEXT , receiptTime TEXT , receiptTotal REAL , taxCode TEXT , taxPercent TEXT , taxAmount REAL , SalesAmountwithTax REAL, receiptHash TEXT , receiptJsonbody TEXT , StatustoFDMS TEXT , qrurl TEXT , receiptServerSignature TEXT , submitReceiptServerresponseJSON TEXT, Total15VAT TEXT , TotalNonVAT REAL , TotalExempt REAL , TotalWT REAL  )";
 
   String users = 
     "create table users(userId INTEGER PRIMARY KEY AUTOINCREMENT,realName TEXT , userName TEXT UNIQUE , userPassword TEXT , dateCreated TEXT , isAdmin INTEGER DEFAULT 0 ,isCashier INTEGER DEFAULT 0 , isActive INTEGER DEFAULT 1)";
@@ -39,9 +39,9 @@ class DatabaseHelper {
 
   String companyDetails =
     "create table companyDetails(companyID INTEGER PRIMARY KEY AUTOINCREMENT , company TEXT , logo TEXT , address, TEXT , tel TEXT , branchName TEXT , tel2 TEXT , email TEXT , tinNumber TEXT, vatNumber TEXT ,vendorNumber TEXT , website TEXT , bank TEXT ,bankBranch TEXT , bankAcntName TEXT , bankAcntNo TEXT , baseCurreny , backUpLocation TEXT , baseTaxPercentage REAL)";
-
+  
   String paymentMethods =
-    "create table paymentMethods (payMethodId INTEGER PRIMARY KEY AUTOINCREMENT, description TEXT , rate REAL , fiscalGroup INTEGER , currency TEXT , vatNumber TEXT , tinNumber TEXT)";
+    "create table paymentMethods (payMethodId INTEGER PRIMARY KEY AUTOINCREMENT, description TEXT , rate REAL , fiscalGroup INTEGER , currency TEXT , vatNumber TEXT , tinNumber TEXT , defaultMethod INTEGER DEFAULT 0 )";
 
   //====DATABASE FUNCTIONS =======/////////
 
@@ -49,7 +49,7 @@ class DatabaseHelper {
   Future<Database> initDB() async {
     final databasePath = await getDatabasesPath();
     final path = join(databasePath , databaseName);
-    //await deleteDatabase(path);
+    //Sawait deleteDatabase(path);
 
     return openDatabase(path , version: 1 , onCreate: (db, version) async {
       await db.execute(users);
@@ -60,8 +60,8 @@ class DatabaseHelper {
       await db.execute(stockPurchases);
       await db.execute(companyDetails);
       await db.execute(paymentMethods);
-      //await db.execute(openDay);
-      //await db.execute(submittedReceipts);
+      await db.execute(openDay);
+      await db.execute(submittedReceipts);
       //await db.execute(dailyReports);
     }  , onUpgrade: (db ,oldVersion , newVersion) async {
       if(oldVersion > 2){
@@ -90,6 +90,12 @@ class DatabaseHelper {
   Future<int> addProduct(Products product) async{
     final Database db = await initDB();
     return db.insert('products', product.toMap());
+  }
+
+  //add products
+  Future<int> addCompanyDetails(CompanyDetails companyDetails) async{
+    final Database db = await initDB();
+    return db.insert('companyDetails', companyDetails.toMap());
   }
 
   //add products
@@ -263,6 +269,64 @@ class DatabaseHelper {
       ''' , [productid]);
     }
 
+    //Get Default Currency
+    Future<List<Map<String,dynamic>>> getDefaultPayMethod(int defaultTag) async{
+      final db = await initDB();
+      return await db.rawQuery('''
+        SELECT paymentMethods.*
+        FROM paymentMethods
+        WHERE paymentMethods.payMethodId = ?
+      ''' , [defaultTag]);
+    }
+
+    Future<String?> getDefaultCurrency() async {
+      final db = await initDB(); // Ensure your `initDB` initializes the database
+      final result = await db.rawQuery('''
+        SELECT currency 
+        FROM paymentMethods
+        WHERE defaultMethod = 1
+        LIMIT 1
+      ''');
+
+      if (result.isNotEmpty) {
+        return result[0]['currency'] as String; // Return the currency
+      }
+      return null; // Return null if no default method is set
+  }
+
+    Future<double?> getDefaultRate() async {
+      final db = await initDB(); // Ensure your `initDB` initializes the database
+      final result = await db.rawQuery('''
+        SELECT rate 
+        FROM paymentMethods
+        WHERE defaultMethod = 1
+        LIMIT 1
+      ''');
+
+      if (result.isNotEmpty) {
+        return result[0]['rate'] as double; // Return the rate
+      }
+      return null; // Return null if no default method is set
+    }
+
+    ///Get Open day Table
+    Future<List<Map<String, dynamic>>> getOpenDay() async {
+      final db = await initDB(); // Initialize the database
+        return await db.rawQuery('''
+          SELECT openDay.*
+          FROM openDay
+        ''');
+    }
+
+    //Get Submitted Receipts table
+    Future <List<Map<String, dynamic>>> getSubmittedReceipts() async {
+      final db = await initDB();
+      return await db.rawQuery('''
+        SELECT submittedReceipts.*
+        FROM submittedReceipts
+      ''');
+    }
+
     ///Get All Users From DB
     Future<List<Map<String, dynamic>>> getAllUsers() async {
       final db = await initDB(); // Initialize the database
@@ -272,6 +336,14 @@ class DatabaseHelper {
         ''');
     }
     
+    ///Get All Users From DB
+    Future<List<Map<String, dynamic>>> getCompanyDetails() async {
+      final db = await initDB(); // Initialize the database
+        return await db.rawQuery('''
+          SELECT companyDetails.*
+          FROM companyDetails
+        ''');
+    }
 
     //////Update Product Stock Quantity
     Future<void> updateProductStockQty(int productid , int newStockQty) async{
@@ -281,6 +353,17 @@ class DatabaseHelper {
         {'stockQty': newStockQty},
         where: 'productid = ?',
         whereArgs: [productid]
+      );
+    }
+
+    //Set Default Currency
+    Future<void> setDefaultCurrency(int methodId , int defaultTag)async{
+      final db = await initDB();
+      await db.update(
+        'paymentMethods',
+        {'defaultMethod': defaultTag},
+        where: 'payMethodId = ?',
+        whereArgs: [methodId]
       );
     }
 
@@ -311,4 +394,81 @@ class DatabaseHelper {
         FROM paymentMethods
       ''');
     }
+
+    Future<Map<String, dynamic>?> getProductByBarcode(String barcode) async {
+    final db = await initDB();
+    final result = await db.query(
+      'products',
+      where: 'barcode = ?',
+      whereArgs: [barcode],
+    );
+    return result.isNotEmpty ? result.first : null;
+  }
+
+  Future<Map<String, int>> getPreviousReceiptData() async {
+    final db = await initDB();
+    List<Map<String, dynamic>> result = await db.rawQuery(
+        "SELECT receiptCounter, FiscalDayNo, receiptGlobalNo FROM SubmittedReceipts ORDER BY receiptGlobalNo DESC LIMIT 1");
+    return result.isNotEmpty
+        ? {
+            "receiptCounter": result.first["receiptCounter"],
+            "FiscalDayNo": result.first["FiscalDayNo"],
+            "receiptGlobalNo": result.first["receiptGlobalNo"]
+          }
+        : {"receiptCounter": 0, "FiscalDayNo": 0, "receiptGlobalNo": 0};
+  }
+  Future<int> getPreviousFiscalDayNo() async {
+    final db = await initDB();
+    List<Map<String, dynamic>> result = await db.rawQuery(
+        "SELECT FiscalDayNo FROM OpenDay ORDER BY ID DESC LIMIT 1");
+    return result.isNotEmpty ? result.first["FiscalDayNo"] : 0;
+  }
+  Future<void> insertOpenDay(
+      int fiscalDayNo, String status, String fiscalDayOpened) async {
+    final db = await initDB();
+    await db.insert(
+      'OpenDay',
+      {
+        'FiscalDayNo': fiscalDayNo,
+        'StatusOfFirstReceipt': status,
+        'FiscalDayOpened': fiscalDayOpened,
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<void> updateDatabase(Map<String, int> taxIDs) async {
+  try {
+    final db = await initDB();
+
+    // Get latest record ID
+    List<Map<String, dynamic>> result =
+        await db.rawQuery("SELECT ID FROM OpenDay ORDER BY id DESC LIMIT 1");
+
+    if (result.isNotEmpty) {
+      int id = result.first["ID"];
+
+      // Update the OpenDay table
+      await db.update(
+        'OpenDay',
+        {
+          'TaxExempt': taxIDs['Exempt'] ?? 0,
+          'TaxZero': taxIDs['Zero'] ?? 0,
+          'Tax15': taxIDs['VAT15'] ?? 0,
+          'TaxWT': taxIDs['WT'] ?? 0,
+        },
+        where: 'ID = ?',
+        whereArgs: [id],
+      );
+
+      print("Applicable Tax IDs Set in DB !!");
+    } else {
+      print("No records found in OpenDay table");
+    }
+  } catch (e) {
+    print("Database update error: $e");
+  }
+}
+
+
 }

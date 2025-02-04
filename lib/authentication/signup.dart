@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:pulsepay/JsonModels/users.dart';
+import 'package:pulsepay/JsonModels/json_models.dart';
 import 'package:pulsepay/SQLite/database_helper.dart';
 import 'package:pulsepay/authentication/login.dart';
 
