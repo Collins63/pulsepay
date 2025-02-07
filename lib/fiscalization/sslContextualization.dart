@@ -22,7 +22,7 @@ class SSLContextProvider {
     SecurityContext securityContext = SecurityContext.defaultContext;
     
 
-if (!hasPermission) {
+  if (!hasPermission) {
     print("Permission denied. Cannot access external storage.");
   }
 

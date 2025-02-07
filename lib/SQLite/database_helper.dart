@@ -86,6 +86,10 @@ class DatabaseHelper {
     return db.insert('users', user.toMap());
   }
 
+  Future<int> addReceipt(SubmittedReceipt receipt) async{
+    final Database db = await initDB();
+    return db.insert('submittedReceipts', receipt.toMap());
+  }
   //add products
   Future<int> addProduct(Products product) async{
     final Database db = await initDB();
@@ -138,7 +142,7 @@ class DatabaseHelper {
   }
 
   //invoice numbers
-  Future<int> getNextInvoiceId() async {
+   getNextInvoiceId() async {
     final db = await initDB();
     final result = await db.rawQuery('SELECT MAX(invoiceId) as lastId FROM invoices');
     int lastId = result.first['lastId'] as int? ?? 0; // Start at 0 if no invoices

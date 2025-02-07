@@ -1,7 +1,16 @@
+import 'dart:convert';
+import 'dart:io';
+import 'package:basic_utils/basic_utils.dart';
+import 'package:crypto/crypto.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
+import 'package:logger/logger.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:pointycastle/digests/sha256.dart';
+import 'package:pointycastle/signers/rsa_signer.dart';
 import 'package:pulsepay/JsonModels/json_models.dart';
 //import 'package:flutter_screenutil/flutter_screenutil.dart';
 //import 'package:get/get_connect/sockets/src/socket_notifier.dart';
@@ -9,6 +18,8 @@ import 'package:pulsepay/SQLite/database_helper.dart';
 import 'package:pulsepay/common/constants.dart';
 import 'package:pulsepay/common/custom_field.dart';
 import 'package:get/get.dart';
+import 'package:pulsepay/fiscalization/sslContextualization.dart';
+import 'package:pulsepay/fiscalization/submitReceipts.dart';
 //import 'package:pulsepay/home/home_page.dart';
 
 class Pos  extends StatefulWidget{
@@ -26,7 +37,10 @@ class _PosState extends State<Pos>{
     fetchDefaultPayMethod();
     fetchDefaultCurrency();
     fetchDefaultRate();
+    //initializePrivateKey();
   }
+
+  late String privateKey;
 
   final TextEditingController controller = TextEditingController();
   final TextEditingController customerNameController = TextEditingController();
@@ -53,7 +67,459 @@ class _PosState extends State<Pos>{
   String? defaultCurrency;
   double? defaultRate;
 
+  List<Map<String, dynamic>> receiptItems = [];
+  double totalAmount = 0.0; 
+  double taxAmount = 0.0;
+  String? generatedJson;
+  String? fiscalResponse;
+  double taxPercent = 0.0 ;
+  String? taxCode;
+  double salesAmountwithTax =0.0;
+  String? encodedSignature;
+  String? encodedHash;
+  
 
+  Future<bool> requestStoragePermission() async {
+  if (await Permission.storage.isGranted) {
+    return true;
+  }
+  
+  var status = await Permission.storage.request();
+  return status.isGranted;
+}
+
+  void addItem() {
+  for (var item in cartItems) {
+    double itemTotal = (item['sellingPrice'] is String) 
+        ? double.parse(item['sellingPrice']) 
+        : item['sellingPrice'].toDouble();
+    
+    int quantity = (item['sellqty'] is String) 
+        ? int.parse(item['sellqty']) 
+        : item['sellqty'];
+
+    double totalPrice = itemTotal * quantity;
+    double itemTax;
+    int taxID;
+    String taxCode;
+    double taxPercent;
+    
+    String productTax = item['tax'] ?? ""; // Handle null case
+
+    if (productTax == "zero") {
+      taxID = 1;
+      taxPercent = 0.0;
+      taxCode = "A";
+      itemTax = totalPrice * taxPercent;
+    } else if (productTax == "vat") {
+      taxID = 3;
+      taxPercent = 15.00; // Convert 15% to decimal
+      taxCode = "C";
+      itemTax = totalPrice * (taxPercent / 100);
+      salesAmountwithTax += totalPrice;
+    } else {
+      taxID = 2;
+      taxPercent = 0.00;
+      taxCode = "B";
+      itemTax = totalPrice * taxPercent;
+    }
+
+    setState(() {
+      receiptItems.add({
+        'productName': item['productName'],
+        'price': itemTotal,
+        'quantity': quantity,
+        'total': totalPrice,
+        'taxID': taxID,
+        'taxPercent': taxPercent,
+        'taxCode': taxCode,
+      });
+    });
+
+    totalAmount += totalPrice;
+    taxAmount += itemTax;
+  }
+}
+
+  Future<RSAPrivateKey?> loadPrivateKeyFromP12(String filePath, String password) async {
+  // Load the `.p12` file
+  Uint8List p12Bytes = await File(filePath).readAsBytes();
+
+  // Parse PKCS#12 file
+   var p12 = Pkcs12Utils.parsePkcs12( p12Bytes, password: password);
+
+  // Extract private key as PEM
+  String? privateKeyPem = p12.privateKey;
+
+  if (privateKeyPem != null) {
+    return CryptoUtils.rsaPrivateKeyFromPem(privateKeyPem); // Convert to RSAPrivateKey
+  } else {
+    print("❌ No private key found in the .p12 file.");
+    return null;
+  }
+}
+
+  /// Generate JSON after sale
+  generateFiscalJSON() async {
+    String p12FilePath = "path/to/your_certificate.p12";
+  String p12Password = "your_password";
+
+  // Load the private key from the .p12 file
+  RSAPrivateKey? privateKey = await loadPrivateKeyFromP12(p12FilePath, p12Password);
+
+  if (privateKey != null) {
+    String dataToSign = "Signature_raw";
+    
+    // Generate the digital signature
+    String deviceSignature = generateDeviceSignature(dataToSign, privateKey);
+    print("Device Signature: $deviceSignature");
+  } else {
+    print("❌ Unable to sign data because the private key could not be loaded.");
+  }
+    
+    try {
+      String privateKeyPem = await readPrivateKeyFromStorage();
+      final logger = Logger();
+      logger.d(privateKeyPem);
+      RSAPrivateKey privateKey = CryptoUtils.rsaPrivateKeyFromPem(privateKeyPem);
+      String hash =await generateHash();
+    String signature = await generateDeviceSignature(hash , privateKey );
+    String nextInvoice = dbHelper.getNextInvoiceId().toString();
+    String saleCurrency;
+    if (receiptItems.isEmpty) return "{}";
+    if (selectedPayMethod.isEmpty){
+      saleCurrency = defaultCurrency.toString();
+    }else{
+      saleCurrency = returnCurrency();
+    }
+    Map<String, dynamic> jsonData = {
+  "receipt": {
+    "receiptLines": receiptItems.asMap().entries.map((entry) {
+      int index = entry.key + 1;
+      var item = entry.value;
+      return {
+        "receiptLineNo": "$index",
+        "receiptLineHSCode": "99001000",
+        "receiptLinePrice": item["price"].toStringAsFixed(2),
+        "taxID": item["taxID"],
+        "taxPercent": item["taxPercent"].toStringAsFixed(2),
+        "receiptLineType": "Sale",
+        "receiptLineQuantity": item["quantity"].toString(),
+        "taxCode": item["taxCode"],
+        "receiptLineTotal": item["total"].toStringAsFixed(2),
+        "receiptLineName": item["productName"]
+      };
+    }).toList(),
+    "receiptType": "FISCALINVOICE",
+    "receiptGlobalNo": 2,
+    "receiptCurrency": "$saleCurrency",
+    "receiptPrintForm": "InvoiceA4",
+    "receiptDate": DateTime.now().toIso8601String(),
+    "receiptPayments": [
+      {"moneyTypeCode": "Cash", "paymentAmount": totalAmount.toStringAsFixed(2)}
+    ],
+    "receiptCounter": 1,
+    "receiptTaxes": generateReceiptTaxes(receiptItems), // Call the function here
+    "receiptDeviceSignature": {
+      "signature":signature ,
+      "hash": hash,
+    },
+    "buyerData": {
+      "VATNumber": "123456789",
+      "buyerTradeName": "SAT ",
+      "buyerTIN": "0000000000",
+      "buyerRegisterName": "SAT "
+    },
+    "receiptTotal": totalAmount.toStringAsFixed(2),
+    "receiptLinesTaxInclusive": true,
+    "invoiceNo": nextInvoice,
+  }
+};
+    print("json: $jsonData");
+    return jsonEncode(jsonData);
+    } catch (e) {
+      Get.snackbar(
+        "Error Message",
+        "$e",
+        snackPosition: SnackPosition.TOP,
+        colorText: Colors.white,
+        backgroundColor: Colors.red,
+        icon:const Icon(Icons.error),
+        shouldIconPulse: true
+      );
+    }
+    
+  }
+  /// Function to generate `receiptTaxes` dynamically
+List<Map<String, dynamic>> generateReceiptTaxes(List<dynamic> receiptItems) {
+  Map<int, Map<String, dynamic>> taxGroups = {}; // Store tax summaries
+
+  for (var item in receiptItems) {
+    int taxID = item["taxID"];
+    double taxPercent = item["taxPercent"];
+    double total = item["total"];
+
+    if (!taxGroups.containsKey(taxID)) {
+      taxGroups[taxID] = {
+        "taxID": taxID,
+        "taxPercent": taxPercent.toStringAsFixed(2),
+        "taxCode": item["taxCode"],
+        "taxAmount": 0.0,
+        "salesAmountWithTax": 0.0
+      };
+    }
+
+    // Calculate tax amount
+    double taxAmount = (total * taxPercent) / 100 ;
+    taxGroups[taxID]!["taxAmount"] += taxAmount;
+    taxGroups[taxID]!["salesAmountWithTax"] += total;
+  }
+
+  // Convert map to list and round values
+  return taxGroups.values.map((tax) {
+    return {
+      "taxID": tax["taxID"],
+      "taxPercent": tax["taxPercent"],
+      "taxCode": tax["taxCode"],
+      "taxAmount": tax["taxAmount"].toStringAsFixed(2),
+      "salesAmountWithTax": tax["salesAmountWithTax"].toStringAsFixed(2)
+    };
+  }).toList();
+}
+
+/// Function to generate `receiptTaxes` concatenation
+String generateTaxSummary(List<dynamic> receiptItems) {
+  Map<int, Map<String, dynamic>> taxGroups = {}; // Store tax summaries
+
+  for (var item in receiptItems) {
+    int taxID = item["taxID"];
+    double taxPercent = item["taxPercent"];
+    double total = item["total"];
+    String taxCode = item["taxCode"];
+
+    if (!taxGroups.containsKey(taxID)) {
+      taxGroups[taxID] = {
+        "taxCode": taxCode,
+        "taxPercent": taxPercent.toStringAsFixed(2),
+        "taxAmount": 0.0,
+        "salesAmountWithTax": 0.0
+      };
+    }
+
+    // Calculate tax amount
+    double taxAmount = (total * taxPercent) / (100 + taxPercent);
+    taxGroups[taxID]!["taxAmount"] += taxAmount;
+    taxGroups[taxID]!["salesAmountWithTax"] += total;
+  }
+
+  // Convert tax groups to a sorted list (optional: sort by taxCode)
+  List<Map<String, dynamic>> sortedTaxes = taxGroups.values.toList()
+    ..sort((a, b) => a["taxCode"].compareTo(b["taxCode"]));
+
+  // Concatenate tax details in the required order
+  return sortedTaxes.map((tax) {
+    return "${tax["taxCode"]}${tax["taxPercent"]}${tax["taxAmount"].toStringAsFixed(2)}${tax["salesAmountWithTax"].toStringAsFixed(2)}";
+  }).join("");
+}
+
+/// Function to generate the final concatenated receipt string
+String generateReceiptString({
+  required int deviceID,
+  required String receiptType,
+  required String receiptCurrency,
+  required int receiptGlobalNo,
+  required DateTime receiptDate,
+  required double receiptTotal,
+  required List<dynamic> receiptItems,
+}) {
+  String formattedDate = receiptDate.toIso8601String();
+  String formattedTotal = receiptTotal.toStringAsFixed(2);
+  String receiptTaxes = generateTaxSummary(receiptItems);
+
+  return "$deviceID$receiptType$receiptCurrency$receiptGlobalNo$formattedDate$formattedTotal$receiptTaxes";
+}
+  /// Generate SHA-256 Hash
+  generateHash() async {
+    String receiptString = generateReceiptString(
+    deviceID: 21659,
+    receiptType: "FISCALINVOICE",
+    receiptCurrency: "ZWL",
+    receiptGlobalNo: 2,
+    receiptDate: DateTime.now(),
+    receiptTotal: 945.00,
+    receiptItems: receiptItems,
+  );
+  print("Concatenated Receipt String: $receiptString");
+
+    var bytes = utf8.encode(receiptString);
+    var digest = sha256.convert(bytes);
+    final hash = base64.encode(digest.bytes);
+    print(hash);
+    return hash;
+  }
+
+  // Future<String> initializePrivateKey() async {
+  //   privateKey = await readPrivateKeyFromStorage();
+  //   return privateKey;
+
+  // }
+
+  // Future<String> readPrivateKeyFromStorage() async {
+  // await Future.delayed(Duration(seconds: 5));
+  // bool hasPermission = await requestStoragePermission();
+  // final directory = await getApplicationDocumentsDirectory();
+  // String privateKeyPath = "/storage/emulated/0/Pulse/Configurations/testwelleast_T_private.pem";
+  // File file = File(privateKeyPath);
+  // if (!hasPermission) {
+  //   print("Permission denied. Cannot access external storage.");
+  // }
+  // if (!file.existsSync()) {
+  //   print("Private Key file not found at: $privateKeyPath");
+  // }
+
+  // print("Private Key file exists and is accessible!");
+  // Uint8List privateKeyBytes = await file.readAsBytes();
+  // String privateKeyPem = utf8.decode(privateKeyBytes);
+  // //return await file.readAsString()
+  // final logger = Logger();
+  //     logger.d(privateKeyPem);
+  // return privateKeyPem;
+  // }
+
+  
+Uint8List signHash(String hash, RSAPrivateKey privateKey) {
+  var signer = Signer('SHA-256/RSA')
+    ..init(true, PrivateKeyParameter<RSAPrivateKey>(privateKey));
+
+  return signer.generateSignature(Uint8List.fromList(base64Decode(hash))) as Uint8List;
+}
+
+String generateDeviceSignature(String hash, RSAPrivateKey privateKey) {
+  Uint8List signatureBytes = signHash(hash, privateKey);
+  return base64Encode(signatureBytes);
+}
+
+  
+
+
+//   Future<String> signHash(String hash) async {
+//   try {
+//     String privateKeyPem = await initializePrivateKey();
+
+//   final logger = Logger();
+//   logger.d(privateKeyPem);
+//   logger.d(hash);
+//   // Convert Base64-encoded hash to Uint8List
+//   Uint8List hashBytes = base64Decode(hash);
+
+//   // Parse the private key
+//   if (privateKeyPem.isEmpty) {
+//     throw Exception("Private key is empty or invalid.");
+//   }
+//   if(!privateKeyPem.contains("END RSA PRIVATE KEY")){
+//     logger.w("Key Incomplete");
+//   }
+//   else
+//   {logger.d("key complete");}
+    
+//   RSAPrivateKey privateKey = CryptoUtils.rsaPrivateKeyFromPem(privateKeyPem);
+
+//   // Create the signer
+//   RSASigner signer = RSASigner(SHA256Digest(), "0609608648016503040201");
+
+//   signer.init(true, PrivateKeyParameter<RSAPrivateKey>(privateKey));
+
+//   // Generate the signature
+//   RSASignature signature = signer.generateSignature(hashBytes);
+
+//   return base64Encode(signature.bytes);
+//   } catch (e) {
+//     return "Error: $e";
+//   }
+// }
+
+
+  
+  
+  
+  // void addReceipt(int receiptCounter) async{
+  //   final db = DatabaseHelper();
+  //   try {
+  //     db.addReceipt(SubmittedReceipt(
+  //       receiptCounter: json["receiptCounter"],
+  //       fiscalDayNo: json["FiscalDayNo"],
+  //       invoiceNo: await dbHelper.getNextInvoiceId(),
+  //       receiptId: json["receiptID"],
+  //       receiptType: json["receiptType"],
+  //       receiptCurrency: json["receiptCurrency"],
+  //       moneyType: json["moneyType"],
+  //       receiptDate: DateTime.parse(json["receiptDate"]),
+  //       receiptTime: json["receiptTime"],
+  //       receiptTotal: totalAmount,
+  //       taxCode: "C",
+  //       taxPercent: "15.00",
+  //       taxAmount: taxAmount,
+  //       salesAmountwithTax:salesAmountwithTax,
+  //       receiptHash: generateHash(jsonEncode(receiptItems)),
+  //       receiptJsonbody: generateFiscalJSON(),
+  //       statustoFdms: json["StatustoFDMS"],
+  //       qrurl: json["qrurl"],
+  //       receiptServerSignature: json["receiptServerSignature"],
+  //       submitReceiptServerresponseJson: json["submitReceiptServerresponseJSON"],
+  //       total15Vat: json["Total15VAT"],
+  //       totalNonVat: json["TotalNonVAT"],
+  //       totalExempt: json["TotalExempt"],
+  //       totalWt: json["TotalWT"],
+  //     )); 
+  //   } catch (e) {
+      
+  //   }
+  // }
+  
+  void encodeSignatures (){
+    String Signature = "ONF7PnfI6o5NAfPycPxEOMAz2uW8uOAyKGZI45Zpx73CzupMgiKPC3fFvkbu2tEYd6okcBkcoPHrlr2301r+M+BLgwbxEzJSHFCBK4zqnwua87J9A9mukQ7lFyGeObvHyismEFhnn5+2XB8ljOHjyw0dIu18booOP/OT/QLEJr6dlH27aUYmSAKTWBJpGb5fMo/7p+uH+o/ablosxHuC0k6WyxT62Axm8sUVNhfrCUny18Z+H93gOuGF7sEPv/HFe+4Q+TwK9ziOoSI/0BnlimG0aomDb9Go3F5AhIm2jNPlTImrMzHJlp2MMXfzFAG9+kCNTi0ryIAHTHAJRjuEyQ\u003d\u003d";
+    String hash= "5awS4i+L++uom200XGBpvB6cECSyu+jr0vHbsYD2P2o\u003d" ;
+    encodedSignature = base64Encode(utf8.encode(Signature));
+    encodedHash = base64Encode(utf8.encode(hash));
+  }
+  
+  Map<String , dynamic> jsonDatatest = {"receipt":{"receiptLines":[{"receiptLineNo":"1","receiptLineHSCode":"99001000","receiptLinePrice":"434.78","taxID":3,"taxPercent":"15.00","receiptLineType":"Sale","receiptLineQuantity":"1.0","taxCode":"C","receiptLineTotal":"434.78","receiptLineName":"RENTAL JANUARY 2025 "}],"receiptType":"FISCALINVOICE","receiptGlobalNo":6,"receiptCurrency":"USD","receiptPrintForm":"InvoiceA4","receiptDate":"2025-01-31T17:18:37","receiptPayments":[{"moneyTypeCode":"Cash","paymentAmount":"434.78"}],"receiptCounter":5,"receiptTaxes":[{"taxID":"3","taxPercent":"15.00","taxCode":"C","taxAmount":"56.71","SalesAmountwithTax":434.78}],"receiptDeviceSignature":{"signature":"","hash": ""},"buyerData":{"VATNumber":"123456789","buyerTradeName":"SAT ","buyerTIN":"0000000000","buyerRegisterName":"SAT "},"receiptTotal":"434.78","receiptLinesTaxInclusive":true,"invoiceNo":"00000390"}};
+  Future<void> submitReceipt() async {
+  String apiEndpointSubmitReceipt =
+      "https://fdmsapitest.zimra.co.zw/Device/v1/21659/SubmitReceipt";
+  const String deviceModelName = "Server";
+  const String deviceModelVersion = "v1";  
+
+  SSLContextProvider sslContextProvider = SSLContextProvider();
+  SecurityContext securityContext = await sslContextProvider.createSSLContext();
+
+  // Call the Ping function
+  final String response = await SubmitReceipts.submitReceipts(
+    apiEndpointSubmitReceipt: apiEndpointSubmitReceipt,
+    deviceModelName: deviceModelName,
+    deviceModelVersion: deviceModelVersion,
+    securityContext: securityContext,
+    receiptjsonBody: jsonEncode(jsonDatatest),
+  );
+
+  if(response.isNotEmpty){
+    receiptItems.clear();
+    clearCart();
+    paidController.clear();
+    selectedCustomer.clear();
+    selectedPayMethod.clear();
+  }
+
+  //print("Response: \n$response");
+  Get.snackbar(
+      "Zimra Response", "$response",
+      snackPosition: SnackPosition.TOP,
+      colorText: Colors.white,
+      backgroundColor: Colors.green,
+      icon: const Icon(Icons.message, color: Colors.white),
+    );
+  print(response);
+}
   //=================FUNCTIONS============================//
   //======================================================//
   // Toggle barcode scanner
@@ -166,10 +632,7 @@ class _PosState extends State<Pos>{
       snackPosition: SnackPosition.TOP,
       showProgressIndicator: true,
     );
-    clearCart();
-    paidController.clear();
-    selectedCustomer.clear();
-    selectedPayMethod.clear();
+
     Get.snackbar(
       'Succes',
       'Sales Done',
@@ -1324,6 +1787,10 @@ class _PosState extends State<Pos>{
                                               return; // Exit the function
                                             }
                                             // Complete the sale if all validations pass
+                                            addItem();
+                                            generateFiscalJSON();
+                                            generateHash();
+                                            submitReceipt();
                                             completeSale();
                                             Navigator.pop(context);
                                             } catch (e) {

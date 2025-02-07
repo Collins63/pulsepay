@@ -489,7 +489,7 @@ SubmittedReceipt submittedReceiptFromMap(String str) => SubmittedReceipt.fromMap
 String submittedReceiptToMap(SubmittedReceipt data) => json.encode(data.toMap());
 
 class SubmittedReceipt {
-    final int receiptGlobalNo;
+    final int? receiptGlobalNo;
     final int receiptCounter;
     final int fiscalDayNo;
     final int invoiceNo;
@@ -516,7 +516,7 @@ class SubmittedReceipt {
     final int totalWt;
 
     SubmittedReceipt({
-        required this.receiptGlobalNo,
+        this.receiptGlobalNo,
         required this.receiptCounter,
         required this.fiscalDayNo,
         required this.invoiceNo,
