@@ -77,6 +77,8 @@ class _PosState extends State<Pos>{
   double salesAmountwithTax =0.0;
   String? encodedSignature;
   String? encodedHash;
+  String? signature64 ;
+   String? signatureMD5 ;
   
 
   Future<bool> requestStoragePermission() async {
@@ -140,50 +142,93 @@ class _PosState extends State<Pos>{
     taxAmount += itemTax;
   }
 }
+  Future<RSAPrivateKey?> loadPrivateKeyFromP12(String filePath , String password) async{
+    bool hashPermission = await requestStoragePermission();
+    if(!hashPermission){
+      print("Cannot access file...not permitted");
+      return null;
+    }
 
-  Future<RSAPrivateKey?> loadPrivateKeyFromP12(String filePath, String password) async {
-  // Load the `.p12` file
-  Uint8List p12Bytes = await File(filePath).readAsBytes();
+    //Load file\
+    File p12File = File(filePath);
+    if(!p12File.existsSync()){
+      print("Keystore file not found");
+      return null;
+    }
 
-  // Parse PKCS#12 file
-   var p12 = Pkcs12Utils.parsePkcs12( p12Bytes, password: password);
+    Uint8List p12Bytes = await p12File.readAsBytes();
+    List<String> pemList = Pkcs12Utils.parsePkcs12(p12Bytes , password: password);
+    if(pemList.isEmpty){
+      print("No private key found in p12 file");
+    }
+    String privateKeyPem = pemList.firstWhere(
+      (pem) => pem.contains("BEGIN PRIVATE KEY"),
+      orElse: ()=> "",
+    );
+    if(privateKeyPem.isEmpty){
+      print("NO RSA privatekey found");
+    }
+    return CryptoUtils.rsaPrivateKeyFromPem(privateKeyPem);
 
-  // Extract private key as PEM
-  String? privateKeyPem = p12.privateKey;
+  }
+  Uint8List signHash(String hash, RSAPrivateKey privateKey) {
+  var signer = Signer('SHA-256/RSA')
+    ..init(true, PrivateKeyParameter<RSAPrivateKey>(privateKey));
 
-  if (privateKeyPem != null) {
-    return CryptoUtils.rsaPrivateKeyFromPem(privateKeyPem); // Convert to RSAPrivateKey
-  } else {
-    print("❌ No private key found in the .p12 file.");
+  return signer.generateSignature(Uint8List.fromList(base64Decode(hash))) as Uint8List;
+}
+
+String generateDeviceSignature(String hash, RSAPrivateKey privateKey) {
+  Uint8List signatureBytes = signHash(hash, privateKey);
+  return base64Encode(signatureBytes);
+}
+String computeMD5(Uint8List signatureBytes) {
+  var md5Hash = md5.convert(signatureBytes);
+  return md5Hash.toString();
+}
+Future<Map<String, String>?> generateRSASignature(String hash, String p12FilePath, String password) async {
+  RSAPrivateKey? privateKey = await loadPrivateKeyFromP12(p12FilePath, password);
+
+  if (privateKey == null) {
+    print("❌ Unable to sign data because private key could not be loaded.");
     return null;
   }
+
+  // Generate SHA-256 Hash
+  hash = await generateHash();
+  print("✅ Generated Hash (Base64): $hash");
+  Uint8List hashBytes = base64Decode(hash);
+  String stringHasybt = hashBytes.toString();
+
+  // Sign the hash using RSA
+  Uint8List signatureBytes = signHash(stringHasybt, privateKey);
+
+  // Convert to Base64 and compute MD5 hash
+  String base64Signature = base64Encode(signatureBytes);
+  String md5Signature = computeMD5(signatureBytes);
+
+  return {
+    "signatureHex": md5Signature,
+    "signatureBase64": base64Signature,
+  };
 }
 
   /// Generate JSON after sale
   generateFiscalJSON() async {
-    String p12FilePath = "path/to/your_certificate.p12";
-  String p12Password = "your_password";
-
-  // Load the private key from the .p12 file
-  RSAPrivateKey? privateKey = await loadPrivateKeyFromP12(p12FilePath, p12Password);
-
-  if (privateKey != null) {
-    String dataToSign = "Signature_raw";
-    
-    // Generate the digital signature
-    String deviceSignature = generateDeviceSignature(dataToSign, privateKey);
-    print("Device Signature: $deviceSignature");
-  } else {
-    print("❌ Unable to sign data because the private key could not be loaded.");
-  }
+    String p12FilePath = "/storage/emulated/0/Pulse/Configurations/testwelleast_T_certificate.p12";
+   String p12Password = "testwelleast123";
     
     try {
-      String privateKeyPem = await readPrivateKeyFromStorage();
-      final logger = Logger();
-      logger.d(privateKeyPem);
-      RSAPrivateKey privateKey = CryptoUtils.rsaPrivateKeyFromPem(privateKeyPem);
+      print("entered generateFiscalJSON");
       String hash =await generateHash();
-    String signature = await generateDeviceSignature(hash , privateKey );
+      print("hash available");
+      Map<String, String>? signatureData = await generateRSASignature(hash, p12FilePath, p12Password);
+      print(signatureData);
+    if(signatureData != null){
+      signature64 = signatureData["signatureBase64"].toString() ;
+      signatureMD5 = signatureData["signatureHex"].toString();
+    }
+    
     String nextInvoice = dbHelper.getNextInvoiceId().toString();
     String saleCurrency;
     if (receiptItems.isEmpty) return "{}";
@@ -221,7 +266,7 @@ class _PosState extends State<Pos>{
     "receiptCounter": 1,
     "receiptTaxes": generateReceiptTaxes(receiptItems), // Call the function here
     "receiptDeviceSignature": {
-      "signature":signature ,
+      "signature": signatureMD5 ,
       "hash": hash,
     },
     "buyerData": {
@@ -358,123 +403,6 @@ String generateReceiptString({
     return hash;
   }
 
-  // Future<String> initializePrivateKey() async {
-  //   privateKey = await readPrivateKeyFromStorage();
-  //   return privateKey;
-
-  // }
-
-  // Future<String> readPrivateKeyFromStorage() async {
-  // await Future.delayed(Duration(seconds: 5));
-  // bool hasPermission = await requestStoragePermission();
-  // final directory = await getApplicationDocumentsDirectory();
-  // String privateKeyPath = "/storage/emulated/0/Pulse/Configurations/testwelleast_T_private.pem";
-  // File file = File(privateKeyPath);
-  // if (!hasPermission) {
-  //   print("Permission denied. Cannot access external storage.");
-  // }
-  // if (!file.existsSync()) {
-  //   print("Private Key file not found at: $privateKeyPath");
-  // }
-
-  // print("Private Key file exists and is accessible!");
-  // Uint8List privateKeyBytes = await file.readAsBytes();
-  // String privateKeyPem = utf8.decode(privateKeyBytes);
-  // //return await file.readAsString()
-  // final logger = Logger();
-  //     logger.d(privateKeyPem);
-  // return privateKeyPem;
-  // }
-
-  
-Uint8List signHash(String hash, RSAPrivateKey privateKey) {
-  var signer = Signer('SHA-256/RSA')
-    ..init(true, PrivateKeyParameter<RSAPrivateKey>(privateKey));
-
-  return signer.generateSignature(Uint8List.fromList(base64Decode(hash))) as Uint8List;
-}
-
-String generateDeviceSignature(String hash, RSAPrivateKey privateKey) {
-  Uint8List signatureBytes = signHash(hash, privateKey);
-  return base64Encode(signatureBytes);
-}
-
-  
-
-
-//   Future<String> signHash(String hash) async {
-//   try {
-//     String privateKeyPem = await initializePrivateKey();
-
-//   final logger = Logger();
-//   logger.d(privateKeyPem);
-//   logger.d(hash);
-//   // Convert Base64-encoded hash to Uint8List
-//   Uint8List hashBytes = base64Decode(hash);
-
-//   // Parse the private key
-//   if (privateKeyPem.isEmpty) {
-//     throw Exception("Private key is empty or invalid.");
-//   }
-//   if(!privateKeyPem.contains("END RSA PRIVATE KEY")){
-//     logger.w("Key Incomplete");
-//   }
-//   else
-//   {logger.d("key complete");}
-    
-//   RSAPrivateKey privateKey = CryptoUtils.rsaPrivateKeyFromPem(privateKeyPem);
-
-//   // Create the signer
-//   RSASigner signer = RSASigner(SHA256Digest(), "0609608648016503040201");
-
-//   signer.init(true, PrivateKeyParameter<RSAPrivateKey>(privateKey));
-
-//   // Generate the signature
-//   RSASignature signature = signer.generateSignature(hashBytes);
-
-//   return base64Encode(signature.bytes);
-//   } catch (e) {
-//     return "Error: $e";
-//   }
-// }
-
-
-  
-  
-  
-  // void addReceipt(int receiptCounter) async{
-  //   final db = DatabaseHelper();
-  //   try {
-  //     db.addReceipt(SubmittedReceipt(
-  //       receiptCounter: json["receiptCounter"],
-  //       fiscalDayNo: json["FiscalDayNo"],
-  //       invoiceNo: await dbHelper.getNextInvoiceId(),
-  //       receiptId: json["receiptID"],
-  //       receiptType: json["receiptType"],
-  //       receiptCurrency: json["receiptCurrency"],
-  //       moneyType: json["moneyType"],
-  //       receiptDate: DateTime.parse(json["receiptDate"]),
-  //       receiptTime: json["receiptTime"],
-  //       receiptTotal: totalAmount,
-  //       taxCode: "C",
-  //       taxPercent: "15.00",
-  //       taxAmount: taxAmount,
-  //       salesAmountwithTax:salesAmountwithTax,
-  //       receiptHash: generateHash(jsonEncode(receiptItems)),
-  //       receiptJsonbody: generateFiscalJSON(),
-  //       statustoFdms: json["StatustoFDMS"],
-  //       qrurl: json["qrurl"],
-  //       receiptServerSignature: json["receiptServerSignature"],
-  //       submitReceiptServerresponseJson: json["submitReceiptServerresponseJSON"],
-  //       total15Vat: json["Total15VAT"],
-  //       totalNonVat: json["TotalNonVAT"],
-  //       totalExempt: json["TotalExempt"],
-  //       totalWt: json["TotalWT"],
-  //     )); 
-  //   } catch (e) {
-      
-  //   }
-  // }
   
   void encodeSignatures (){
     String Signature = "ONF7PnfI6o5NAfPycPxEOMAz2uW8uOAyKGZI45Zpx73CzupMgiKPC3fFvkbu2tEYd6okcBkcoPHrlr2301r+M+BLgwbxEzJSHFCBK4zqnwua87J9A9mukQ7lFyGeObvHyismEFhnn5+2XB8ljOHjyw0dIu18booOP/OT/QLEJr6dlH27aUYmSAKTWBJpGb5fMo/7p+uH+o/ablosxHuC0k6WyxT62Axm8sUVNhfrCUny18Z+H93gOuGF7sEPv/HFe+4Q+TwK9ziOoSI/0BnlimG0aomDb9Go3F5AhIm2jNPlTImrMzHJlp2MMXfzFAG9+kCNTi0ryIAHTHAJRjuEyQ\u003d\u003d";
@@ -520,71 +448,6 @@ String generateDeviceSignature(String hash, RSAPrivateKey privateKey) {
     );
   print(response);
 }
-  //=================FUNCTIONS============================//
-  //======================================================//
-  // Toggle barcode scanner
-  // void toggleBarcodeScanner() {
-  //   setState(() {
-  //     isBarcodeEnabled = !isBarcodeEnabled;
-  //   });
-
-  //   if (isBarcodeEnabled) {
-  //     startBarcodeScan();
-  //   }
-  // }
-
-  // Start barcode scanning
-  // Future<void> startBarcodeScan() async {
-  //   while (isBarcodeEnabled) {
-  //     try {
-  //       String barcode = await FlutterBarcodeScanner.scanBarcode(
-  //         "#ff6666", // Line color for the scanner
-  //         "Cancel", // Text for the cancel button
-  //         true, // Show the flash icon
-  //         ScanMode.BARCODE, // Scan mode (BARCODE or QR)
-  //       );
-
-  //       if (barcode != "-1") {
-  //         await addToCartBarcode(barcode);
-  //       } else {
-  //         // If canceled, stop scanning
-  //         break;
-  //       }
-  //     } catch (e) {
-  //       print("Error while scanning: $e");
-  //       ScaffoldMessenger.of(context).showSnackBar(
-  //         SnackBar(content: Text("Error while scanning barcode.")),
-  //       );
-  //       break;
-  //     }
-  //   }
-  // }
-
-// Add product to cart
-  // Future<void> addToCartBarcode(String barcode) async {
-  //   final product = await dbHelper.getProductByBarcode(barcode);
-
-  //   if (product != null) {
-  //     setState(() {
-  //       int existingIndex = cartItems.indexWhere((item) => item['barcode'] == barcode);
-
-  //       if (existingIndex != -1) {
-  //         cartItems[existingIndex]['quantity']++;
-  //       } else {
-  //         cartItems.add({
-  //           ...product,
-  //           'quantity': 1,
-  //         });
-  //       }
-  //     });
-  //   } else {
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       SnackBar(content: Text('Product not found!')),
-  //     );
-  //   }
-  // }
-
-
   void completeSale() async {
     try {
       final double totalAmount = calculateTotalPrice();
