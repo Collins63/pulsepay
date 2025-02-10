@@ -3,9 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pulsepay/JsonModels/json_models.dart';
 import 'package:pulsepay/SQLite/database_helper.dart';
-import 'package:pulsepay/authentication/login.dart';
 import 'package:pulsepay/common/app_bar.dart';
-import 'package:pulsepay/common/reusable_text.dart';
 import 'package:pulsepay/forms/users.dart';
 
 class AddUser extends StatefulWidget{

@@ -142,7 +142,7 @@ class DatabaseHelper {
   }
 
   //invoice numbers
-   getNextInvoiceId() async {
+  Future<int> getNextInvoiceId() async {
     final db = await initDB();
     final result = await db.rawQuery('SELECT MAX(invoiceId) as lastId FROM invoices');
     int lastId = result.first['lastId'] as int? ?? 0; // Start at 0 if no invoices
@@ -330,6 +330,11 @@ class DatabaseHelper {
         FROM submittedReceipts
       ''');
     }
+    //Insert Into submitted receipts
+    Future<int> insertReceipt(Map<String, dynamic> receiptData) async {
+    final db = await initDB();
+    return await db.insert('submittedReceipts', receiptData);
+    }
 
     ///Get All Users From DB
     Future<List<Map<String, dynamic>>> getAllUsers() async {
@@ -474,5 +479,28 @@ class DatabaseHelper {
   }
 }
 
+  Future<List<Map<String,dynamic>>> getReceiptsPending() async{
+      final db = await initDB();
+      return await db.rawQuery('''
+        SELECT submittedReceipts.*
+        FROM submittedReceipts
+        WHERE submittedReceipts.StatustoFDMS = unsubmitted
+      ''');
+  }
+    Future<List<Map<String,dynamic>>> getReceiptsSubmitted() async{
+      final db = await initDB();
+      return await db.rawQuery('''
+        SELECT submittedReceipts.*
+        FROM submittedReceipts
+        WHERE submittedReceipts.StatustoFDMS = submitted
+      ''');
+    }
 
+  Future<List<Map<String,dynamic>>> getAllReceipts() async{
+      final db = await initDB();
+      return await db.rawQuery('''
+        SELECT submittedReceipts.*
+        FROM submittedReceipts
+      ''');
+    }
 }

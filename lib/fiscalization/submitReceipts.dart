@@ -1,8 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:pulsepay/fiscalization/receiptResponse.dart';
+
 class SubmitReceipts {
-  static Future<String> submitReceipts({
+  static Future<ReceiptResponse> submitReceipts({
     required String apiEndpointSubmitReceipt,
     required String deviceModelName,
     required String deviceModelVersion,
@@ -39,30 +41,35 @@ class SubmitReceipts {
       print("[INFO] Response Body: $responseBody");
 
       if (response.statusCode == 200) {
-        // Parse JSON response
-        final Map<String, dynamic> jsonResponse = jsonDecode(responseBody);
+        // // Parse JSON response
+        // final Map<String, dynamic> jsonResponse = jsonDecode(responseBody);
 
-        if (jsonResponse.containsKey("receiptID") && jsonResponse.containsKey("receiptServerSignature")) {
-          int receiptID = jsonResponse["receiptID"];
-          String receiptServerSignature = jsonResponse["receiptServerSignature"].toString();
+        // if (jsonResponse.containsKey("receiptID") && jsonResponse.containsKey("receiptServerSignature")) {
+        //   int receiptID = jsonResponse["receiptID"];
+        //   String receiptServerSignature = jsonResponse["receiptServerSignature"].toString();
 
-          print("[SUCCESS] Receipt submitted successfully!");
-          print("[INFO] Receipt ID: $receiptID");
-          print("[INFO] Receipt Server Signature: $receiptServerSignature");
+        //   print("[SUCCESS] Receipt submitted successfully!");
+        //   print("[INFO] Receipt ID: $receiptID");
+        //   print("[INFO] Receipt Server Signature: $receiptServerSignature");
 
-          responseMessage = "Receipt submitted successfully.\nStatus Code: ${response.statusCode}";
+        //   responseMessage = "Receipt submitted successfully.\nStatus Code: ${response.statusCode}";
+        // } else {
+        //   print("[WARNING] Receipt submission was successful but missing required fields.");
+        // }
 
-          // ✅ Optionally: Store submission status in SQLite
-        //  await _updateOpenDayStatus("processed");
-        } else {
-          print("[WARNING] Receipt submission was successful but missing required fields.");
-        }
+          final Map<String, dynamic> jsonResponse = jsonDecode(responseBody);
+          if (jsonResponse.containsKey("receiptID") && jsonResponse.containsKey("receiptServerSignature")) {
+            return ReceiptResponse.fromJson(jsonResponse, response.statusCode);
+          }
       } else {
         responseMessage = "Error: Received status code ${response.statusCode}\nResponse Body: $responseBody";
         print("[ERROR] Receipt submission failed with status ${response.statusCode}");
-
-        // ✅ Update status in SQLite as "unprocessed"
-       // await _updateOpenDayStatus("unprocessed");
+        return ReceiptResponse(
+          receiptID: -1,
+          receiptServerSignature: "",
+          statusCode: response.statusCode,
+          message: "Failed to submit receipt. Status Code: ${response.statusCode}",
+        );
       }
     } catch (e) {
       print("[ERROR] Exception during receipt submission: ${e.toString()}");
@@ -70,8 +77,12 @@ class SubmitReceipts {
     } finally {
       httpClient.close();
     }
-
-    return responseMessage;
+    return ReceiptResponse(
+      receiptID: -1,
+      receiptServerSignature: "",
+      statusCode: 500,
+      message: "Unexpected error occurred. No valid response received.",
+    );
   }
 
   /// ✅ SQLite Update Function - Updates OpenDay Table in Fiscalization DB

@@ -47,6 +47,7 @@ class PingService {
       } else {
         getPingServerResponse = "Error: Received status code ${response.statusCode}\nResponse Body: $responseBody";
       }
+      return response.statusCode.toString();
     } catch (e) {
       print("Error occurred during the request: ${e.toString()}");
       print("Probable issue with connection to the server :)");

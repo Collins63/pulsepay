@@ -6,6 +6,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:logger/logger.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -18,8 +19,11 @@ import 'package:pulsepay/SQLite/database_helper.dart';
 import 'package:pulsepay/common/constants.dart';
 import 'package:pulsepay/common/custom_field.dart';
 import 'package:get/get.dart';
+import 'package:pulsepay/fiscalization/ping.dart';
+import 'package:pulsepay/fiscalization/receiptResponse.dart';
 import 'package:pulsepay/fiscalization/sslContextualization.dart';
 import 'package:pulsepay/fiscalization/submitReceipts.dart';
+import 'package:pulsepay/main.dart';
 //import 'package:pulsepay/home/home_page.dart';
 
 class Pos  extends StatefulWidget{
@@ -90,7 +94,7 @@ class _PosState extends State<Pos>{
   return status.isGranted;
 }
 
-  void addItem() {
+  addItem() async{
   for (var item in cartItems) {
     double itemTotal = (item['sellingPrice'] is String) 
         ? double.parse(item['sellingPrice']) 
@@ -155,9 +159,19 @@ class _PosState extends State<Pos>{
       print("Keystore file not found");
       return null;
     }
+    print("private keyy found");
 
-    Uint8List p12Bytes = await p12File.readAsBytes();
+    //Uint8List p12Bytes = await p12File.readAsBytes();
+    Uint8List p12Bytes = await p12File.openRead().fold<Uint8List>(
+  Uint8List(0),
+  (buffer, chunk) => Uint8List.fromList([...buffer, ...chunk])
+);
+    //print(p12Bytes);
+    var logger = Logger();
+    logger.d("p12Bytes: $p12Bytes");
     List<String> pemList = Pkcs12Utils.parsePkcs12(p12Bytes , password: password);
+    print("pem list found");
+    print(pemList);
     if(pemList.isEmpty){
       print("No private key found in p12 file");
     }
@@ -165,12 +179,13 @@ class _PosState extends State<Pos>{
       (pem) => pem.contains("BEGIN PRIVATE KEY"),
       orElse: ()=> "",
     );
+    print("private key pem found");
     if(privateKeyPem.isEmpty){
       print("NO RSA privatekey found");
     }
     return CryptoUtils.rsaPrivateKeyFromPem(privateKeyPem);
-
   }
+
   Uint8List signHash(String hash, RSAPrivateKey privateKey) {
   var signer = Signer('SHA-256/RSA')
     ..init(true, PrivateKeyParameter<RSAPrivateKey>(privateKey));
@@ -187,12 +202,16 @@ String computeMD5(Uint8List signatureBytes) {
   return md5Hash.toString();
 }
 Future<Map<String, String>?> generateRSASignature(String hash, String p12FilePath, String password) async {
+  print("Entered generate signatyre");
   RSAPrivateKey? privateKey = await loadPrivateKeyFromP12(p12FilePath, password);
-
+  print("Got private key");
   if (privateKey == null) {
     print("❌ Unable to sign data because private key could not be loaded.");
     return null;
+  }else{
+    print("Key loaded");
   }
+  
 
   // Generate SHA-256 Hash
   hash = await generateHash();
@@ -213,88 +232,129 @@ Future<Map<String, String>?> generateRSASignature(String hash, String p12FilePat
   };
 }
 
+  void signKotlin() async {
+    String filePath = "/storage/emulated/0/Pulse/Configurations/testwelleast_T_certificate.p12";
+    String password = "testwelleast123";
+    String data = await generateHash();
+    String signedData = await signData(filePath, password, data);
+    print("Signed Data: $signedData");  
+  }
   /// Generate JSON after sale
-  generateFiscalJSON() async {
-    String p12FilePath = "/storage/emulated/0/Pulse/Configurations/testwelleast_T_certificate.p12";
-   String p12Password = "testwelleast123";
-    
+  Future<String> generateFiscalJSON() async {
+  try {
+    print("Entered generateFiscalJSON");
+
+    String filePath = "/storage/emulated/0/Pulse/Configurations/testwelleast_T_certificate.p12";
+    String password = "testwelleast123";
+
+    // Ensure signing does not fail
+    String signedData;
     try {
-      print("entered generateFiscalJSON");
-      String hash =await generateHash();
-      print("hash available");
-      Map<String, String>? signatureData = await generateRSASignature(hash, p12FilePath, p12Password);
-      print(signatureData);
-    if(signatureData != null){
-      signature64 = signatureData["signatureBase64"].toString() ;
-      signatureMD5 = signatureData["signatureHex"].toString();
-    }
-    
-    String nextInvoice = dbHelper.getNextInvoiceId().toString();
-    String saleCurrency;
-    if (receiptItems.isEmpty) return "{}";
-    if (selectedPayMethod.isEmpty){
-      saleCurrency = defaultCurrency.toString();
-    }else{
-      saleCurrency = returnCurrency();
-    }
-    Map<String, dynamic> jsonData = {
-  "receipt": {
-    "receiptLines": receiptItems.asMap().entries.map((entry) {
-      int index = entry.key + 1;
-      var item = entry.value;
-      return {
-        "receiptLineNo": "$index",
-        "receiptLineHSCode": "99001000",
-        "receiptLinePrice": item["price"].toStringAsFixed(2),
-        "taxID": item["taxID"],
-        "taxPercent": item["taxPercent"].toStringAsFixed(2),
-        "receiptLineType": "Sale",
-        "receiptLineQuantity": item["quantity"].toString(),
-        "taxCode": item["taxCode"],
-        "receiptLineTotal": item["total"].toStringAsFixed(2),
-        "receiptLineName": item["productName"]
-      };
-    }).toList(),
-    "receiptType": "FISCALINVOICE",
-    "receiptGlobalNo": 2,
-    "receiptCurrency": "$saleCurrency",
-    "receiptPrintForm": "InvoiceA4",
-    "receiptDate": DateTime.now().toIso8601String(),
-    "receiptPayments": [
-      {"moneyTypeCode": "Cash", "paymentAmount": totalAmount.toStringAsFixed(2)}
-    ],
-    "receiptCounter": 1,
-    "receiptTaxes": generateReceiptTaxes(receiptItems), // Call the function here
-    "receiptDeviceSignature": {
-      "signature": signatureMD5 ,
-      "hash": hash,
-    },
-    "buyerData": {
-      "VATNumber": "123456789",
-      "buyerTradeName": "SAT ",
-      "buyerTIN": "0000000000",
-      "buyerRegisterName": "SAT "
-    },
-    "receiptTotal": totalAmount.toStringAsFixed(2),
-    "receiptLinesTaxInclusive": true,
-    "invoiceNo": nextInvoice,
-  }
-};
-    print("json: $jsonData");
-    return jsonEncode(jsonData);
+      String data = await generateHash();
+      signedData = await signData(filePath, password, data);
     } catch (e) {
-      Get.snackbar(
-        "Error Message",
-        "$e",
-        snackPosition: SnackPosition.TOP,
-        colorText: Colors.white,
-        backgroundColor: Colors.red,
-        icon:const Icon(Icons.error),
-        shouldIconPulse: true
-      );
+      Get.snackbar("Signing Error", "$e", snackPosition: SnackPosition.TOP);
+      return "{}";
     }
-    
+
+    print("Signed Data: $signedData");
+
+    if (receiptItems.isEmpty) {
+      print("Receipt items are empty, returning empty JSON.");
+      return "{}";
+    }
+
+    String hash = await generateHash();
+    print("Hash generated successfully");
+
+    int nextInvoice = await dbHelper.getNextInvoiceId();
+
+    String saleCurrency = selectedPayMethod.isEmpty ? defaultCurrency.toString() : returnCurrency();
+
+    // Ensure tax calculation does not fail
+    List<Map<String, dynamic>> taxes = [];
+    try {
+      taxes = generateReceiptTaxes(receiptItems);
+    } catch (e) {
+      Get.snackbar("Tax Calculation Error", "$e", snackPosition: SnackPosition.TOP);
+      return "{}";
+    }
+
+    DateTime now = DateTime.now();
+    String formattedDate = DateFormat("yyyy-MM-ddTHH:mm:ss").format(now);
+
+
+    Map<String, dynamic> jsonData = {
+      "receipt": {
+        "receiptLines": receiptItems.asMap().entries.map((entry) {
+          int index = entry.key + 1;
+          var item = entry.value;
+          return {
+            "receiptLineNo": "$index",
+            "receiptLineHSCode": "99001000",
+            "receiptLinePrice": item["price"].toStringAsFixed(2),
+            "taxID": item["taxID"],
+            "taxPercent": item["taxPercent"].toStringAsFixed(2),
+            "receiptLineType": "Sale",
+            "receiptLineQuantity": item["quantity"].toString(),
+            "taxCode": item["taxCode"],
+            "receiptLineTotal": item["total"].toStringAsFixed(2),
+            "receiptLineName": item["productName"]
+          };
+        }).toList(),
+        "receiptType": "FISCALINVOICE",
+        "receiptGlobalNo": 3,
+        "receiptCurrency": saleCurrency,
+        "receiptPrintForm": "InvoiceA4",
+        "receiptDate": formattedDate ,
+        "receiptPayments": [
+          {"moneyTypeCode": "Cash", "paymentAmount": totalAmount.toStringAsFixed(2)}
+        ],
+        "receiptCounter": 1,
+        "receiptTaxes": taxes,
+        "receiptDeviceSignature": {
+          "signature": signedData,
+          "hash": hash,
+        },
+        "buyerData": {
+          "VATNumber": "123456789",
+          "buyerTradeName": "SAT ",
+          "buyerTIN": "0000000000",
+          "buyerRegisterName": "SAT "
+        },
+        "receiptTotal": totalAmount.toStringAsFixed(2),
+        "receiptLinesTaxInclusive": true,
+        "invoiceNo": nextInvoice.toString(),
+      }
+    };
+
+    // Ensure JSON encoding does not fail
+    final jsonString;
+    try {
+      jsonString = jsonEncode(jsonData);
+    } catch (e) {
+      Get.snackbar("JSON Encoding Error", "$e", snackPosition: SnackPosition.TOP);
+      return "{}";
+    }
+    File file = File("/storage/emulated/0/Pulse/Configurations/jsonFile.txt");
+    await file.writeAsString(jsonString);
+    print("Generated JSON: $jsonString");
+    return jsonString;
+
+  } catch (e) {
+    Get.snackbar(
+      "Error Message",
+      "$e",
+      snackPosition: SnackPosition.TOP,
+      colorText: Colors.white,
+      backgroundColor: Colors.red,
+      icon: const Icon(Icons.error),
+      shouldIconPulse: true
+    );
+    return "{}"; // Ensure the function always returns something
   }
+}
+
   /// Function to generate `receiptTaxes` dynamically
 List<Map<String, dynamic>> generateReceiptTaxes(List<dynamic> receiptItems) {
   Map<int, Map<String, dynamic>> taxGroups = {}; // Store tax summaries
@@ -402,41 +462,22 @@ String generateReceiptString({
     print(hash);
     return hash;
   }
-
-  
-  void encodeSignatures (){
-    String Signature = "ONF7PnfI6o5NAfPycPxEOMAz2uW8uOAyKGZI45Zpx73CzupMgiKPC3fFvkbu2tEYd6okcBkcoPHrlr2301r+M+BLgwbxEzJSHFCBK4zqnwua87J9A9mukQ7lFyGeObvHyismEFhnn5+2XB8ljOHjyw0dIu18booOP/OT/QLEJr6dlH27aUYmSAKTWBJpGb5fMo/7p+uH+o/ablosxHuC0k6WyxT62Axm8sUVNhfrCUny18Z+H93gOuGF7sEPv/HFe+4Q+TwK9ziOoSI/0BnlimG0aomDb9Go3F5AhIm2jNPlTImrMzHJlp2MMXfzFAG9+kCNTi0ryIAHTHAJRjuEyQ\u003d\u003d";
-    String hash= "5awS4i+L++uom200XGBpvB6cECSyu+jr0vHbsYD2P2o\u003d" ;
-    encodedSignature = base64Encode(utf8.encode(Signature));
-    encodedHash = base64Encode(utf8.encode(hash));
-  }
-  
-  Map<String , dynamic> jsonDatatest = {"receipt":{"receiptLines":[{"receiptLineNo":"1","receiptLineHSCode":"99001000","receiptLinePrice":"434.78","taxID":3,"taxPercent":"15.00","receiptLineType":"Sale","receiptLineQuantity":"1.0","taxCode":"C","receiptLineTotal":"434.78","receiptLineName":"RENTAL JANUARY 2025 "}],"receiptType":"FISCALINVOICE","receiptGlobalNo":6,"receiptCurrency":"USD","receiptPrintForm":"InvoiceA4","receiptDate":"2025-01-31T17:18:37","receiptPayments":[{"moneyTypeCode":"Cash","paymentAmount":"434.78"}],"receiptCounter":5,"receiptTaxes":[{"taxID":"3","taxPercent":"15.00","taxCode":"C","taxAmount":"56.71","SalesAmountwithTax":434.78}],"receiptDeviceSignature":{"signature":"","hash": ""},"buyerData":{"VATNumber":"123456789","buyerTradeName":"SAT ","buyerTIN":"0000000000","buyerRegisterName":"SAT "},"receiptTotal":"434.78","receiptLinesTaxInclusive":true,"invoiceNo":"00000390"}};
-  Future<void> submitReceipt() async {
-  String apiEndpointSubmitReceipt =
-      "https://fdmsapitest.zimra.co.zw/Device/v1/21659/SubmitReceipt";
+  Future<String> ping() async {
+  String apiEndpointPing =
+      "https://fdmsapitest.zimra.co.zw/Device/v1/21659/Ping";
   const String deviceModelName = "Server";
-  const String deviceModelVersion = "v1";  
+  const String deviceModelVersion = "v1"; 
 
   SSLContextProvider sslContextProvider = SSLContextProvider();
   SecurityContext securityContext = await sslContextProvider.createSSLContext();
 
   // Call the Ping function
-  final String response = await SubmitReceipts.submitReceipts(
-    apiEndpointSubmitReceipt: apiEndpointSubmitReceipt,
+  final String response = await PingService.ping(
+    apiEndpointPing: apiEndpointPing,
     deviceModelName: deviceModelName,
     deviceModelVersion: deviceModelVersion,
     securityContext: securityContext,
-    receiptjsonBody: jsonEncode(jsonDatatest),
   );
-
-  if(response.isNotEmpty){
-    receiptItems.clear();
-    clearCart();
-    paidController.clear();
-    selectedCustomer.clear();
-    selectedPayMethod.clear();
-  }
 
   //print("Response: \n$response");
   Get.snackbar(
@@ -446,9 +487,148 @@ String generateReceiptString({
       backgroundColor: Colors.green,
       icon: const Icon(Icons.message, color: Colors.white),
     );
-  print(response);
+  
+    return response;
 }
-  void completeSale() async {
+  Map<String , dynamic> jsonDatatest = {"receipt":{"receiptLines":[{"receiptLineNo":"1","receiptLineHSCode":"99001000","receiptLinePrice":"434.78","taxID":3,"taxPercent":"15.00","receiptLineType":"Sale","receiptLineQuantity":"1.0","taxCode":"C","receiptLineTotal":"434.78","receiptLineName":"RENTAL JANUARY 2025 "}],"receiptType":"FISCALINVOICE","receiptGlobalNo":6,"receiptCurrency":"USD","receiptPrintForm":"InvoiceA4","receiptDate":"2025-01-31T17:18:37","receiptPayments":[{"moneyTypeCode":"Cash","paymentAmount":"434.78"}],"receiptCounter":5,"receiptTaxes":[{"taxID":"3","taxPercent":"15.00","taxCode":"C","taxAmount":"56.71","SalesAmountwithTax":434.78}],"receiptDeviceSignature":{"signature":"","hash": ""},"buyerData":{"VATNumber":"123456789","buyerTradeName":"SAT ","buyerTIN":"0000000000","buyerRegisterName":"SAT "},"receiptTotal":"434.78","receiptLinesTaxInclusive":true,"invoiceNo":"00000390"}};
+  Future<void> saveReceiptToDatabase({
+  required int receiptCounter,
+  required int fiscalDayNo,
+  required int invoiceNo,
+  required String receiptType,
+  required String receiptCurrency,
+  required String moneyType,
+  required DateTime receiptDate,
+  required String receiptTime,
+  required double receiptTotal,
+  required String taxCode,
+  required String taxPercent,
+  required double taxAmount,
+  required double salesAmountwithTax,
+  required String receiptHash,
+  required String receiptJsonbody,
+  required String statustoFdms,
+  required String qrurl,
+  required double total15Vat,
+  required double totalNonVat,
+  required double totalExempt,
+  required double totalWt,
+  int? receiptId,
+  String? receiptServerSignature,
+  String? submitReceiptServerresponseJson,
+}) async {
+  final dbHelper = DatabaseHelper();
+
+  Map<String, dynamic> receiptData = {
+    "receiptCounter": receiptCounter,
+    "fiscalDayNo": fiscalDayNo,
+    "invoiceNo": invoiceNo,
+    "receiptId": receiptId,
+    "receiptType": receiptType,
+    "receiptCurrency": receiptCurrency,
+    "moneyType": moneyType,
+    "receiptDate": receiptDate.toIso8601String(),
+    "receiptTime": receiptTime,
+    "receiptTotal": receiptTotal,
+    "taxCode": taxCode,
+    "taxPercent": taxPercent,
+    "taxAmount": taxAmount,
+    "salesAmountwithTax": salesAmountwithTax,
+    "receiptHash": receiptHash,
+    "receiptJsonbody": receiptJsonbody,
+    "statustoFdms": statustoFdms,
+    "qrurl": qrurl,
+    "receiptServerSignature": receiptServerSignature,
+    "submitReceiptServerresponseJson": submitReceiptServerresponseJson,
+    "total15Vat": total15Vat,
+    "totalNonVat": totalNonVat,
+    "totalExempt": totalExempt,
+    "totalWt": totalWt,
+  };
+
+  try {
+    int insertedId = await dbHelper.insertReceipt(receiptData);
+    print("[DB SUCCESS] Receipt inserted with ID: $insertedId");
+  } catch (e) {
+    print("[DB ERROR] Failed to insert receipt: ${e.toString()}");
+  }
+}
+
+  Future<void> submitReceipt() async {
+    String jsonString  = await generateFiscalJSON();
+    final receiptJson = jsonEncode(jsonString);
+    Get.snackbar(
+      'Fiscalizing',
+      'Processing',
+      icon: const Icon(Icons.check, color: Colors.white,),
+      colorText: Colors.white,
+      backgroundColor: Colors.green,
+      snackPosition: SnackPosition.TOP,
+      showProgressIndicator: true,
+    );
+    String pingResponse = await ping();
+    if(pingResponse.isNotEmpty){
+      String apiEndpointSubmitReceipt =
+      "https://fdmsapitest.zimra.co.zw/Device/v1/21659/SubmitReceipt";
+      const String deviceModelName = "Server";
+      const String deviceModelVersion = "v1";  
+
+      SSLContextProvider sslContextProvider = SSLContextProvider();
+      SecurityContext securityContext = await sslContextProvider.createSSLContext();
+      final receiptJsonbody = await generateFiscalJSON();
+      print(receiptJsonbody);
+      // Call the Ping function
+      ReceiptResponse response = await SubmitReceipts.submitReceipts(
+        apiEndpointSubmitReceipt: apiEndpointSubmitReceipt,
+        deviceModelName: deviceModelName,
+        deviceModelVersion: deviceModelVersion,
+        securityContext: securityContext,
+        receiptjsonBody:receiptJsonbody,
+      );
+      print(response);
+      Get.snackbar(
+        "Zimra Response", "$response",
+        snackPosition: SnackPosition.TOP,
+        colorText: Colors.white,
+        backgroundColor: Colors.green,
+        icon: const Icon(Icons.message, color: Colors.white),
+      );
+      String receiptServerSignature = response.receiptServerSignature.toString(); 
+      int receiptId = response.receiptID;
+      int statusCode = response.statusCode; 
+      print("your status code is$statusCode");
+       Map<String, dynamic> jsonData = jsonDecode(receiptJsonbody);
+      if (statusCode == 200 || statusCode == 500){
+        saveReceiptToDatabase(
+          receiptCounter: int.parse(jsonData['receiptCounter']),
+          fiscalDayNo: 1,
+          invoiceNo: jsonData['invoiceNo'],
+          receiptType: jsonData['receiptType'],
+          receiptCurrency: jsonData['receiptCurrency'],
+          moneyType: jsonData['receiptPayments'][0]['moneyTypeCode'],
+          receiptDate: jsonData['receiptDate'],
+          receiptTime: jsonData['receiptDate'],
+          receiptTotal: jsonData['receiptTotal'],
+          taxCode: "C",
+          taxPercent: "15.00",
+          taxAmount: taxAmount,
+          salesAmountwithTax: salesAmountwithTax,
+          receiptHash: jsonData['receiptDeviceSignature']['hash'],
+          receiptJsonbody: receiptJsonbody,
+          statustoFdms: "Submitted",
+          qrurl: "https://fdmsapitest.zimra.co.zw/Device/v1/21659/SubmitReceipt",
+          total15Vat: 0.0,
+          totalNonVat: 0,
+          totalExempt: 0,
+          totalWt: 0,
+          receiptId: receiptId,
+          receiptServerSignature: receiptServerSignature,
+          submitReceiptServerresponseJson: response.toString(),
+        );
+      }
+    }
+  }
+  completeSale() async {
     try {
       final double totalAmount = calculateTotalPrice();
     final double totalTax = calculateTotalTax();
@@ -486,15 +666,6 @@ String generateReceiptString({
       dbHelper.updateProductStockQty(productid, remainingStock);
     }
     }
-    Get.snackbar(
-      'Fiscalizing',
-      'Processing',
-      icon: const Icon(Icons.check, color: Colors.white,),
-      colorText: Colors.white,
-      backgroundColor: Colors.green,
-      snackPosition: SnackPosition.TOP,
-      showProgressIndicator: true,
-    );
 
     Get.snackbar(
       'Succes',
@@ -504,6 +675,7 @@ String generateReceiptString({
       backgroundColor: Colors.green,
       snackPosition: SnackPosition.TOP,
     );
+    clearCart();
     } catch (e) {
       Get.snackbar(
         "Error",
@@ -1610,7 +1782,7 @@ String generateReceiptString({
                                     SizedBox(
                                       width: double.infinity,
                                       child: ElevatedButton(
-                                        onPressed: () {
+                                        onPressed: () async {
                                           try {
                                             // Check if the text input is empty
                                             if (paidController.text.isEmpty) {
@@ -1650,11 +1822,11 @@ String generateReceiptString({
                                               return; // Exit the function
                                             }
                                             // Complete the sale if all validations pass
-                                            addItem();
-                                            generateFiscalJSON();
-                                            generateHash();
-                                            submitReceipt();
-                                            completeSale();
+                                            await addItem();
+                                            await generateFiscalJSON();
+                                            //generateHash();
+                                            await submitReceipt();
+                                            await completeSale();
                                             Navigator.pop(context);
                                             } catch (e) {
                                               Get.snackbar(

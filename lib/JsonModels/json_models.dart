@@ -493,7 +493,7 @@ class SubmittedReceipt {
     final int receiptCounter;
     final int fiscalDayNo;
     final int invoiceNo;
-    final int receiptId;
+    final int? receiptId;
     final String receiptType;
     final String receiptCurrency;
     final String moneyType;
@@ -510,17 +510,17 @@ class SubmittedReceipt {
     final String qrurl;
     final String? receiptServerSignature;
     final String? submitReceiptServerresponseJson;
-    final String total15Vat;
-    final int totalNonVat;
-    final int totalExempt;
-    final int totalWt;
+    final double total15Vat;
+    final double totalNonVat;
+    final double totalExempt;
+    final double totalWt;
 
     SubmittedReceipt({
         this.receiptGlobalNo,
         required this.receiptCounter,
         required this.fiscalDayNo,
         required this.invoiceNo,
-        required this.receiptId,
+        this.receiptId,
         required this.receiptType,
         required this.receiptCurrency,
         required this.moneyType,

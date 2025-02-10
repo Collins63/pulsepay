@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:pulsepay/SQLite/database_helper.dart';
-import 'package:pulsepay/common/constants.dart';
 import 'package:pulsepay/common/custom_button.dart';
 
 class EditStockPurchases extends StatefulWidget {

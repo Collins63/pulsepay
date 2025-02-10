@@ -4,7 +4,6 @@ import 'package:pulsepay/JsonModels/json_models.dart';
 import 'package:pulsepay/SQLite/database_helper.dart';
 //import 'package:pulsepay/authentication/login.dart';
 import 'package:pulsepay/forms/view_products.dart';
-import 'package:pulsepay/home/home_page.dart';
 
 class AddProduct extends StatefulWidget{
   const AddProduct ({super.key});

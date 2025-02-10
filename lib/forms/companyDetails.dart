@@ -48,7 +48,7 @@ class _CompanydetailsState extends State<Companydetails> {
 
   final db = DatabaseHelper();
   final formKey = GlobalKey<FormState>();
-  @override
+
   void clearFields(){
     company.clear();
     logo.clear();

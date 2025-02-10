@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -25,7 +24,35 @@ class FiscalPage extends StatefulWidget {
 }
 
 class _FiscalPageState extends State<FiscalPage> {
-  String deviceID = "21281";
+  final DatabaseHelper dbHelper  = DatabaseHelper();
+  String deviceID = "21659";
+  String taxPayerName = "TestWellEast Investments";
+  String tinNumber = "2000874913";
+  String vatNumber = "220280877";
+  String serialNumber = "testwelleast-1";
+  String modelName = "Server";
+  List<Map<String, dynamic>> receiptsPending= [];
+  List<Map<String, dynamic>> receiptsSubmitted= [];
+  List<Map<String , dynamic>> allReceipts=[];
+
+  Future<void> fetchReceiptsPending() async {
+    List<Map<String, dynamic>> data = await dbHelper.getReceiptsPending();
+    setState(() {
+      receiptsPending = data;
+    });
+  }
+  Future <void> fetchReceiptsSubmitted() async{
+    List<Map<String ,dynamic>> data  = await dbHelper.getSubmittedReceipts();
+    setState(() {
+      receiptsSubmitted = data;
+    });
+  }
+  Future <void> fetchAllReceipts() async{
+    List<Map<String ,dynamic>> data  = await dbHelper.getAllReceipts();
+    setState(() {
+      allReceipts = data;
+    });
+  }
 
   ///MANUAL OPENDAY
   Future<String> openDayManual() async {
@@ -278,7 +305,7 @@ Future<String> getConfig() async {
         child: SingleChildScrollView(
           scrollDirection: Axis.vertical,
           child: Padding(
-            padding: EdgeInsets.symmetric(horizontal: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 10),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -288,7 +315,7 @@ Future<String> getConfig() async {
                     height: 100,
                   ),
                 ),
-                SizedBox(height: 15,),
+                const SizedBox(height: 15,),
                 Container(
                   height:350,
                   decoration: BoxDecoration(
@@ -299,27 +326,27 @@ Future<String> getConfig() async {
                     padding: const EdgeInsets.only(left: 10.0 ,top: 10.0),
                     child: ListView(
                       children: [
-                        const Text("TAXPAYER NAME:" , style: TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16),),
+                        Text("TAXPAYER NAME: $taxPayerName" , style:const TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16),),
                         const SizedBox(height: 6,),
-                        const Text("TAXPAYER TIN:" , style: TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16)),
+                        Text("TAXPAYER TIN: $tinNumber" , style:const TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16)),
                         const SizedBox(height: 6,),
-                        Text("VAT NUMBER:" , style: TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16)),
+                        Text("VAT NUMBER: $vatNumber" , style:const TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16)),
                         const SizedBox(height: 6,),
-                        Text("DEVICE ID:" , style: TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16)),
+                        Text("DEVICE ID: $deviceID" , style:const TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16)),
                         const SizedBox(height: 6,),
-                        Text("SERIAL NO:" , style: TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16)),
+                        Text("SERIAL NO: $serialNumber" , style:const TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16)),
                         const SizedBox(height: 6,),
-                        Text("MODEL NAME:" , style: TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16)),
+                        Text("MODEL NAME: $modelName" , style:const TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16)),
                         const SizedBox(height: 6,),
-                        Text("FSCAL DAY:" , style: TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16)),
+                        Text("FSCAL DAY:" , style: const TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16)),
                         const SizedBox(height: 6,),
                         Text("TIME TO CLOSEDAY:" , style: TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16)),
                         const SizedBox(height: 6,),
-                        Text("RECEIPT COUNTER:" , style: TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16)),
+                        Text("RECEIPT COUNTER: ${allReceipts.length}" , style: TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16)),
                         const SizedBox(height: 6,),
-                        Text("RECEIPTS SUBMITTED:" , style: TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16)),
+                        Text("RECEIPTS SUBMITTED: ${receiptsSubmitted.length}" , style: TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16)),
                         const SizedBox(height: 6,),
-                        Text("RECEIPTS PENDING:" , style: TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16)),
+                        Text("RECEIPTS PENDING: ${receiptsPending.length}" , style: TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16)),
                       ],
                     ),
                   ),
@@ -421,7 +448,7 @@ Future<String> getConfig() async {
                 children: [
                   Icon(Icons.list_alt, color: Colors.black),
                   Text(
-                    "Fiscal",
+                    "Fiscalization",
                     style: TextStyle(fontSize: 10),
                   )
                 ],

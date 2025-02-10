@@ -4,10 +4,8 @@ import 'package:pulsepay/fiscalization/fiscal_tables.dart';
 import 'package:pulsepay/forms/add_product.dart';
 import 'package:pulsepay/forms/companyDetails.dart';
 import 'package:pulsepay/forms/payment_methods.dart';
-import 'package:pulsepay/forms/sales.dart';
-import 'package:pulsepay/forms/sales_invoices.dart';
 import 'package:pulsepay/forms/users.dart';
-import 'package:pulsepay/forms/view_invoices.dart';
+import 'package:pulsepay/home/fiscal_page.dart';
 import 'package:pulsepay/home/home_page.dart';
 import 'package:pulsepay/pointOfSale/pos.dart';
 //import 'package:flutter_screenutil/flutter_screenutil.dart';
@@ -320,7 +318,10 @@ class _SettingsState extends State<Settings>{
           children: [
             IconButton(
                 onPressed: (){
-                  Get.to(()=> const HomePage());
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const HomePage()),
+                  );
                 },
                 icon: const Column(
                   children: [
@@ -334,10 +335,10 @@ class _SettingsState extends State<Settings>{
             ),
             IconButton(
               onPressed: (){
-                //Navigator.pushReplacement(
-                  //context,
-                  //MaterialPageRoute(builder: (context) => MyAccount()),
-                //);
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const FiscalPage()),
+                  );
               },
               icon: const Column(
                 children: [
