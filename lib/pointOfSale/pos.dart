@@ -662,7 +662,6 @@ String generateReceiptString({
       dbHelper.updateProductStockQty(productid, remainingStock);
     }
     }
-
     Get.snackbar(
       'Succes',
       'Sales Done',
@@ -743,22 +742,21 @@ String generateReceiptString({
   }
 
   Future<void> fetchDefaultPayMethod() async {
-  int defaultTag = 1;
-  try {
-    List<Map<String, dynamic>> data = await dbHelper.getDefaultPayMethod(defaultTag);
-    if (data.isNotEmpty) {
-      defaultPayMethod = data;
-      print('Default payment method fetched: $defaultPayMethod');
-    } else {
-      print('No default payment method found for defaultTag: $defaultTag');
-      defaultPayMethod = [];
+    int defaultTag = 1;
+    try {
+      List<Map<String, dynamic>> data = await dbHelper.getDefaultPayMethod(defaultTag);
+      if (data.isNotEmpty) {
+        defaultPayMethod = data;
+        print('Default payment method fetched: $defaultPayMethod');
+      } else {
+        print('No default payment method found for defaultTag: $defaultTag');
+        defaultPayMethod = [];
+      }
+    } catch (e) {
+      print('Error fetching default payment method: $e');
+      defaultPayMethod = []; // Optional: Handle this scenario based on your application logic
     }
-  } catch (e) {
-    print('Error fetching default payment method: $e');
-    defaultPayMethod = []; // Optional: Handle this scenario based on your application logic
   }
-}
-
 
   void addToCustomer(Map<String , dynamic> customer){
     selectedCustomer.add(customer);
@@ -876,7 +874,6 @@ String generateReceiptString({
  
 
   double calculateTotalPrice() {
-
     return cartItems.fold(0.0, (total, item) {
       final double sellingPrice = item['sellingPrice'] ?? 0.0; // Default to 0.0 if null
       final int sellQty = item['sellqty'] ?? 1.0; // Default to 1.0 if null
@@ -886,7 +883,6 @@ String generateReceiptString({
         double rate  = selectedPayMethod[0]['rate'];
         return total + (sellingPrice * sellQty * rate);
       }
-      
     });
   }
 
@@ -1606,9 +1602,15 @@ String generateReceiptString({
                           }
                         },
                         onDismissed: (direction) {
+                          //int cartItemQty = cartItems[index]['sellqty'];
                           if (direction == DismissDirection.endToStart) {
                             setState(() {
                               cartItems.removeAt(index);
+                            });
+                          }
+                          else{
+                            setState(() {
+                              cartItems[index]['sellqty'] += 1;
                             });
                           }
                         },
