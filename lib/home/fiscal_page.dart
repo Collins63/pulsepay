@@ -86,7 +86,6 @@ class _FiscalPageState extends State<FiscalPage> {
       },
       body: openDayRequest,
     );
-
     if (response.statusCode == 200) {
       print("Open Day posted successfully!");
       await dbHelper.insertOpenDay(fiscalDayNo, "unprocessed", iso8601);

@@ -19,7 +19,7 @@ class Users {
   final String? realName;
   final String userName;
   final String userPassword;
-  final String? dateCreated;
+  final String? DateCreated;
   final int? isAdmin;
   final int? isCashier;
   final int? isActive;
@@ -30,7 +30,7 @@ class Users {
     this.realName,
     required this.userName,
     required this.userPassword,
-    this.dateCreated,
+    this.DateCreated,
     this.isAdmin,
     this.isCashier,
     this.isActive
@@ -41,7 +41,7 @@ class Users {
     realName: json["realName"],
     userName: json["userName"],
     userPassword: json["userPassword"],
-    dateCreated: json["dateCreated"],
+    DateCreated: json["dateCreated"],
     isAdmin: json["isAdmin"],
     isCashier: json["isCashier"],
     isActive: json["isActive"]
@@ -52,7 +52,7 @@ class Users {
     "realName": realName,
     "userName": userName,
     "userPassword": userPassword,
-    "dateCreated": dateCreated,
+    "dateCreated": DateCreated,
     "isAdmin": isAdmin,
     "isCashier": isCashier,
     "isActive": isActive
@@ -497,7 +497,7 @@ class SubmittedReceipt {
     final String receiptType;
     final String receiptCurrency;
     final String moneyType;
-    final DateTime receiptDate;
+    final String receiptDate;
     final String receiptTime;
     final double receiptTotal;
     final String taxCode;
@@ -506,7 +506,7 @@ class SubmittedReceipt {
     final double salesAmountwithTax;
     final String receiptHash;
     final String receiptJsonbody;
-    final String statustoFdms;
+    final String StatustoFdms;
     final String qrurl;
     final String? receiptServerSignature;
     final String? submitReceiptServerresponseJson;
@@ -533,7 +533,7 @@ class SubmittedReceipt {
         required this.salesAmountwithTax,
         required this.receiptHash,
         required this.receiptJsonbody,
-        required this.statustoFdms,
+        required this.StatustoFdms,
         required this.qrurl,
         this.receiptServerSignature,
         this.submitReceiptServerresponseJson,
@@ -552,7 +552,7 @@ class SubmittedReceipt {
         receiptType: json["receiptType"],
         receiptCurrency: json["receiptCurrency"],
         moneyType: json["moneyType"],
-        receiptDate: DateTime.parse(json["receiptDate"]),
+        receiptDate: DateTime.parse(json["receiptDate"]).toString(),
         receiptTime: json["receiptTime"],
         receiptTotal: json["receiptTotal"].toDouble(),
         taxCode: json["taxCode"],
@@ -561,7 +561,7 @@ class SubmittedReceipt {
         salesAmountwithTax: json["SalesAmountwithTax"].toDouble(),
         receiptHash: json["receiptHash"],
         receiptJsonbody: json["receiptJsonbody"],
-        statustoFdms: json["StatustoFDMS"],
+        StatustoFdms: json["StatustoFDMS"],
         qrurl: json["qrurl"],
         receiptServerSignature: json["receiptServerSignature"],
         submitReceiptServerresponseJson: json["submitReceiptServerresponseJSON"],
@@ -580,7 +580,7 @@ class SubmittedReceipt {
         "receiptType": receiptType,
         "receiptCurrency": receiptCurrency,
         "moneyType": moneyType,
-        "receiptDate": "${receiptDate.year.toString().padLeft(4, '0')}-${receiptDate.month.toString().padLeft(2, '0')}-${receiptDate.day.toString().padLeft(2, '0')}",
+        "receiptDate": receiptDate,
         "receiptTime": receiptTime,
         "receiptTotal": receiptTotal,
         "taxCode": taxCode,
@@ -589,7 +589,7 @@ class SubmittedReceipt {
         "SalesAmountwithTax": salesAmountwithTax,
         "receiptHash": receiptHash,
         "receiptJsonbody": receiptJsonbody,
-        "StatustoFDMS": statustoFdms,
+        "StatustoFDMS": StatustoFdms,
         "qrurl": qrurl,
         "receiptServerSignature": receiptServerSignature,
         "submitReceiptServerresponseJSON": submitReceiptServerresponseJson,

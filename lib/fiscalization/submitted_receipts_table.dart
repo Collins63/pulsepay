@@ -56,113 +56,117 @@ class _submittedReceiptsTableState extends State<SubmittedReceiptsTable> {
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
-          : Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: SingleChildScrollView(
-                    child: DataTable(
-                      columns: const [
-                        DataColumn(label: Text('Select')),
-                        DataColumn(label: Text('ReceiptGlobalNo')),
-                        DataColumn(label: Text('ReceiptCounter')),
-                        DataColumn(label: Text('FiscalDayNo')),
-                        DataColumn(label: Text('InvoiceNo')),
-                        DataColumn(label: Text('ReceiptID')),
-                        DataColumn(label: Text('ReceiptType')),
-                        DataColumn(label: Text('ReceiptCurrency')),
-                        DataColumn(label: Text('MoneyType')),
-                        DataColumn(label: Text('ReceiptDate')),
-                        DataColumn(label: Text('ReceiptTime')),
-                        DataColumn(label: Text('ReceiptTotal')),
-                        DataColumn(label: Text('TaxCode')),
-                        DataColumn(label: Text('taxPercent')),
-                        DataColumn(label:Text('taxAmount')),
-                        DataColumn(label:Text('salesAmountwithTax')),
-                        DataColumn(label:Text('receiptHash')),
-                        DataColumn(label:Text('receiptJsonbody')),
-                        DataColumn(label:Text('statustoFdms')),
-                        DataColumn(label:Text('qrurl')),
-                        DataColumn(label:Text('receiptServerSignature')),
-                        DataColumn(label:Text('submitReceiptServerresponseJson')),
-                        DataColumn(label:Text('total15Vat')),
-                        DataColumn(label:Text('totalNonVat')),
-                        DataColumn(label:Text('totalExempt')),
-                        DataColumn(label:Text('totalWT')),
-                      ],
-                      rows: submittedReceipts
-                          .map(
-                            (receipt) {
-                              final receiptID = receipt['receiptGlobalNo'];
-                              return DataRow(
-                              cells: [
-                                DataCell(
-                                  Checkbox(
-                                    value: selectedReceipt.contains(receiptID),
-                                    onChanged: (_) => toggleSelection(receiptID),
+          : SingleChildScrollView(
+            scrollDirection: Axis.vertical,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: SingleChildScrollView(
+                      child: DataTable(
+                        columns: const [
+                          DataColumn(label: Text('Select')),
+                          DataColumn(label: Text('ReceiptGlobalNo')),
+                          DataColumn(label: Text('ReceiptCounter')),
+                          DataColumn(label: Text('FiscalDayNo')),
+                          DataColumn(label: Text('InvoiceNo')),
+                          DataColumn(label: Text('ReceiptID')),
+                          DataColumn(label: Text('ReceiptType')),
+                          DataColumn(label: Text('ReceiptCurrency')),
+                          DataColumn(label: Text('MoneyType')),
+                          DataColumn(label: Text('ReceiptDate')),
+                          DataColumn(label: Text('ReceiptTime')),
+                          DataColumn(label: Text('ReceiptTotal')),
+                          DataColumn(label: Text('TaxCode')),
+                          DataColumn(label: Text('taxPercent')),
+                          DataColumn(label:Text('taxAmount')),
+                          DataColumn(label:Text('salesAmountwithTax')),
+                          DataColumn(label:Text('receiptHash')),
+                          DataColumn(label:Text('receiptJsonbody')),
+                          DataColumn(label:Text('statustoFdms')),
+                          DataColumn(label:Text('qrurl')),
+                          DataColumn(label:Text('receiptServerSignature')),
+                          DataColumn(label:Text('submitReceiptServerresponseJson')),
+                          DataColumn(label:Text('total15Vat')),
+                          DataColumn(label:Text('totalNonVat')),
+                          DataColumn(label:Text('totalExempt')),
+                          DataColumn(label:Text('totalWT')),
+                        ],
+                        rows: submittedReceipts
+                            .map(
+                              (receipt) {
+                                final receiptID = receipt['receiptGlobalNo'];
+                                return DataRow(
+                                cells: [
+                                  DataCell(
+                                    Checkbox(
+                                      value: selectedReceipt.contains(receiptID),
+                                      onChanged: (_) => toggleSelection(receiptID),
+                                    ),
                                   ),
-                                ),
-                                DataCell(Text(receipt['receiptCounter'].toString())),
-                                DataCell(Text(receipt['fiscalDayNo'].toString())),
-                                DataCell(Text(receipt['invoiceNo'].toString())),
-                                DataCell(Text(receipt['receiptId'].toString())),
-                                DataCell(Text(receipt['receiptType'].toString())),
-                                DataCell(Text(receipt['receiptCurrency'].toString())),
-                                DataCell(Text(receipt['moneyType'].toString())),
-                                DataCell(Text(receipt['receiptDate'].toString())),
-                                DataCell(Text(receipt['receiptTime'].toString())),
-                                DataCell(Text(receipt['receiptTotal'].toString())),
-                                DataCell(Text(receipt['taxCode'].toString())),
-                                DataCell(Text(receipt['taxPercent'].toString())),
-                                DataCell(Text(receipt['taxAmount'].toString())),
-                                DataCell(Text(receipt['salesAmountwithTax'].toString())),
-                                DataCell(Text(receipt['receiptHash'].toString())),
-                                DataCell(Text(receipt['receiptJsonbody'].toString())),
-                                DataCell(Text(receipt['statustoFdms'].toString())),
-                                DataCell(Text(receipt['qrurl'].toString())),
-                                DataCell(Text(receipt['receiptServerSignature'].toString())),
-                                DataCell(Text(receipt['submitReceiptServerresponseJson'].toString())),
-                                DataCell(Text(receipt['total15Vat'].toString())),
-                                DataCell(Text(receipt['totalNonVat'].toString())),
-                                DataCell(Text(receipt['totalExempt'].toString())),
-                                DataCell(Text(receipt['totalWT'].toString())),
-                              ],
-                            );
-                          })
-                          .toList(),
+                                  DataCell(Text(receipt['receiptGlobalNo'].toString())),
+                                  DataCell(Text(receipt['receiptCounter'].toString())),
+                                  DataCell(Text(receipt['fiscalDayNo'].toString())),
+                                  DataCell(Text(receipt['invoiceNo'].toString())),
+                                  DataCell(Text(receipt['receiptId'].toString())),
+                                  DataCell(Text(receipt['receiptType'].toString())),
+                                  DataCell(Text(receipt['receiptCurrency'].toString())),
+                                  DataCell(Text(receipt['moneyType'].toString())),
+                                  DataCell(Text(receipt['receiptDate'].toString())),
+                                  DataCell(Text(receipt['receiptTime'].toString())),
+                                  DataCell(Text(receipt['receiptTotal'].toString())),
+                                  DataCell(Text(receipt['taxCode'].toString())),
+                                  DataCell(Text(receipt['taxPercent'].toString())),
+                                  DataCell(Text(receipt['taxAmount'].toString())),
+                                  DataCell(Text(receipt['salesAmountwithTax'].toString())),
+                                  DataCell(Text(receipt['receiptHash'].toString())),
+                                  DataCell(Text(receipt['receiptJsonbody'].toString())),
+                                  DataCell(Text(receipt['StatustoFdms'].toString())),
+                                  DataCell(Text(receipt['qrurl'].toString())),
+                                  DataCell(Text(receipt['receiptServerSignature'].toString())),
+                                  DataCell(Text(receipt['submitReceiptServerresponseJson'].toString())),
+                                  DataCell(Text(receipt['total15Vat'].toString())),
+                                  DataCell(Text(receipt['totalNonVat'].toString())),
+                                  DataCell(Text(receipt['totalExempt'].toString())),
+                                  DataCell(Text(receipt['totalWT'].toString())),
+                                ],
+                              );
+                            })
+                            .toList(),
+                      ),
                     ),
                   ),
+                  const SizedBox(height: 50,),
+                  if (selectedReceipt.isNotEmpty)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    CustomOutlineBtn(
+                      width: 150,
+                      height: 50,
+                      text: "View Day Sales",
+                      color:const Color.fromARGB(255, 14, 19, 29),
+                      color2: const Color.fromARGB(255, 14, 19, 29),
+                      onTap: (){
+                        //final i = selectedUsers.first;
+                        //fetchSalesForInvoice(invoiceId);
+                      },
+                    ),
+                    
+                    CustomOutlineBtn(
+                      width: 150,
+                      height: 50,
+                      text: "Day Details",
+                      color:const Color.fromARGB(255, 14, 19, 29),
+                      color2: const Color.fromARGB(255, 14, 19, 29),
+                      onTap: (){
+                      },
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 50,),
-                if (selectedReceipt.isNotEmpty)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  CustomOutlineBtn(
-                    width: 150,
-                    height: 50,
-                    text: "View Day Sales",
-                    color:const Color.fromARGB(255, 14, 19, 29),
-                    color2: const Color.fromARGB(255, 14, 19, 29),
-                    onTap: (){
-                      //final i = selectedUsers.first;
-                      //fetchSalesForInvoice(invoiceId);
-                    },
-                  ),
-                  
-                  CustomOutlineBtn(
-                    width: 150,
-                    height: 50,
-                    text: "Day Details",
-                    color:const Color.fromARGB(255, 14, 19, 29),
-                    color2: const Color.fromARGB(255, 14, 19, 29),
-                    onTap: (){
-                    },
-                  ),
-                ],
-              ),
-            ],
+              ],
+            ),
           ),
 
     );

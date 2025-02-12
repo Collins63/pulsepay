@@ -86,6 +86,11 @@ class DatabaseHelper {
     return db.insert('users', user.toMap());
   }
 
+  Future<int> insertReceipt(SubmittedReceipt receiptData) async {
+    final db = await initDB();
+    return await db.insert('submittedReceipts', receiptData.toMap());
+    }
+
   Future<int> addReceipt(SubmittedReceipt receipt) async{
     final Database db = await initDB();
     return db.insert('submittedReceipts', receipt.toMap());
@@ -322,6 +327,16 @@ class DatabaseHelper {
         ''');
     }
 
+    Future<int> getlatestFiscalDay() async {
+      final db = await initDB();
+      List<Map<String, dynamic>> result = await db.rawQuery(
+        "SELECT FiscalDayNo FROM OpenDay ORDER BY ID DESC LIMIT 1");
+      if(result.isNotEmpty){
+        return result.first["FiscalDayNo"] as int;
+      }
+      return 1;
+    }
+
     //Get Submitted Receipts table
     Future <List<Map<String, dynamic>>> getSubmittedReceipts() async {
       final db = await initDB();
@@ -329,11 +344,6 @@ class DatabaseHelper {
         SELECT submittedReceipts.*
         FROM submittedReceipts
       ''');
-    }
-    //Insert Into submitted receipts
-    Future<int> insertReceipt(Map<String, dynamic> receiptData) async {
-    final db = await initDB();
-    return await db.insert('submittedReceipts', receiptData);
     }
 
     ///Get All Users From DB

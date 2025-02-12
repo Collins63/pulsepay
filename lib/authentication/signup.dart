@@ -209,7 +209,7 @@ class _SignupState extends State<Signup>{
                             realName: realname.text ,
                             userName: username.text,
                             userPassword: password.text,
-                            dateCreated: date,
+                            DateCreated: date,
                             isAdmin: isAdmin? 1 : 0,
                             isCashier: isCashier? 1 :0,
                             )

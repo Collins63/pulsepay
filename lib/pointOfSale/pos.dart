@@ -60,6 +60,7 @@ class _PosState extends State<Pos>{
   List<Map<String , dynamic>> defaultPayMethod = [];
   List<Map<String, dynamic>> payMethods = [];
   List<Map<String, dynamic>> searchResults = [];
+  List<Map<String, dynamic>> products = [];
   List<Map<String, dynamic>> cartItems = [];
   List<Map<String, dynamic>> customerDetails = [];
   List<Map<String, dynamic>> selectedCustomer =[];
@@ -491,68 +492,6 @@ String generateReceiptString({
     return response;
 }
   Map<String , dynamic> jsonDatatest = {"receipt":{"receiptLines":[{"receiptLineNo":"1","receiptLineHSCode":"99001000","receiptLinePrice":"434.78","taxID":3,"taxPercent":"15.00","receiptLineType":"Sale","receiptLineQuantity":"1.0","taxCode":"C","receiptLineTotal":"434.78","receiptLineName":"RENTAL JANUARY 2025 "}],"receiptType":"FISCALINVOICE","receiptGlobalNo":6,"receiptCurrency":"USD","receiptPrintForm":"InvoiceA4","receiptDate":"2025-01-31T17:18:37","receiptPayments":[{"moneyTypeCode":"Cash","paymentAmount":"434.78"}],"receiptCounter":5,"receiptTaxes":[{"taxID":"3","taxPercent":"15.00","taxCode":"C","taxAmount":"56.71","SalesAmountwithTax":434.78}],"receiptDeviceSignature":{"signature":"","hash": ""},"buyerData":{"VATNumber":"123456789","buyerTradeName":"SAT ","buyerTIN":"0000000000","buyerRegisterName":"SAT "},"receiptTotal":"434.78","receiptLinesTaxInclusive":true,"invoiceNo":"00000390"}};
-  Future<void> saveReceiptToDatabase({
-  required int receiptCounter,
-  required int fiscalDayNo,
-  required int invoiceNo,
-  required String receiptType,
-  required String receiptCurrency,
-  required String moneyType,
-  required DateTime receiptDate,
-  required String receiptTime,
-  required double receiptTotal,
-  required String taxCode,
-  required String taxPercent,
-  required double taxAmount,
-  required double salesAmountwithTax,
-  required String receiptHash,
-  required String receiptJsonbody,
-  required String statustoFdms,
-  required String qrurl,
-  required double total15Vat,
-  required double totalNonVat,
-  required double totalExempt,
-  required double totalWt,
-  int? receiptId,
-  String? receiptServerSignature,
-  String? submitReceiptServerresponseJson,
-}) async {
-  final dbHelper = DatabaseHelper();
-
-  Map<String, dynamic> receiptData = {
-    "receiptCounter": receiptCounter,
-    "fiscalDayNo": fiscalDayNo,
-    "invoiceNo": invoiceNo,
-    "receiptId": receiptId,
-    "receiptType": receiptType,
-    "receiptCurrency": receiptCurrency,
-    "moneyType": moneyType,
-    "receiptDate": receiptDate.toIso8601String(),
-    "receiptTime": receiptTime,
-    "receiptTotal": receiptTotal,
-    "taxCode": taxCode,
-    "taxPercent": taxPercent,
-    "taxAmount": taxAmount,
-    "salesAmountwithTax": salesAmountwithTax,
-    "receiptHash": receiptHash,
-    "receiptJsonbody": receiptJsonbody,
-    "statustoFdms": statustoFdms,
-    "qrurl": qrurl,
-    "receiptServerSignature": receiptServerSignature,
-    "submitReceiptServerresponseJson": submitReceiptServerresponseJson,
-    "total15Vat": total15Vat,
-    "totalNonVat": totalNonVat,
-    "totalExempt": totalExempt,
-    "totalWt": totalWt,
-  };
-
-  try {
-    int insertedId = await dbHelper.insertReceipt(receiptData);
-    print("[DB SUCCESS] Receipt inserted with ID: $insertedId");
-  } catch (e) {
-    print("[DB ERROR] Failed to insert receipt: ${e.toString()}");
-  }
-}
 
   Future<void> submitReceipt() async {
     String jsonString  = await generateFiscalJSON();
@@ -578,7 +517,7 @@ String generateReceiptString({
       final receiptJsonbody = await generateFiscalJSON();
       print(receiptJsonbody);
       // Call the Ping function
-      ReceiptResponse response = await SubmitReceipts.submitReceipts(
+      Map<String, dynamic> response = await SubmitReceipts.submitReceipts(
         apiEndpointSubmitReceipt: apiEndpointSubmitReceipt,
         deviceModelName: deviceModelName,
         deviceModelVersion: deviceModelVersion,
@@ -593,39 +532,96 @@ String generateReceiptString({
         backgroundColor: Colors.green,
         icon: const Icon(Icons.message, color: Colors.white),
       );
-      String receiptServerSignature = response.receiptServerSignature.toString(); 
-      int receiptId = response.receiptID;
-      int statusCode = response.statusCode; 
-      print("your status code is$statusCode");
-       Map<String, dynamic> jsonData = jsonDecode(receiptJsonbody);
-      if (statusCode == 200 || statusCode == 500){
-        saveReceiptToDatabase(
-          receiptCounter: int.parse(jsonData['receiptCounter']),
-          fiscalDayNo: 1,
-          invoiceNo: jsonData['invoiceNo'],
-          receiptType: jsonData['receiptType'],
-          receiptCurrency: jsonData['receiptCurrency'],
-          moneyType: jsonData['receiptPayments'][0]['moneyTypeCode'],
-          receiptDate: jsonData['receiptDate'],
-          receiptTime: jsonData['receiptDate'],
-          receiptTotal: jsonData['receiptTotal'],
-          taxCode: "C",
-          taxPercent: "15.00",
-          taxAmount: taxAmount,
-          salesAmountwithTax: salesAmountwithTax,
-          receiptHash: jsonData['receiptDeviceSignature']['hash'],
-          receiptJsonbody: receiptJsonbody,
-          statustoFdms: "Submitted",
-          qrurl: "https://fdmsapitest.zimra.co.zw/Device/v1/21659/SubmitReceipt",
-          total15Vat: 0.0,
-          totalNonVat: 0,
-          totalExempt: 0,
-          totalWt: 0,
-          receiptId: receiptId,
-          receiptServerSignature: receiptServerSignature,
-          submitReceiptServerresponseJson: response.toString(),
+      int statusCode = response["statusCode"];
+      Map<String, dynamic> responseBody = jsonDecode(response["responseBody"]);
+      Map<String, dynamic> jsonData = jsonDecode(receiptJsonbody);
+      if (statusCode == 200) {
+        final db=DatabaseHelper();
+
+      print("Code is 200, saving receipt...");
+
+      // Check if 'receiptPayments' is non-empty before accessing index 0
+      String moneyType = (jsonData['receipt']['receiptPayments'] != null && jsonData['receipt']['receiptPayments'].isNotEmpty)
+      ? jsonData['receipt']['receiptPayments'][0]['moneyTypeCode'].toString()
+      : "";
+      print("your date is ${jsonData['receipt']?['receiptDate']}");
+      print("your invoice number is ${jsonData['receipt']?['invoiceNo']?.toString()}");
+      print(jsonData);
+      String submitReceiptServerresponseJson = responseBody.toString();
+      int fiscalDayNo = await db.getlatestFiscalDay();
+      print("fiscal day no is $fiscalDayNo");
+      double receiptTotal = double.parse(jsonData['receipt']?['receiptTotal']?.toString() ?? "0");
+      try {
+        db.insertReceipt(SubmittedReceipt(
+        receiptCounter: jsonData['receipt']?['receiptCounter'] ?? 0,
+        fiscalDayNo: fiscalDayNo, 
+        invoiceNo: int.tryParse(jsonData['receipt']?['invoiceNo']) ?? 0,
+        receiptId: responseBody['receiptID'] ?? 0,
+        receiptType: jsonData['receipt']['receiptType']?.toString() ?? "",
+        receiptCurrency: jsonData['receipt']?['receiptCurrency']?.toString() ?? "",
+        moneyType: moneyType,
+        receiptDate: jsonData['receipt']?['receiptDate']?.toString() ?? "",
+        receiptTime: jsonData['receipt']?['receiptDate']?.toString() ?? "",
+        receiptTotal: receiptTotal,
+        taxCode: "C",
+        taxPercent: "15.00",
+        taxAmount:  taxAmount ?? 0,
+        salesAmountwithTax: salesAmountwithTax ?? 0,
+        receiptHash: jsonData['receipt']?['receiptDeviceSignature']?['hash']?.toString() ?? "",
+        receiptJsonbody: receiptJsonbody?.toString() ?? "",
+        StatustoFdms: "Submitted",
+        qrurl:"https://fdmsapitest.zimra.co.zw/Device/v1/21659/SubmitReceipt",
+        receiptServerSignature: responseBody['receiptServerSignature']?['signature'].toString() ?? "",
+        submitReceiptServerresponseJson: submitReceiptServerresponseJson,
+        total15Vat: 0.0,
+        totalNonVat: 0.0,
+        totalExempt: 0.0,
+        totalWt: 0.0));
+      } catch (e) {
+        Get.snackbar("Error",
+          "$e",
+          snackPosition: SnackPosition.TOP,
+          colorText: Colors.white,
+          backgroundColor: Colors.red,
+          icon: const Icon(Icons.error),
         );
       }
+
+}
+
+      // String receiptServerSignature = response.receiptServerSignature.toString(); 
+      // int receiptId = response.receiptID;
+      // int statusCode = response.statusCode; 
+      // print("your status code is$statusCode");
+      //  Map<String, dynamic> jsonData = jsonDecode(receiptJsonbody);
+      // if (statusCode == 200 || statusCode == 500){
+      //   saveReceiptToDatabase(
+      //     receiptCounter: int.parse(jsonData['receiptCounter']),
+      //     fiscalDayNo: 1,
+      //     invoiceNo: int.parse(jsonData['invoiceNo']),
+      //     receiptType: jsonData['receiptType'].toString(),
+      //     receiptCurrency: jsonData['receiptCurrency'].toString(),
+      //     moneyType: jsonData['receiptPayments'][0]['moneyTypeCode'].toString(),
+      //     receiptDate: jsonData['receiptDate'].toString(),
+      //     receiptTime: jsonData['receiptDate'].toString(),
+      //     receiptTotal: double.parse(jsonData['receiptTotal']),
+      //     taxCode: "C",
+      //     taxPercent: "15.00",
+      //     taxAmount: taxAmount,
+      //     salesAmountwithTax: salesAmountwithTax,
+      //     receiptHash: jsonData['receiptDeviceSignature']['hash'].toString(),
+      //     receiptJsonbody: receiptJsonbody.toString(),
+      //     statustoFdms: "Submitted",
+      //     qrurl: "https://fdmsapitest.zimra.co.zw/Device/v1/21659/SubmitReceipt",
+      //     total15Vat: 0.0,
+      //     totalNonVat: 0,
+      //     totalExempt: 0,
+      //     totalWt: 0,
+      //     receiptId: receiptId,
+      //     receiptServerSignature: receiptServerSignature.toString(),
+      //     submitReceiptServerresponseJson: response.toString(),
+      //   );
+      // }
     }
   }
   completeSale() async {
@@ -1225,6 +1221,88 @@ String generateReceiptString({
       }
     );
   }
+
+  ///=====PAYMENT METHODS=====//////////
+  //////////////////////////////////////
+  showProducts() async{
+    products = await dbHelper.getAllProducts();
+    return showModalBottomSheet(
+      isScrollControlled: true,
+      isDismissible: false,
+      context: context,
+      builder: (context){
+        return Container(
+          height: 600,
+          child: Padding(
+            padding:  EdgeInsets.only(
+              left: 16.0,
+              right: 16.0,
+              top: 16.0,
+              bottom: MediaQuery.of(context).viewInsets.bottom
+            ),
+            child: Form(
+              key: formKey,
+              child: ListView(
+                scrollDirection: Axis.vertical,
+                  children: [
+                    Center(
+                      child: Container(
+                        height: 5,
+                        width: 100,
+                        decoration: BoxDecoration(
+                          color: kDark,
+                          borderRadius: BorderRadius.circular(20), 
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 10,),
+                    Row(
+                      children: [
+                        IconButton(onPressed: (){
+                          Navigator.pop(context);
+                        }, icon:const Icon(Icons.arrow_circle_left_sharp, size: 40, color: kDark,)),
+                        const Center(child: const Text("Products" , style: TextStyle(color: Colors.black,fontSize: 18, fontWeight: FontWeight.w500),)),
+                      ],
+                    ),
+                    SizedBox(height: 15,),
+                    
+                    SizedBox(height: 10,),
+                    Container(
+                      height: 480,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10.0),
+                        border: Border.all(width: 1 , color: const Color.fromARGB(255, 14, 19, 29)),
+                        color:const Color.fromARGB(255, 14, 19, 29),
+                      ),
+                      child: ListView.builder(
+                        itemCount: products.length,
+                        itemBuilder: (context , index){
+                          final product = products[index];
+                          return Container(
+                            margin: const EdgeInsets.symmetric(vertical: 5.0, horizontal: 10.0),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey, width: 1.0),
+                              borderRadius: BorderRadius.circular(10.0), 
+                              color: Colors.white, 
+                            ),
+                            child: ListTile(
+                              title: Text(product['productName']),
+                              subtitle: Text("Price: ${product['sellingPrice']}"),
+                              trailing: IconButton(onPressed:()=>addToCart(product), icon:const Icon(Icons.add_circle_outline_sharp)),
+                            ),
+                          );
+                        }
+                      ),
+                    ),
+                  ],
+                
+              ),
+            ),
+          ),
+        );
+      }
+    );
+  }
   
   //=================END OF FUNCTIONS============================//a
   //======================================================//
@@ -1629,6 +1707,7 @@ String generateReceiptString({
                   //context,
                   //MaterialPageRoute(builder: (context) => MyAccount()),
                 //);
+                showProducts();
               },
               icon: const Column(
                 children: [
