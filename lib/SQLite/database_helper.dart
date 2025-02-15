@@ -79,7 +79,20 @@ class DatabaseHelper {
       return false;
     }
   }
+   // Fetch sales data for reports
+  Future<List<Map<String, dynamic>>> getSalesReport(String period) async {
+    final db = await initDB();
+    String query = "";
 
+    if (period == "Daily") {
+      query = "SELECT totalAmount, strftime('%Y-%m-%d', date) as date FROM invoices GROUP BY date";
+    } else if (period == "Weekly") {
+      query = "SELECT totalAmount, strftime('%Y-%W', date) as date FROM invoices GROUP BY date";
+    } else if (period == "Monthly") {
+      query = "SELECT totalAmount, strftime('%Y-%m', date) as date FROM invoices GROUP BY date";
+    }
+    return await db.rawQuery(query);
+  }
   //signup
   Future<int> signup(Users user)async{
     final Database db = await initDB();
@@ -152,6 +165,13 @@ class DatabaseHelper {
     final result = await db.rawQuery('SELECT MAX(invoiceId) as lastId FROM invoices');
     int lastId = result.first['lastId'] as int? ?? 0; // Start at 0 if no invoices
     return lastId + 1;
+  }
+  
+  Future<int> getNextReceiptGlobalNo() async {
+    final db = await initDB();
+    final result = await db.rawQuery('SELECT MAX(receiptGlobalNo) as lastGlobalNo FROM submittedReceipts');
+    int lastGlobalNo = result.first['lastGlobalNo'] as int? ?? 0; // Start at 0 if no invoices
+    return lastGlobalNo + 1;
   }
 
   //save sale
@@ -336,7 +356,47 @@ class DatabaseHelper {
       }
       return 1;
     }
+    Future<int> getLatestReceiptGlobalNo() async {
+      final db = await initDB();
+      List<Map<String, dynamic>> result = await db.rawQuery(
+        "SELECT receiptGlobalNo FROM submittedReceipts ORDER BY receiptGlobalNo DESC LIMIT 1"
+      );
 
+      if (result.isNotEmpty) {
+        return result.first["receiptGlobalNo"] as int;
+      }
+        return 1; // Default value if no records exist
+      }
+    Future<int> getNextReceiptCounter(int fiscalDayNo) async {
+      final db = await initDB();
+      List<Map<String, dynamic>> result = await db.rawQuery(
+        '''
+          SELECT MAX(receiptCounter) as lastCounter
+          FROM submittedReceipts 
+          WHERE FiscalDayNo = ?
+        ''',
+        [fiscalDayNo],
+      );
+
+      // Retrieve the counter from the result
+      int nextCounter = (result.isNotEmpty && result.first['lastCounter'] != null) 
+        ? result.first['lastCounter'] + 1 
+        : 1;
+      // Default value if no records exist
+      return nextCounter;
+    }
+    //free
+    Future<String> getLatestReceiptHash() async {
+      final db = await initDB();
+      List<Map<String, dynamic>> result = await db.rawQuery(
+        "SELECT receiptHash FROM submittedReceipts ORDER BY receiptGlobalNo DESC LIMIT 1"
+      );
+
+      if (result.isNotEmpty) {
+        return result.first["receiptHash"] ?? "";
+      }
+      return ""; // Return empty string if no record is found
+    }
     //Get Submitted Receipts table
     Future <List<Map<String, dynamic>>> getSubmittedReceipts() async {
       final db = await initDB();
@@ -345,7 +405,6 @@ class DatabaseHelper {
         FROM submittedReceipts
       ''');
     }
-
     ///Get All Users From DB
     Future<List<Map<String, dynamic>>> getAllUsers() async {
       final db = await initDB(); // Initialize the database
@@ -354,7 +413,6 @@ class DatabaseHelper {
           FROM users
         ''');
     }
-    
     ///Get All Users From DB
     Future<List<Map<String, dynamic>>> getCompanyDetails() async {
       final db = await initDB(); // Initialize the database
@@ -363,7 +421,6 @@ class DatabaseHelper {
           FROM companyDetails
         ''');
     }
-
     //////Update Product Stock Quantity
     Future<void> updateProductStockQty(int productid , int newStockQty) async{
       final db = await initDB();
@@ -374,7 +431,6 @@ class DatabaseHelper {
         whereArgs: [productid]
       );
     }
-
     //Set Default Currency
     Future<void> setDefaultCurrency(int methodId , int defaultTag)async{
       final db = await initDB();
@@ -385,8 +441,6 @@ class DatabaseHelper {
         whereArgs: [methodId]
       );
     }
-
-
     ///// Get all Products
     Future<List<Map<String, dynamic>>> getAllProducts() async{
       final db = await initDB();

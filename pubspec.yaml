@@ -47,6 +47,8 @@ dependencies:
   pointycastle: ^3.9.1
   basic_utils: ^5.7.0
   logger: ^2.5.0
+  fl_chart: ^0.66.0
+  syncfusion_flutter_charts: ^28.2.5+1
 
 dev_dependencies:
   flutter_test:

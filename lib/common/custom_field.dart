@@ -4,12 +4,8 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class CustomField extends StatelessWidget{
   const CustomField({super.key, required this.controller, this.onChanged,});
-
   final TextEditingController controller;
   final void Function(String)? onChanged;
- 
-
-
   @override
   Widget build(BuildContext context){
     return Container(
@@ -57,7 +53,6 @@ class CustomField extends StatelessWidget{
               style: const TextStyle(fontSize:  14, color: Colors.black , fontWeight:FontWeight.w500),
             ),
           ),
-          
         ],
       ),
     

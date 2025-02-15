@@ -24,6 +24,7 @@ import 'package:pulsepay/fiscalization/receiptResponse.dart';
 import 'package:pulsepay/fiscalization/sslContextualization.dart';
 import 'package:pulsepay/fiscalization/submitReceipts.dart';
 import 'package:pulsepay/main.dart';
+import 'package:sqflite/sqflite.dart';
 //import 'package:pulsepay/home/home_page.dart';
 
 class Pos  extends StatefulWidget{
@@ -84,13 +85,17 @@ class _PosState extends State<Pos>{
   String? encodedHash;
   String? signature64 ;
    String? signatureMD5 ;
+  // ignore: non_constant_identifier_names
+  String? receiptDeviceSignature_signature_hex ;
+  // ignore: non_constant_identifier_names
+  String? receiptDeviceSignature_signature;
+  String genericzimraqrurl = "https://fdmstest.zimra.co.zw/";
+  int deviceID = 21659;
   
-
   Future<bool> requestStoragePermission() async {
   if (await Permission.storage.isGranted) {
     return true;
   }
-  
   var status = await Permission.storage.request();
   return status.isGranted;
 }
@@ -109,26 +114,26 @@ class _PosState extends State<Pos>{
     double itemTax;
     int taxID;
     String taxCode;
-    double taxPercent;
+    String taxPercent;
     
     String productTax = item['tax'] ?? ""; // Handle null case
 
     if (productTax == "zero") {
-      taxID = 1;
-      taxPercent = 0.0;
-      taxCode = "A";
-      itemTax = totalPrice * taxPercent;
+      taxID = 2;
+      taxPercent = "0.0";
+      taxCode = "B";
+      itemTax = totalPrice * double.parse(taxPercent);
     } else if (productTax == "vat") {
       taxID = 3;
-      taxPercent = 15.00; // Convert 15% to decimal
+      taxPercent = "15.00"; // Convert 15% to decimal
       taxCode = "C";
-      itemTax = totalPrice * (taxPercent / 100);
+      itemTax = totalPrice * (double.parse(taxPercent) / 100);
       salesAmountwithTax += totalPrice;
     } else {
-      taxID = 2;
-      taxPercent = 0.00;
-      taxCode = "B";
-      itemTax = totalPrice * taxPercent;
+      taxID = 1;
+      taxPercent = "";
+      taxCode = "A";
+      itemTax = totalPrice * 0;
     }
 
     setState(() {
@@ -233,13 +238,13 @@ Future<Map<String, String>?> generateRSASignature(String hash, String p12FilePat
   };
 }
 
-  void signKotlin() async {
-    String filePath = "/storage/emulated/0/Pulse/Configurations/testwelleast_T_certificate.p12";
-    String password = "testwelleast123";
-    String data = await generateHash();
-    String signedData = await signData(filePath, password, data);
-    print("Signed Data: $signedData");  
-  }
+  // void signKotlin() async {
+  //   String filePath = "/storage/emulated/0/Pulse/Configurations/testwelleast_T_certificate.p12";
+  //   String password = "testwelleast123";
+  //   String data = await generateHash();
+  //   String signedData = await signData(filePath, password, data);
+  //   print("Signed Data: $signedData");  
+  // }
   /// Generate JSON after sale
   Future<String> generateFiscalJSON() async {
   try {
@@ -251,25 +256,28 @@ Future<Map<String, String>?> generateRSASignature(String hash, String p12FilePat
     // Ensure signing does not fail
     String signedData;
     try {
-      String data = await generateHash();
-      signedData = await signData(filePath, password, data);
+      String data = await useRawString();
+      final Map<String, String> signedDataMap  = await signData(filePath, password, data);
+      //final Map<String, dynamic> signedDataMap = jsonDecode(signedDataString);
+      receiptDeviceSignature_signature_hex = signedDataMap["receiptDeviceSignature_signature_hex"] ?? "";
+      receiptDeviceSignature_signature = signedDataMap["receiptDeviceSignature_signature"] ?? "";
     } catch (e) {
       Get.snackbar("Signing Error", "$e", snackPosition: SnackPosition.TOP);
       return "{}";
     }
-
-    print("Signed Data: $signedData");
-
+    print("Signed Data: $receiptDeviceSignature_signature");
     if (receiptItems.isEmpty) {
       print("Receipt items are empty, returning empty JSON.");
       return "{}";
     }
 
+    int fiscalDayNo = await dbHelper.getlatestFiscalDay();
+    int nextReceiptCounter = await dbHelper.getNextReceiptCounter(fiscalDayNo);
     String hash = await generateHash();
     print("Hash generated successfully");
 
     int nextInvoice = await dbHelper.getNextInvoiceId();
-
+    int getNextReceiptGlobalNo = await dbHelper.getLatestReceiptGlobalNo();
     String saleCurrency = selectedPayMethod.isEmpty ? defaultCurrency.toString() : returnCurrency();
 
     // Ensure tax calculation does not fail
@@ -295,7 +303,7 @@ Future<Map<String, String>?> generateRSASignature(String hash, String p12FilePat
             "receiptLineHSCode": "99001000",
             "receiptLinePrice": item["price"].toStringAsFixed(2),
             "taxID": item["taxID"],
-            "taxPercent": item["taxPercent"].toStringAsFixed(2),
+            "taxPercent": double.parse(item["taxPercent"].toString()).toStringAsFixed(2),
             "receiptLineType": "Sale",
             "receiptLineQuantity": item["quantity"].toString(),
             "taxCode": item["taxCode"],
@@ -304,17 +312,17 @@ Future<Map<String, String>?> generateRSASignature(String hash, String p12FilePat
           };
         }).toList(),
         "receiptType": "FISCALINVOICE",
-        "receiptGlobalNo": 3,
+        "receiptGlobalNo": getNextReceiptGlobalNo,
         "receiptCurrency": saleCurrency,
         "receiptPrintForm": "InvoiceA4",
         "receiptDate": formattedDate ,
         "receiptPayments": [
           {"moneyTypeCode": "Cash", "paymentAmount": totalAmount.toStringAsFixed(2)}
         ],
-        "receiptCounter": 1,
+        "receiptCounter": nextReceiptCounter,
         "receiptTaxes": taxes,
         "receiptDeviceSignature": {
-          "signature": signedData,
+          "signature": receiptDeviceSignature_signature,
           "hash": hash,
         },
         "buyerData": {
@@ -362,13 +370,13 @@ List<Map<String, dynamic>> generateReceiptTaxes(List<dynamic> receiptItems) {
 
   for (var item in receiptItems) {
     int taxID = item["taxID"];
-    double taxPercent = item["taxPercent"];
+    String taxPercent = item["taxPercent"];
     double total = item["total"];
 
     if (!taxGroups.containsKey(taxID)) {
       taxGroups[taxID] = {
         "taxID": taxID,
-        "taxPercent": taxPercent.toStringAsFixed(2),
+        "taxPercent": taxPercent,
         "taxCode": item["taxCode"],
         "taxAmount": 0.0,
         "salesAmountWithTax": 0.0
@@ -376,7 +384,7 @@ List<Map<String, dynamic>> generateReceiptTaxes(List<dynamic> receiptItems) {
     }
 
     // Calculate tax amount
-    double taxAmount = (total * taxPercent) / 100 ;
+    double taxAmount = (total * double.parse(taxPercent)) / 100 ;
     taxGroups[taxID]!["taxAmount"] += taxAmount;
     taxGroups[taxID]!["salesAmountWithTax"] += total;
   }
@@ -394,39 +402,108 @@ List<Map<String, dynamic>> generateReceiptTaxes(List<dynamic> receiptItems) {
 }
 
 /// Function to generate `receiptTaxes` concatenation
+// String generateTaxSummary(List<dynamic> receiptItems) {
+//   Map<int, Map<String, dynamic>> taxGroups = {}; // Store tax summaries
+
+//   for (var item in receiptItems) {
+//     int taxID = item["taxID"];
+//     double taxPercent = item["taxPercent"];
+//     double total = item["total"];
+//     String taxCode = item["taxCode"];
+
+//     if (!taxGroups.containsKey(taxID)) {
+//       taxGroups[taxID] = {
+//         "taxCode": taxCode,
+//         "taxPercent": taxPercent.toStringAsFixed(2),
+//         "taxAmount": 0.0,
+//         "salesAmountWithTax": 0.0
+//       };
+//     }
+
+//     // Calculate tax amount
+//     double taxAmount = (total * taxPercent) / (100 + taxPercent);
+//     taxGroups[taxID]!["taxAmount"] += taxAmount;
+//     taxGroups[taxID]!["salesAmountWithTax"] += total;
+//   }
+
+//   // Convert tax groups to a sorted list (optional: sort by taxCode)
+//   List<Map<String, dynamic>> sortedTaxes = taxGroups.values.toList()
+//     ..sort((a, b) => a["taxCode"].compareTo(b["taxCode"]));
+
+//   // Concatenate tax details in the required order
+//   return sortedTaxes.map((tax) {
+//     return "${tax["taxCode"]}${tax["taxPercent"]}${tax["taxAmount"].toStringAsFixed(2)}${tax["salesAmountWithTax"].toStringAsFixed(2)}";
+//   }).join("");
+// }
+// String generateTaxSummary(List<dynamic> receiptItems) {
+//   Map<int, Map<String, dynamic>> taxGroups = {};
+
+//   for (var item in receiptItems) {
+//     int taxID = item["taxID"];
+//     String taxPercent = item["taxPercent"];
+//     double total = item["total"];
+//     String taxCode = item["taxCode"];
+//     double taxPercentValue = double.parse(taxPercent);
+
+//     if (!taxGroups.containsKey(taxID)) {
+//       taxGroups[taxID] = {
+//         "taxCode": taxCode,
+//         "taxPercent": taxPercentValue % 1 == 0 ? "${taxPercentValue.toInt()}.00" : "${taxPercentValue.toStringAsFixed(2)}",
+//         "taxAmount": 0.0,
+//         "salesAmountWithTax": 0.0
+//       };
+//     }
+
+//     double taxAmount = (total * taxPercentValue) / (100 + taxPercentValue);
+//     taxGroups[taxID]!["taxAmount"] += taxAmount;
+//     taxGroups[taxID]!["salesAmountWithTax"] += total;
+//   }
+
+//   List<Map<String, dynamic>> sortedTaxes = taxGroups.values.toList()
+//     ..sort((a, b) => a["taxCode"].compareTo(b["taxCode"]));
+
+//   return sortedTaxes.map((tax) {
+//     return "${tax["taxCode"]}${tax["taxPercent"]}${(tax["taxAmount"] * 100).round().toString()}${(tax["salesAmountWithTax"] * 100).round().toString()}";
+//   }).join("");
+// }
 String generateTaxSummary(List<dynamic> receiptItems) {
-  Map<int, Map<String, dynamic>> taxGroups = {}; // Store tax summaries
+  Map<int, Map<String, dynamic>> taxGroups = {};
 
   for (var item in receiptItems) {
     int taxID = item["taxID"];
-    double taxPercent = item["taxPercent"];
     double total = item["total"];
     String taxCode = item["taxCode"];
+
+    // Ensure taxPercent is a valid number, defaulting to 0.0 if empty or null
+    double taxPercentValue = (item["taxPercent"] == null || item["taxPercent"] == "")
+        ? 0.0
+        : double.parse(item["taxPercent"]);
 
     if (!taxGroups.containsKey(taxID)) {
       taxGroups[taxID] = {
         "taxCode": taxCode,
-        "taxPercent": taxPercent.toStringAsFixed(2),
+        "taxPercent": taxPercentValue % 1 == 0 
+          ? "${taxPercentValue.toInt()}.00" 
+          : taxPercentValue.toStringAsFixed(2),
         "taxAmount": 0.0,
         "salesAmountWithTax": 0.0
       };
     }
 
-    // Calculate tax amount
-    double taxAmount = (total * taxPercent) / (100 + taxPercent);
+    double taxAmount = (total * taxPercentValue) / (100 + taxPercentValue);
     taxGroups[taxID]!["taxAmount"] += taxAmount;
     taxGroups[taxID]!["salesAmountWithTax"] += total;
   }
 
-  // Convert tax groups to a sorted list (optional: sort by taxCode)
   List<Map<String, dynamic>> sortedTaxes = taxGroups.values.toList()
     ..sort((a, b) => a["taxCode"].compareTo(b["taxCode"]));
 
-  // Concatenate tax details in the required order
   return sortedTaxes.map((tax) {
-    return "${tax["taxCode"]}${tax["taxPercent"]}${tax["taxAmount"].toStringAsFixed(2)}${tax["salesAmountWithTax"].toStringAsFixed(2)}";
+    return "${tax["taxCode"]}${tax["taxPercent"]}${(tax["taxAmount"] * 100).round().toString()}${(tax["salesAmountWithTax"] * 100).round().toString()}";
   }).join("");
 }
+
+
 
 /// Function to generate the final concatenated receipt string
 String generateReceiptString({
@@ -437,23 +514,51 @@ String generateReceiptString({
   required DateTime receiptDate,
   required double receiptTotal,
   required List<dynamic> receiptItems,
+  required String getPreviousReceiptHash,
 }) {
-  String formattedDate = receiptDate.toIso8601String();
+  String formattedDate = receiptDate.toIso8601String().split('.').first;
+  print("Formatted Date: $formattedDate");
   String formattedTotal = receiptTotal.toStringAsFixed(2);
+  double receiptTotal_numeric = receiptTotal;
+  int receiptTotal_ampl = (receiptTotal_numeric * 100).round();
+  String receiptTotal_adj = receiptTotal_ampl.toString();
   String receiptTaxes = generateTaxSummary(receiptItems);
 
-  return "$deviceID$receiptType$receiptCurrency$receiptGlobalNo$formattedDate$formattedTotal$receiptTaxes";
+  return "$deviceID$receiptType$receiptCurrency$receiptGlobalNo$formattedDate$receiptTotal_adj$receiptTaxes$getPreviousReceiptHash";
 }
+
   /// Generate SHA-256 Hash
-  generateHash() async {
+  /// 
+  useRawString() async {
+    int latestReceiptGlobalNo = await dbHelper.getLatestReceiptGlobalNo();
+    int currentGlobalNo = latestReceiptGlobalNo + 1;
+    String getLatestReceiptHash = await dbHelper.getLatestReceiptHash();
     String receiptString = generateReceiptString(
     deviceID: 21659,
     receiptType: "FISCALINVOICE",
-    receiptCurrency: "ZWL",
-    receiptGlobalNo: 2,
+    receiptCurrency: "USD",
+    receiptGlobalNo: currentGlobalNo,
     receiptDate: DateTime.now(),
-    receiptTotal: 945.00,
+    receiptTotal: totalAmount,
     receiptItems: receiptItems,
+    getPreviousReceiptHash: getLatestReceiptHash,
+  );
+  print("Concatenated Receipt String: $receiptString");
+  return receiptString;
+  }
+  generateHash() async {
+    int latestReceiptGlobalNo = await dbHelper.getLatestReceiptGlobalNo();
+    int currentGlobalNo = latestReceiptGlobalNo + 1;
+    String getLatestReceiptHash = await dbHelper.getLatestReceiptHash();
+    String receiptString = generateReceiptString(
+    deviceID: 21659,
+    receiptType: "FISCALINVOICE",
+    receiptCurrency: "USD",
+    receiptGlobalNo: currentGlobalNo,
+    receiptDate: DateTime.now(),
+    receiptTotal: totalAmount,
+    receiptItems: receiptItems,
+    getPreviousReceiptHash: getLatestReceiptHash,
   );
   print("Concatenated Receipt String: $receiptString");
 
@@ -492,7 +597,11 @@ String generateReceiptString({
     return response;
 }
   Map<String , dynamic> jsonDatatest = {"receipt":{"receiptLines":[{"receiptLineNo":"1","receiptLineHSCode":"99001000","receiptLinePrice":"434.78","taxID":3,"taxPercent":"15.00","receiptLineType":"Sale","receiptLineQuantity":"1.0","taxCode":"C","receiptLineTotal":"434.78","receiptLineName":"RENTAL JANUARY 2025 "}],"receiptType":"FISCALINVOICE","receiptGlobalNo":6,"receiptCurrency":"USD","receiptPrintForm":"InvoiceA4","receiptDate":"2025-01-31T17:18:37","receiptPayments":[{"moneyTypeCode":"Cash","paymentAmount":"434.78"}],"receiptCounter":5,"receiptTaxes":[{"taxID":"3","taxPercent":"15.00","taxCode":"C","taxAmount":"56.71","SalesAmountwithTax":434.78}],"receiptDeviceSignature":{"signature":"","hash": ""},"buyerData":{"VATNumber":"123456789","buyerTradeName":"SAT ","buyerTIN":"0000000000","buyerRegisterName":"SAT "},"receiptTotal":"434.78","receiptLinesTaxInclusive":true,"invoiceNo":"00000390"}};
-
+  String getReceiptQrData(String receiptDeviceSignatureSignatureHexsent) {
+    return receiptDeviceSignatureSignatureHexsent.length > 16 
+      ? receiptDeviceSignatureSignatureHexsent.substring(0, 16) 
+      : receiptDeviceSignatureSignatureHexsent;
+  }
   Future<void> submitReceipt() async {
     String jsonString  = await generateFiscalJSON();
     final receiptJson = jsonEncode(jsonString);
@@ -506,7 +615,32 @@ String generateReceiptString({
       showProgressIndicator: true,
     );
     String pingResponse = await ping();
-    if(pingResponse.isNotEmpty){
+    final receiptJsonbody = await generateFiscalJSON();
+    
+    Map<String, dynamic> jsonData = jsonDecode(receiptJsonbody);
+    final db=DatabaseHelper();
+      String moneyType = (jsonData['receipt']['receiptPayments'] != null && jsonData['receipt']['receiptPayments'].isNotEmpty)
+      ? jsonData['receipt']['receiptPayments'][0]['moneyTypeCode'].toString()
+      : "";
+      print("your date is ${jsonData['receipt']?['receiptDate']}");
+      print("your invoice number is ${jsonData['receipt']?['invoiceNo']?.toString()}");
+      print(jsonData);
+      int fiscalDayNo = await db.getlatestFiscalDay();
+      print("fiscal day no is $fiscalDayNo");
+      double receiptTotal = double.parse(jsonData['receipt']?['receiptTotal']?.toString() ?? "0");
+      String formattedDeviceID = deviceID.toString().padLeft(10, '0');
+      String parseDate = jsonData['receipt']?['receiptDate'];
+      DateTime formattedDate = DateTime.parse(parseDate);
+      String formattedDateStr = DateFormat("ddMMyyyy").format(formattedDate);
+      int latestReceiptGlobalNo = await db.getLatestReceiptGlobalNo();
+      
+      int currentGlobalNo = latestReceiptGlobalNo + 1;
+      String formatedReceiptGlobalNo = currentGlobalNo.toString().padLeft(10, '0');
+      String receiptDeviceSignatureSignatureHex= receiptDeviceSignature_signature_hex.toString();
+      String receiptQrData = getReceiptQrData(receiptDeviceSignatureSignatureHex);
+      String qrurl = genericzimraqrurl + formattedDeviceID + formattedDateStr + formatedReceiptGlobalNo + receiptQrData;
+      print("QR URL: $qrurl");
+    if(pingResponse=="200"){
       String apiEndpointSubmitReceipt =
       "https://fdmsapitest.zimra.co.zw/Device/v1/21659/SubmitReceipt";
       const String deviceModelName = "Server";
@@ -514,7 +648,7 @@ String generateReceiptString({
 
       SSLContextProvider sslContextProvider = SSLContextProvider();
       SecurityContext securityContext = await sslContextProvider.createSSLContext();
-      final receiptJsonbody = await generateFiscalJSON();
+      
       print(receiptJsonbody);
       // Call the Ping function
       Map<String, dynamic> response = await SubmitReceipts.submitReceipts(
@@ -532,96 +666,146 @@ String generateReceiptString({
         backgroundColor: Colors.green,
         icon: const Icon(Icons.message, color: Colors.white),
       );
-      int statusCode = response["statusCode"];
       Map<String, dynamic> responseBody = jsonDecode(response["responseBody"]);
-      Map<String, dynamic> jsonData = jsonDecode(receiptJsonbody);
+      int statusCode = response["statusCode"];
+      String submitReceiptServerresponseJson = responseBody.toString();
+      print("your server server response is $submitReceiptServerresponseJson");
       if (statusCode == 200) {
-        final db=DatabaseHelper();
-
       print("Code is 200, saving receipt...");
 
       // Check if 'receiptPayments' is non-empty before accessing index 0
-      String moneyType = (jsonData['receipt']['receiptPayments'] != null && jsonData['receipt']['receiptPayments'].isNotEmpty)
-      ? jsonData['receipt']['receiptPayments'][0]['moneyTypeCode'].toString()
-      : "";
-      print("your date is ${jsonData['receipt']?['receiptDate']}");
-      print("your invoice number is ${jsonData['receipt']?['invoiceNo']?.toString()}");
-      print(jsonData);
-      String submitReceiptServerresponseJson = responseBody.toString();
-      int fiscalDayNo = await db.getlatestFiscalDay();
-      print("fiscal day no is $fiscalDayNo");
-      double receiptTotal = double.parse(jsonData['receipt']?['receiptTotal']?.toString() ?? "0");
+      
       try {
-        db.insertReceipt(SubmittedReceipt(
-        receiptCounter: jsonData['receipt']?['receiptCounter'] ?? 0,
-        fiscalDayNo: fiscalDayNo, 
-        invoiceNo: int.tryParse(jsonData['receipt']?['invoiceNo']) ?? 0,
-        receiptId: responseBody['receiptID'] ?? 0,
-        receiptType: jsonData['receipt']['receiptType']?.toString() ?? "",
-        receiptCurrency: jsonData['receipt']?['receiptCurrency']?.toString() ?? "",
-        moneyType: moneyType,
-        receiptDate: jsonData['receipt']?['receiptDate']?.toString() ?? "",
-        receiptTime: jsonData['receipt']?['receiptDate']?.toString() ?? "",
-        receiptTotal: receiptTotal,
-        taxCode: "C",
-        taxPercent: "15.00",
-        taxAmount:  taxAmount ?? 0,
-        salesAmountwithTax: salesAmountwithTax ?? 0,
-        receiptHash: jsonData['receipt']?['receiptDeviceSignature']?['hash']?.toString() ?? "",
-        receiptJsonbody: receiptJsonbody?.toString() ?? "",
-        StatustoFdms: "Submitted",
-        qrurl:"https://fdmsapitest.zimra.co.zw/Device/v1/21659/SubmitReceipt",
-        receiptServerSignature: responseBody['receiptServerSignature']?['signature'].toString() ?? "",
-        submitReceiptServerresponseJson: submitReceiptServerresponseJson,
-        total15Vat: 0.0,
-        totalNonVat: 0.0,
-        totalExempt: 0.0,
-        totalWt: 0.0));
+        final Database dbinit = await dbHelper.initDB();
+        await dbinit.insert('submittedReceipts',
+          {
+            'receiptCounter': jsonData['receipt']?['receiptCounter'] ?? 0,
+            'FiscalDayNo' : fiscalDayNo,
+            'InvoiceNo': int.tryParse(jsonData['receipt']?['invoiceNo']?.toString() ?? "0") ?? 0,
+            'receiptID': responseBody['receiptID'] ?? 0,
+            'receiptType': jsonData['receipt']['receiptType']?.toString() ?? "",
+            'receiptCurrency': jsonData['receipt']?['receiptCurrency']?.toString() ?? "",
+            'moneyType': moneyType,
+            'receiptDate': jsonData['receipt']?['receiptDate']?.toString() ?? "",
+            'receiptTime': jsonData['receipt']?['receiptDate']?.toString() ?? "",
+            'receiptTotal': receiptTotal,
+            'taxCode': "C",
+            'taxPercent': "15.00",
+            'taxAmount': taxAmount ?? 0,
+            'SalesAmountwithTax': salesAmountwithTax ?? 0,
+            'receiptHash': jsonData['receipt']?['receiptDeviceSignature']?['hash']?.toString() ?? "",
+            'receiptJsonbody': receiptJsonbody?.toString() ?? "",
+            'StatustoFDMS': "Submitted".toString(),
+            'qrurl': qrurl,
+            'receiptServerSignature': responseBody['receiptServerSignature']?['signature'].toString() ?? "",
+            'submitReceiptServerresponseJSON': "$submitReceiptServerresponseJson" ?? "noresponse",
+            'Total15VAT': '0.0',
+            'TotalNonVAT': 0.0,
+            'TotalExempt': 0.0,
+            'TotalWT': 0.0,
+          },
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+         print("Data inserted successfully!");
+        
       } catch (e) {
-        Get.snackbar("Error",
+        Get.snackbar(" Db Error",
           "$e",
           snackPosition: SnackPosition.TOP,
           colorText: Colors.white,
           backgroundColor: Colors.red,
           icon: const Icon(Icons.error),
         );
-      }
-
-}
-
-      // String receiptServerSignature = response.receiptServerSignature.toString(); 
-      // int receiptId = response.receiptID;
-      // int statusCode = response.statusCode; 
-      // print("your status code is$statusCode");
-      //  Map<String, dynamic> jsonData = jsonDecode(receiptJsonbody);
-      // if (statusCode == 200 || statusCode == 500){
-      //   saveReceiptToDatabase(
-      //     receiptCounter: int.parse(jsonData['receiptCounter']),
-      //     fiscalDayNo: 1,
-      //     invoiceNo: int.parse(jsonData['invoiceNo']),
-      //     receiptType: jsonData['receiptType'].toString(),
-      //     receiptCurrency: jsonData['receiptCurrency'].toString(),
-      //     moneyType: jsonData['receiptPayments'][0]['moneyTypeCode'].toString(),
-      //     receiptDate: jsonData['receiptDate'].toString(),
-      //     receiptTime: jsonData['receiptDate'].toString(),
-      //     receiptTotal: double.parse(jsonData['receiptTotal']),
-      //     taxCode: "C",
-      //     taxPercent: "15.00",
-      //     taxAmount: taxAmount,
-      //     salesAmountwithTax: salesAmountwithTax,
-      //     receiptHash: jsonData['receiptDeviceSignature']['hash'].toString(),
-      //     receiptJsonbody: receiptJsonbody.toString(),
-      //     statustoFdms: "Submitted",
-      //     qrurl: "https://fdmsapitest.zimra.co.zw/Device/v1/21659/SubmitReceipt",
-      //     total15Vat: 0.0,
-      //     totalNonVat: 0,
-      //     totalExempt: 0,
-      //     totalWt: 0,
-      //     receiptId: receiptId,
-      //     receiptServerSignature: receiptServerSignature.toString(),
-      //     submitReceiptServerresponseJson: response.toString(),
-      //   );
-      // }
+    }
+    
+  }
+  else{
+    try {
+        final Database dbinit = await dbHelper.initDB();
+        await dbinit.insert('submittedReceipts',
+          {
+            'receiptCounter': jsonData['receipt']?['receiptCounter'] ?? 0,
+            'FiscalDayNo' : fiscalDayNo,
+            'InvoiceNo': int.tryParse(jsonData['receipt']?['invoiceNo']?.toString() ?? "0") ?? 0,
+            'receiptID': 0,
+            'receiptType': jsonData['receipt']['receiptType']?.toString() ?? "",
+            'receiptCurrency': jsonData['receipt']?['receiptCurrency']?.toString() ?? "",
+            'moneyType': moneyType,
+            'receiptDate': jsonData['receipt']?['receiptDate']?.toString() ?? "",
+            'receiptTime': jsonData['receipt']?['receiptDate']?.toString() ?? "",
+            'receiptTotal': receiptTotal,
+            'taxCode': "C",
+            'taxPercent': "15.00",
+            'taxAmount': taxAmount ?? 0,
+            'SalesAmountwithTax': salesAmountwithTax ?? 0,
+            'receiptHash': jsonData['receipt']?['receiptDeviceSignature']?['hash']?.toString() ?? "",
+            'receiptJsonbody': receiptJsonbody?.toString() ?? "",
+            'StatustoFDMS': "NOTSubmitted".toString(),
+            'qrurl': qrurl,
+            'receiptServerSignature':"",
+            'submitReceiptServerresponseJSON':"noresponse",
+            'Total15VAT': '0.0',
+            'TotalNonVAT': 0.0,
+            'TotalExempt': 0.0,
+            'TotalWT': 0.0,
+          },
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+         print("Data inserted successfully!");
+      } catch (e) {
+        Get.snackbar("Db Error",
+          "$e",
+          snackPosition: SnackPosition.TOP,
+          colorText: Colors.white,
+          backgroundColor: Colors.red,
+          icon: const Icon(Icons.error),
+        );
+    }
+  }
+    }
+    else{
+      
+      try {
+        final Database dbinit = await dbHelper.initDB();
+        await dbinit.insert('submittedReceipts',
+          {
+            'receiptCounter': jsonData['receipt']?['receiptCounter'] ?? 0,
+            'FiscalDayNo' : fiscalDayNo,
+            'InvoiceNo': int.tryParse(jsonData['receipt']?['invoiceNo']?.toString() ?? "0") ?? 0,
+            'receiptID': 0,
+            'receiptType': jsonData['receipt']['receiptType']?.toString() ?? "",
+            'receiptCurrency': jsonData['receipt']?['receiptCurrency']?.toString() ?? "",
+            'moneyType': moneyType,
+            'receiptDate': jsonData['receipt']?['receiptDate']?.toString() ?? "",
+            'receiptTime': jsonData['receipt']?['receiptDate']?.toString() ?? "",
+            'receiptTotal': receiptTotal,
+            'taxCode': "C",
+            'taxPercent': "15.00",
+            'taxAmount': taxAmount ?? 0,
+            'SalesAmountwithTax': salesAmountwithTax ?? 0,
+            'receiptHash': jsonData['receipt']?['receiptDeviceSignature']?['hash']?.toString() ?? "",
+            'receiptJsonbody': receiptJsonbody?.toString() ?? "",
+            'StatustoFDMS': "NOTSubmitted".toString(),
+            'qrurl': qrurl,
+            'receiptServerSignature':"",
+            'submitReceiptServerresponseJSON':"noresponse",
+            'Total15VAT': '0.0',
+            'TotalNonVAT': 0.0,
+            'TotalExempt': 0.0,
+            'TotalWT': 0.0,
+          },
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+         print("Data inserted successfully!");
+      } catch (e) {
+        Get.snackbar("DB error Error",
+          "$e",
+          snackPosition: SnackPosition.TOP,
+          colorText: Colors.white,
+          backgroundColor: Colors.red,
+          icon: const Icon(Icons.error),
+        );
+    }
     }
   }
   completeSale() async {

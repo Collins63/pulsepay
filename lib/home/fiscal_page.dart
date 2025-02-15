@@ -12,6 +12,8 @@ import 'package:pulsepay/common/reusable_text.dart';
 import 'package:pulsepay/fiscalization/get_status.dart';
 import 'package:pulsepay/fiscalization/ping.dart';
 import 'package:pulsepay/fiscalization/sslContextualization.dart';
+import 'package:pulsepay/fiscalization/submitReceipts.dart';
+import 'package:pulsepay/fiscalization/unsubmitted_receipt.dart';
 import 'package:pulsepay/home/home_page.dart';
 import 'package:pulsepay/home/settings.dart';
 import 'package:pulsepay/pointOfSale/pos.dart';
@@ -251,7 +253,7 @@ Future<String> getConfig() async {
 
 
 
-  Future<void> ping() async {
+  Future<String> ping() async {
   String apiEndpointPing =
       "https://fdmsapitest.zimra.co.zw/Device/v1/21659/Ping";
   const String deviceModelName = "Server";
@@ -276,8 +278,90 @@ Future<String> getConfig() async {
       backgroundColor: Colors.green,
       icon: const Icon(Icons.message, color: Colors.white),
     );
+  return response;
 }
+  Future<String> submitUnsubmittedReceipts(DatabaseHelper dbHelper) async {
+  String sql = "SELECT * FROM SubmittedReceipts WHERE StatustoFDMS = 'NotSubmitted'";
+  int resubmittedCount = 0;
 
+  String pingResponse = await ping();
+  if (pingResponse == "200") {
+    try {
+    // Get the database instance
+    final db = await dbHelper.initDB();
+    String apiEndpointSubmitReceipt =
+      "https://fdmsapitest.zimra.co.zw/Device/v1/21659/SubmitReceipt";
+    const String deviceModelName = "Server";
+    const String deviceModelVersion = "v1"; 
+    SSLContextProvider sslContextProvider = SSLContextProvider();
+    SecurityContext securityContext = await sslContextProvider.createSSLContext();
+    // Retrieve unsubmitted receipts
+    List<Map<String, dynamic>> receipts = await db.rawQuery(sql);
+
+    for (var row in receipts) {
+      UnsubmittedReceipt receipt = UnsubmittedReceipt.fromMap(row);
+
+      // Submit the receipt via HTTP
+      Map<String, dynamic> submitResponse = await SubmitReceipts.submitReceipts(
+        apiEndpointSubmitReceipt: apiEndpointSubmitReceipt,
+        deviceModelName: deviceModelName,
+        deviceModelVersion: deviceModelVersion,
+        securityContext: securityContext,
+        receiptjsonBody:receipt.getReceiptJsonBody(),
+      );
+      Map<String, dynamic> responseBody = jsonDecode(submitResponse["responseBody"]);
+      int statusCode = submitResponse["statusCode"];
+
+      if (statusCode == 200) {
+        String submitReceiptServerresponseJson = responseBody.toString();
+        // Parse the server response
+        int receiptID = responseBody['receiptID'] ?? 0;
+        String receiptServerSignature = responseBody['receiptServerSignature']?['signature'].toString() ?? "";
+
+        print("receiptID: $receiptID");
+        print("receiptServerSignature: $receiptServerSignature");
+
+        // Update database record
+        String updateSql = '''
+          UPDATE SubmittedReceipts 
+          SET receiptID = ?, receiptServerSignature = ?, submitReceiptServerResponseJSON = ?, StatustoFDMS = 'Submitted' 
+          WHERE receiptGlobalNo = ?
+        ''';
+
+        await db.rawUpdate(updateSql, [
+          receiptID,
+          receiptServerSignature,
+          submitReceiptServerresponseJson,
+          receipt.receiptGlobalNo
+        ]);
+
+        resubmittedCount++;
+      }
+    }
+  } catch (e) {
+    print("Error: $e");
+  }
+  Get.snackbar("Submit Successs", "The number of receipts resubmitted is: $resubmittedCount"
+  , snackPosition: SnackPosition.TOP,
+      colorText: Colors.white,
+      backgroundColor: Colors.green,
+      icon: const Icon(Icons.message, color: Colors.white),
+  );
+  return "The number of receipts resubmitted is: $resubmittedCount";
+  }
+  Get.snackbar("No Submission", "Failed to ping the server. Check your connection!"
+  , snackPosition: SnackPosition.TOP,
+      colorText: Colors.black,
+      backgroundColor: Colors.amber,
+      icon: const Icon(Icons.message, color: Colors.black),
+  );
+  return "Failed to ping the server. Check your connection!";
+
+}
+Future<int> getlatestFiscalDay() async {
+  int latestFiscDay = await dbHelper.getlatestFiscalDay();
+  return latestFiscDay;
+}
 
 // void main() {
 //   // Call getStatus from the main method
@@ -337,7 +421,7 @@ Future<String> getConfig() async {
                         const SizedBox(height: 6,),
                         Text("MODEL NAME: $modelName" , style:const TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16)),
                         const SizedBox(height: 6,),
-                        Text("FSCAL DAY:" , style: const TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16)),
+                        Text("FSCAL DAY: ${getlatestFiscalDay()}" , style: const TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16)),
                         const SizedBox(height: 6,),
                         Text("TIME TO CLOSEDAY:" , style: TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16)),
                         const SizedBox(height: 6,),
@@ -407,7 +491,7 @@ Future<String> getConfig() async {
                   color: kDark,
                   color2: kDark,
                   onTap: (){
-                    
+                    submitUnsubmittedReceipts(dbHelper);
                   },
                   height: 50,
                 )
