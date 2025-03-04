@@ -26,7 +26,14 @@ class FiscalPage extends StatefulWidget {
 }
 
 class _FiscalPageState extends State<FiscalPage> {
+  @override
+  void initState(){
+    super.initState();
+    getlatestFiscalDay();
+  }
+
   final DatabaseHelper dbHelper  = DatabaseHelper();
+  int currentFiscal = 0;
   String deviceID = "21659";
   String taxPayerName = "TestWellEast Investments";
   String tinNumber = "2000874913";
@@ -360,6 +367,7 @@ Future<String> getConfig() async {
 }
 Future<int> getlatestFiscalDay() async {
   int latestFiscDay = await dbHelper.getlatestFiscalDay();
+  currentFiscal = latestFiscDay;
   return latestFiscDay;
 }
 
@@ -421,7 +429,7 @@ Future<int> getlatestFiscalDay() async {
                         const SizedBox(height: 6,),
                         Text("MODEL NAME: $modelName" , style:const TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16)),
                         const SizedBox(height: 6,),
-                        Text("FSCAL DAY: ${getlatestFiscalDay()}" , style: const TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16)),
+                        Text("FSCAL DAY: $currentFiscal" , style: const TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16)),
                         const SizedBox(height: 6,),
                         Text("TIME TO CLOSEDAY:" , style: TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16)),
                         const SizedBox(height: 6,),

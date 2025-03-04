@@ -9,8 +9,8 @@ class DatabaseHelper {
   ///
   
 
-  //String dailyReports=
-    //"create table dailyReports(ID INTEGER PRIMARY KEY AUTOINCREMENT, reportDate TEXT , reportTime TEXT , FiscalDayNo INTEGER , SaleByTaxUSD REAL , SaleByTaxZWG REAL , SaleTaxByTaxUSD REAL , SaleTaxByTaxZWG REAL , CreditNoteByTaxUSD REAL , CreditNoteByTaxZWG REAL , CreditNoteTaxByTaxUSD REAL , CreditNoteTaxByTaxZWG REAL, BalanceByMoneyTypeCashUSD REAL , BalanceByMoneyTypeCashZWG REAL , BalanceByMoneyTypeCardUSD REAL , BalanceByMoneyTypeCardZWG REAL , BalanceByMoneyTypeMobileWalletUSD REAl , BalanceByMoneyTypeMobileWalletZWG REAL , BalanceByMoneyTypeCouponUSD REAL , BalanceByMoneyTypeCouponZWG REAL , BalanceByMoneyTypeInvoiceUSD REAL , BalanceByMoneyTypeInvoiceZWG REAL , BalanceByMoneyTypeBankTransferUSD REAL , BalanceByMoneyTypeBankTransferZWG REAL , BalanceByMoneyTypeOtherUSD REAL ,BalanceByMoneyTypeOtherZWG REAL ,reportHash TEXT , reportSignature TEXT , reportJsonBody TEXT , fiscalDayStatus TEXT)";
+  String dailyReports=
+    "create table dailyReports(ID INTEGER PRIMARY KEY AUTOINCREMENT, reportDate TEXT , reportTime TEXT , FiscalDayNo INTEGER , SaleByTaxUSD REAL , SaleByTaxZWG REAL , SaleTaxByTaxUSD REAL , SaleTaxByTaxZWG REAL , CreditNoteByTaxUSD REAL , CreditNoteByTaxZWG REAL , CreditNoteTaxByTaxUSD REAL , CreditNoteTaxByTaxZWG REAL, BalanceByMoneyTypeCashUSD REAL , BalanceByMoneyTypeCashZWG REAL , BalanceByMoneyTypeCardUSD REAL , BalanceByMoneyTypeCardZWG REAL , BalanceByMoneyTypeMobileWalletUSD REAl , BalanceByMoneyTypeMobileWalletZWG REAL , BalanceByMoneyTypeCouponUSD REAL , BalanceByMoneyTypeCouponZWG REAL , BalanceByMoneyTypeInvoiceUSD REAL , BalanceByMoneyTypeInvoiceZWG REAL , BalanceByMoneyTypeBankTransferUSD REAL , BalanceByMoneyTypeBankTransferZWG REAL , BalanceByMoneyTypeOtherUSD REAL ,BalanceByMoneyTypeOtherZWG REAL ,reportHash TEXT , reportSignature TEXT , reportJsonBody TEXT , fiscalDayStatus TEXT)";
   
   String openDay= 
    "create table openDay(ID INTEGER PRIMARY KEY AUTOINCREMENT , FiscalDayNo INTEGER , StatusOfFirstReceipt TEXT , FiscalDayOpened TEXT , FiscalDayClosed TEXT , TaxExempt INTEGER , TaxZero INTEGER , Tax15 INTEGER , TaxWT INTEGER )";

@@ -139,6 +139,31 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    private fun getFirst16CharsOfSignature(signature: String): String {
+        if (signature.isBlank()) {
+            throw IllegalArgumentException("Input must be a non-empty string.")
+        }
+    
+        try {
+            // Decode Base64 string to bytes
+            val byteArray = Base64.decode(signature, Base64.DEFAULT)
+    
+            // Convert bytes to a hexadecimal string
+            val hexStr = byteArray.joinToString("") { "%02x".format(it) }
+    
+            // Compute MD5 hash of the hexadecimal string
+            val md = MessageDigest.getInstance("MD5")
+            val md5Hash = md.digest(hexStr.toByteArray()).joinToString("") { "%02x".format(it) }
+    
+            // Return the first 16 characters of the MD5 hash
+            return md5Hash.take(16)
+    
+        } catch (e: IllegalArgumentException) {
+            throw IllegalArgumentException("Invalid Base64 string.", e)
+        }
+    }
+    
+
     private fun signData(filePath: String, password: String, data: String): Map<String, String> {
         return try {
             // Load the PKCS#12 keystore
@@ -150,10 +175,13 @@ class MainActivity : FlutterActivity() {
             val alias = keystore.aliases().nextElement()
             val privateKey = keystore.getKey(alias, password.toCharArray()) as PrivateKey
 
-            // Sign data using SHA256withRSA
-            val signature = Signature.getInstance("SHA256withRSA")
+             // **Pre-hash the data with SHA-256**
+            val messageDigest = MessageDigest.getInstance("SHA-256")
+            val hashedData = messageDigest.digest(data.toByteArray(Charsets.UTF_8))
+
+            val signature = Signature.getInstance("NONEwithRSA") // Uses raw RSA signing
             signature.initSign(privateKey)
-            signature.update(data.toByteArray(Charsets.UTF_8))
+            signature.update(hashedData)
             val signedBytes = signature.sign()
 
             // Compute MD5 hash
@@ -161,10 +189,28 @@ class MainActivity : FlutterActivity() {
             val digest = md.digest(signedBytes)
             val hexString = digest.joinToString("") { byte -> "%02x".format(byte) }
 
+            // Sign data using SHA256withRSA
+            // val signature = Signature.getInstance("SHA256withRSA")
+            // signature.initSign(privateKey)
+            // signature.update(data.toByteArray(Charsets.UTF_8))
+            // val signedBytes = signature.sign()
+
+            // // Compute MD5 hash
+            // val md = MessageDigest.getInstance("MD5")
+            // val digest = md.digest(signedBytes)
+            // val hexString = digest.joinToString("") { byte -> "%02x".format(byte) }
+
+            // Convert signedBytes to Base64 string
+            val base64Signature = Base64.encodeToString(signedBytes, Base64.NO_WRAP)
+
+            // Compute first 16 chars of the MD5 hash from Base64 signature
+            val first16Chars = getFirst16CharsOfSignature(base64Signature)
+
             // Return a Map instead of a string
             mapOf(
                 "receiptDeviceSignature_signature_hex" to hexString,
-                "receiptDeviceSignature_signature" to Base64.encodeToString(signedBytes, Base64.NO_WRAP)
+                "receiptDeviceSignature_signature" to base64Signature,
+                "receiptDeviceSignature_signature_md5_first16" to first16Chars
             )
         } catch (e: Exception) {
             mapOf("error" to e.message.orEmpty()) // ✅ Return an error in Map format

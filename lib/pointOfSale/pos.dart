@@ -87,6 +87,7 @@ class _PosState extends State<Pos>{
    String? signatureMD5 ;
   // ignore: non_constant_identifier_names
   String? receiptDeviceSignature_signature_hex ;
+  String? first16Chars;
   // ignore: non_constant_identifier_names
   String? receiptDeviceSignature_signature;
   String genericzimraqrurl = "https://fdmstest.zimra.co.zw/";
@@ -120,7 +121,7 @@ class _PosState extends State<Pos>{
 
     if (productTax == "zero") {
       taxID = 2;
-      taxPercent = "0.0";
+      taxPercent = "0.00";
       taxCode = "B";
       itemTax = totalPrice * double.parse(taxPercent);
     } else if (productTax == "vat") {
@@ -131,7 +132,7 @@ class _PosState extends State<Pos>{
       salesAmountwithTax += totalPrice;
     } else {
       taxID = 1;
-      taxPercent = "";
+      taxPercent = "0";
       taxCode = "A";
       itemTax = totalPrice * 0;
     }
@@ -261,6 +262,8 @@ Future<Map<String, String>?> generateRSASignature(String hash, String p12FilePat
       //final Map<String, dynamic> signedDataMap = jsonDecode(signedDataString);
       receiptDeviceSignature_signature_hex = signedDataMap["receiptDeviceSignature_signature_hex"] ?? "";
       receiptDeviceSignature_signature = signedDataMap["receiptDeviceSignature_signature"] ?? "";
+      first16Chars = signedDataMap["receiptDeviceSignature_signature_md5_first16"] ?? "";
+      
     } catch (e) {
       Get.snackbar("Signing Error", "$e", snackPosition: SnackPosition.TOP);
       return "{}";
@@ -298,21 +301,39 @@ Future<Map<String, String>?> generateRSASignature(String hash, String p12FilePat
         "receiptLines": receiptItems.asMap().entries.map((entry) {
           int index = entry.key + 1;
           var item = entry.value;
-          return {
+          if (item["taxPercent"] != ""){
+            return {
             "receiptLineNo": "$index",
             "receiptLineHSCode": "99001000",
             "receiptLinePrice": item["price"].toStringAsFixed(2),
             "taxID": item["taxID"],
-            "taxPercent": double.parse(item["taxPercent"].toString()).toStringAsFixed(2),
+            //if  "taxPercent":  item["taxPercent"] == "" ? 0.00  : double.parse(item["taxPercent"].toString()).toStringAsFixed(2),
+            "taxPercent": item["taxPercent"],   
             "receiptLineType": "Sale",
             "receiptLineQuantity": item["quantity"].toString(),
             "taxCode": item["taxCode"],
             "receiptLineTotal": item["total"].toStringAsFixed(2),
-            "receiptLineName": item["productName"]
+            "receiptLineName": item["productName"],
           };
+          }
+          else{
+            return {
+            "receiptLineNo": "$index",
+            "receiptLineHSCode": "99001000",
+            "receiptLinePrice": item["price"].toStringAsFixed(2),
+            "taxID": item["taxID"], 
+            "receiptLineType": "Sale",
+            "receiptLineQuantity": item["quantity"].toString(),
+            "taxCode": item["taxCode"],
+            "receiptLineTotal": item["total"].toStringAsFixed(2),
+            "receiptLineName": item["productName"],
+          };
+          }
+          
+          // Only add taxPercent if it's not an empty strin
         }).toList(),
         "receiptType": "FISCALINVOICE",
-        "receiptGlobalNo": getNextReceiptGlobalNo,
+        "receiptGlobalNo": getNextReceiptGlobalNo + 1,
         "receiptCurrency": saleCurrency,
         "receiptPrintForm": "InvoiceA4",
         "receiptDate": formattedDate ,
@@ -364,7 +385,6 @@ Future<Map<String, String>?> generateRSASignature(String hash, String p12FilePat
   }
 }
 
-  /// Function to generate `receiptTaxes` dynamically
 List<Map<String, dynamic>> generateReceiptTaxes(List<dynamic> receiptItems) {
   Map<int, Map<String, dynamic>> taxGroups = {}; // Store tax summaries
 
@@ -376,7 +396,7 @@ List<Map<String, dynamic>> generateReceiptTaxes(List<dynamic> receiptItems) {
     if (!taxGroups.containsKey(taxID)) {
       taxGroups[taxID] = {
         "taxID": taxID,
-        "taxPercent": taxPercent,
+        "taxPercent": taxPercent.isEmpty ? "" : taxPercent, // Leave blank if empty
         "taxCode": item["taxCode"],
         "taxAmount": 0.0,
         "salesAmountWithTax": 0.0
@@ -384,7 +404,10 @@ List<Map<String, dynamic>> generateReceiptTaxes(List<dynamic> receiptItems) {
     }
 
     // Calculate tax amount
-    double taxAmount = (total * double.parse(taxPercent)) / 100 ;
+    double taxAmount = taxPercent.isEmpty
+        ? 0.00  // If taxPercent is empty, set taxAmount to 0.00
+        : (total * double.parse(taxPercent)) / 100;
+
     taxGroups[taxID]!["taxAmount"] += taxAmount;
     taxGroups[taxID]!["salesAmountWithTax"] += total;
   }
@@ -393,13 +416,54 @@ List<Map<String, dynamic>> generateReceiptTaxes(List<dynamic> receiptItems) {
   return taxGroups.values.map((tax) {
     return {
       "taxID": tax["taxID"],
-      "taxPercent": tax["taxPercent"],
+      "taxPercent": tax["taxPercent"],  // Blank if empty
       "taxCode": tax["taxCode"],
-      "taxAmount": tax["taxAmount"].toStringAsFixed(2),
+      "taxAmount": tax["taxAmount"].toStringAsFixed(2), // Rounded to 2 decimal places
       "salesAmountWithTax": tax["salesAmountWithTax"].toStringAsFixed(2)
     };
   }).toList();
 }
+
+
+  /// Function to generate `receiptTaxes` dynamically
+// List<Map<String, dynamic>> generateReceiptTaxes(List<dynamic> receiptItems) {
+//   Map<int, Map<String, dynamic>> taxGroups = {}; // Store tax summaries
+
+//   for (var item in receiptItems) {
+//     int taxID = item["taxID"];
+//     String taxPercent = item["taxPercent"];
+//     double total = item["total"];
+
+//     if (!taxGroups.containsKey(taxID)) {
+//       taxGroups[taxID] = {
+//         "taxID": taxID,
+//         "taxPercent": taxPercent,
+//         "taxCode": item["taxCode"],
+//         "taxAmount": 0.0,
+//         "salesAmountWithTax": 0.0
+//       };
+//     }
+//     double taxAmount;
+//     // Calculate tax amount
+//     if(taxPercent==""){
+//       taxAmount = (total * 0)
+//     }
+//     double taxAmount = (total * double.parse(taxPercent)) / 100 ;
+//     taxGroups[taxID]!["taxAmount"] += taxAmount;
+//     taxGroups[taxID]!["salesAmountWithTax"] += total;
+//   }
+
+//   // Convert map to list and round values
+//   return taxGroups.values.map((tax) {
+//     return {
+//       "taxID": tax["taxID"],
+//       "taxPercent": tax["taxPercent"],
+//       "taxCode": tax["taxCode"],
+//       "taxAmount": tax["taxAmount"].toStringAsFixed(2),
+//       "salesAmountWithTax": tax["salesAmountWithTax"].toStringAsFixed(2)
+//     };
+//   }).toList();
+// }
 
 /// Function to generate `receiptTaxes` concatenation
 // String generateTaxSummary(List<dynamic> receiptItems) {
@@ -466,6 +530,42 @@ List<Map<String, dynamic>> generateReceiptTaxes(List<dynamic> receiptItems) {
 //     return "${tax["taxCode"]}${tax["taxPercent"]}${(tax["taxAmount"] * 100).round().toString()}${(tax["salesAmountWithTax"] * 100).round().toString()}";
 //   }).join("");
 // }
+// String generateTaxSummary(List<dynamic> receiptItems) {
+//   Map<int, Map<String, dynamic>> taxGroups = {};
+
+//   for (var item in receiptItems) {
+//     int taxID = item["taxID"];
+//     double total = item["total"];
+//     String taxCode = item["taxCode"];
+
+//     // Ensure taxPercent is a valid number, defaulting to 0.0 if empty or null
+//     double taxPercentValue = (item["taxPercent"] == null || item["taxPercent"] == "")
+//         ? 0.0
+//         : double.parse(item["taxPercent"]);
+
+//     if (!taxGroups.containsKey(taxID)) {
+//       taxGroups[taxID] = {
+//         "taxCode": taxCode,
+//         "taxPercent": taxPercentValue % 1 == 0 
+//           ? "${taxPercentValue.toInt()}.00" 
+//           : taxPercentValue.toStringAsFixed(2),
+//         "taxAmount": 0.0,
+//         "salesAmountWithTax": 0.0
+//       };
+//     }
+
+//     double taxAmount = (total * taxPercentValue) / (100 + taxPercentValue);
+//     taxGroups[taxID]!["taxAmount"] += taxAmount;
+//     taxGroups[taxID]!["salesAmountWithTax"] += total;
+//   }
+
+//   List<Map<String, dynamic>> sortedTaxes = taxGroups.values.toList()
+//     ..sort((a, b) => a["taxCode"].compareTo(b["taxCode"]));
+
+//   return sortedTaxes.map((tax) {
+//     return "${tax["taxCode"]}${tax["taxPercent"]}${(tax["taxAmount"] * 100).round().toString()}${(tax["salesAmountWithTax"] * 100).round().toString()}";
+//   }).join("");
+// }
 String generateTaxSummary(List<dynamic> receiptItems) {
   Map<int, Map<String, dynamic>> taxGroups = {};
 
@@ -473,24 +573,26 @@ String generateTaxSummary(List<dynamic> receiptItems) {
     int taxID = item["taxID"];
     double total = item["total"];
     String taxCode = item["taxCode"];
-
-    // Ensure taxPercent is a valid number, defaulting to 0.0 if empty or null
-    double taxPercentValue = (item["taxPercent"] == null || item["taxPercent"] == "")
+    
+    // Preserve empty taxPercent when missing
+    String? taxPercentValue = item["taxPercent"];
+    double taxPercent = (taxPercentValue == null || taxPercentValue == "")
         ? 0.0
-        : double.parse(item["taxPercent"]);
+        : double.parse(taxPercentValue);
 
     if (!taxGroups.containsKey(taxID)) {
       taxGroups[taxID] = {
         "taxCode": taxCode,
-        "taxPercent": taxPercentValue % 1 == 0 
-          ? "${taxPercentValue.toInt()}.00" 
-          : taxPercentValue.toStringAsFixed(2),
+        "taxPercent": taxPercentValue == null || taxPercentValue == "" 
+          ? 0
+          : (taxPercent % 1 == 0 
+              ? "${taxPercent.toInt()}.00" 
+              : taxPercent.toStringAsFixed(2)),
         "taxAmount": 0.0,
         "salesAmountWithTax": 0.0
       };
     }
-
-    double taxAmount = (total * taxPercentValue) / (100 + taxPercentValue);
+    double taxAmount = (total * taxPercent) / (100 + taxPercent);
     taxGroups[taxID]!["taxAmount"] += taxAmount;
     taxGroups[taxID]!["salesAmountWithTax"] += total;
   }
@@ -502,8 +604,6 @@ String generateTaxSummary(List<dynamic> receiptItems) {
     return "${tax["taxCode"]}${tax["taxPercent"]}${(tax["taxAmount"] * 100).round().toString()}${(tax["salesAmountWithTax"] * 100).round().toString()}";
   }).join("");
 }
-
-
 
 /// Function to generate the final concatenated receipt string
 String generateReceiptString({
@@ -637,7 +737,10 @@ String generateReceiptString({
       int currentGlobalNo = latestReceiptGlobalNo + 1;
       String formatedReceiptGlobalNo = currentGlobalNo.toString().padLeft(10, '0');
       String receiptDeviceSignatureSignatureHex= receiptDeviceSignature_signature_hex.toString();
-      String receiptQrData = getReceiptQrData(receiptDeviceSignatureSignatureHex);
+      //String receiptQrData = getReceiptQrData(receiptDeviceSignatureSignatureHex);
+      String receiptQrData = first16Chars.toString();
+      String testHash = "Lvf3obAk4W4uJclOQTcqwV4zd+59xIj5sEOv5e5UUlM=";
+      String testQrData = getReceiptQrData(testHash);
       String qrurl = genericzimraqrurl + formattedDeviceID + formattedDateStr + formatedReceiptGlobalNo + receiptQrData;
       print("QR URL: $qrurl");
     if(pingResponse=="200"){
