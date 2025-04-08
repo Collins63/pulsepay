@@ -34,6 +34,7 @@ class Pos  extends StatefulWidget{
 }
 
 class _PosState extends State<Pos>{
+  static const platform = MethodChannel('com.example.pulsepay/signature');
   bool isBarcodeEnabled = false;
   @override
   void initState() {
@@ -91,7 +92,7 @@ class _PosState extends State<Pos>{
   // ignore: non_constant_identifier_names
   String? receiptDeviceSignature_signature;
   String genericzimraqrurl = "https://fdmstest.zimra.co.zw/";
-  int deviceID = 21659;
+  int deviceID = 22662;
   
   Future<bool> requestStoragePermission() async {
   if (await Permission.storage.isGranted) {
@@ -128,7 +129,7 @@ class _PosState extends State<Pos>{
       taxID = 3;
       taxPercent = "15.00"; // Convert 15% to decimal
       taxCode = "C";
-      itemTax = totalPrice * (double.parse(taxPercent) / 100);
+      itemTax = totalPrice * 0.15;
       salesAmountwithTax += totalPrice;
     } else {
       taxID = 1;
@@ -153,116 +154,45 @@ class _PosState extends State<Pos>{
     taxAmount += itemTax;
   }
 }
-  Future<RSAPrivateKey?> loadPrivateKeyFromP12(String filePath , String password) async{
-    bool hashPermission = await requestStoragePermission();
-    if(!hashPermission){
-      print("Cannot access file...not permitted");
-      return null;
-    }
 
-    //Load file\
-    File p12File = File(filePath);
-    if(!p12File.existsSync()){
-      print("Keystore file not found");
-      return null;
+  static Future<String?> getSignatureHash(String data) async {
+    try {
+      final String? result = await platform.invokeMethod('SignatureHash', {"data": data});
+      return result;
+    } on PlatformException catch (e) {
+      return "Failed to get hash: '${e.message}'.";
     }
-    print("private keyy found");
-
-    //Uint8List p12Bytes = await p12File.readAsBytes();
-    Uint8List p12Bytes = await p12File.openRead().fold<Uint8List>(
-  Uint8List(0),
-  (buffer, chunk) => Uint8List.fromList([...buffer, ...chunk])
-);
-    //print(p12Bytes);
-    var logger = Logger();
-    logger.d("p12Bytes: $p12Bytes");
-    List<String> pemList = Pkcs12Utils.parsePkcs12(p12Bytes , password: password);
-    print("pem list found");
-    print(pemList);
-    if(pemList.isEmpty){
-      print("No private key found in p12 file");
-    }
-    String privateKeyPem = pemList.firstWhere(
-      (pem) => pem.contains("BEGIN PRIVATE KEY"),
-      orElse: ()=> "",
-    );
-    print("private key pem found");
-    if(privateKeyPem.isEmpty){
-      print("NO RSA privatekey found");
-    }
-    return CryptoUtils.rsaPrivateKeyFromPem(privateKeyPem);
   }
 
-  Uint8List signHash(String hash, RSAPrivateKey privateKey) {
-  var signer = Signer('SHA-256/RSA')
-    ..init(true, PrivateKeyParameter<RSAPrivateKey>(privateKey));
-
-  return signer.generateSignature(Uint8List.fromList(base64Decode(hash))) as Uint8List;
-}
-
-String generateDeviceSignature(String hash, RSAPrivateKey privateKey) {
-  Uint8List signatureBytes = signHash(hash, privateKey);
-  return base64Encode(signatureBytes);
-}
-String computeMD5(Uint8List signatureBytes) {
-  var md5Hash = md5.convert(signatureBytes);
-  return md5Hash.toString();
-}
-Future<Map<String, String>?> generateRSASignature(String hash, String p12FilePath, String password) async {
-  print("Entered generate signatyre");
-  RSAPrivateKey? privateKey = await loadPrivateKeyFromP12(p12FilePath, password);
-  print("Got private key");
-  if (privateKey == null) {
-    print("❌ Unable to sign data because private key could not be loaded.");
-    return null;
-  }else{
-    print("Key loaded");
+  static Future<List<String>?> getSignatureSignature(String data) async {
+    try {
+      final List<dynamic>? result = await platform.invokeMethod('SignatureSignature', {"data": data});
+      return result?.map((e) => e as String).toList();
+    } on PlatformException catch (e) {
+      return ["Failed to sign: '${e.message}'.", ""];
+    }
   }
-  
 
-  // Generate SHA-256 Hash
-  hash = await generateHash();
-  print("✅ Generated Hash (Base64): $hash");
-  Uint8List hashBytes = base64Decode(hash);
-  String stringHasybt = hashBytes.toString();
-
-  // Sign the hash using RSA
-  Uint8List signatureBytes = signHash(stringHasybt, privateKey);
-
-  // Convert to Base64 and compute MD5 hash
-  String base64Signature = base64Encode(signatureBytes);
-  String md5Signature = computeMD5(signatureBytes);
-
-  return {
-    "signatureHex": md5Signature,
-    "signatureBase64": base64Signature,
-  };
-}
-
-  // void signKotlin() async {
-  //   String filePath = "/storage/emulated/0/Pulse/Configurations/testwelleast_T_certificate.p12";
-  //   String password = "testwelleast123";
-  //   String data = await generateHash();
-  //   String signedData = await signData(filePath, password, data);
-  //   print("Signed Data: $signedData");  
-  // }
-  /// Generate JSON after sale
   Future<String> generateFiscalJSON() async {
+    String encodedreceiptDeviceSignature_signature;
   try {
     print("Entered generateFiscalJSON");
 
-    String filePath = "/storage/emulated/0/Pulse/Configurations/testwelleast_T_certificate.p12";
-    String password = "testwelleast123";
+    String filePath = "/storage/emulated/0/Pulse/Configurations/mindTest_T_certificate.p12";
+    String password = "mindTest123";
 
     // Ensure signing does not fail
-    String signedData;
+
     try {
       String data = await useRawString();
+      //List<String>? signature = await getSignatureSignature(data);
+      //receiptDeviceSignature_signature_hex = signature?[0];
+      //receiptDeviceSignature_signature  = signature?[1];
       final Map<String, String> signedDataMap  = await signData(filePath, password, data);
       //final Map<String, dynamic> signedDataMap = jsonDecode(signedDataString);
       receiptDeviceSignature_signature_hex = signedDataMap["receiptDeviceSignature_signature_hex"] ?? "";
       receiptDeviceSignature_signature = signedDataMap["receiptDeviceSignature_signature"] ?? "";
-      first16Chars = signedDataMap["receiptDeviceSignature_signature_md5_first16"] ?? "";
+      //first16Chars = signedDataMap["receiptDeviceSignature_signature_md5_first16"] ?? "";
       
     } catch (e) {
       Get.snackbar("Signing Error", "$e", snackPosition: SnackPosition.TOP);
@@ -304,7 +234,7 @@ Future<Map<String, String>?> generateRSASignature(String hash, String p12FilePat
           if (item["taxPercent"] != ""){
             return {
             "receiptLineNo": "$index",
-            "receiptLineHSCode": "99001000",
+            "receiptLineHSCode": "04021099",
             "receiptLinePrice": item["price"].toStringAsFixed(2),
             "taxID": item["taxID"],
             //if  "taxPercent":  item["taxPercent"] == "" ? 0.00  : double.parse(item["taxPercent"].toString()).toStringAsFixed(2),
@@ -404,10 +334,19 @@ List<Map<String, dynamic>> generateReceiptTaxes(List<dynamic> receiptItems) {
     }
 
     // Calculate tax amount
-    double taxAmount = taxPercent.isEmpty
-        ? 0.00  // If taxPercent is empty, set taxAmount to 0.00
-        : (total * double.parse(taxPercent)) / 100;
-
+    //double taxAmount = taxPercent.isEmpty
+      //  ? 0.00  // If taxPercent is empty, set taxAmount to 0.00
+       // : total - double.parse((total / 1.15).toString());
+    double taxAmount;
+    if(taxPercent.isEmpty){
+      taxAmount = 0.00;
+    }
+    else if(taxPercent=="15.00"){
+      taxAmount = total - double.parse((total / 1.15).toString());
+    }
+    else{
+      taxAmount = total * 0;
+    }
     taxGroups[taxID]!["taxAmount"] += taxAmount;
     taxGroups[taxID]!["salesAmountWithTax"] += total;
   }
@@ -419,153 +358,11 @@ List<Map<String, dynamic>> generateReceiptTaxes(List<dynamic> receiptItems) {
       "taxPercent": tax["taxPercent"],  // Blank if empty
       "taxCode": tax["taxCode"],
       "taxAmount": tax["taxAmount"].toStringAsFixed(2), // Rounded to 2 decimal places
-      "salesAmountWithTax": tax["salesAmountWithTax"].toStringAsFixed(2)
+      "salesAmountWithTax": tax["salesAmountWithTax"],
     };
   }).toList();
 }
 
-
-  /// Function to generate `receiptTaxes` dynamically
-// List<Map<String, dynamic>> generateReceiptTaxes(List<dynamic> receiptItems) {
-//   Map<int, Map<String, dynamic>> taxGroups = {}; // Store tax summaries
-
-//   for (var item in receiptItems) {
-//     int taxID = item["taxID"];
-//     String taxPercent = item["taxPercent"];
-//     double total = item["total"];
-
-//     if (!taxGroups.containsKey(taxID)) {
-//       taxGroups[taxID] = {
-//         "taxID": taxID,
-//         "taxPercent": taxPercent,
-//         "taxCode": item["taxCode"],
-//         "taxAmount": 0.0,
-//         "salesAmountWithTax": 0.0
-//       };
-//     }
-//     double taxAmount;
-//     // Calculate tax amount
-//     if(taxPercent==""){
-//       taxAmount = (total * 0)
-//     }
-//     double taxAmount = (total * double.parse(taxPercent)) / 100 ;
-//     taxGroups[taxID]!["taxAmount"] += taxAmount;
-//     taxGroups[taxID]!["salesAmountWithTax"] += total;
-//   }
-
-//   // Convert map to list and round values
-//   return taxGroups.values.map((tax) {
-//     return {
-//       "taxID": tax["taxID"],
-//       "taxPercent": tax["taxPercent"],
-//       "taxCode": tax["taxCode"],
-//       "taxAmount": tax["taxAmount"].toStringAsFixed(2),
-//       "salesAmountWithTax": tax["salesAmountWithTax"].toStringAsFixed(2)
-//     };
-//   }).toList();
-// }
-
-/// Function to generate `receiptTaxes` concatenation
-// String generateTaxSummary(List<dynamic> receiptItems) {
-//   Map<int, Map<String, dynamic>> taxGroups = {}; // Store tax summaries
-
-//   for (var item in receiptItems) {
-//     int taxID = item["taxID"];
-//     double taxPercent = item["taxPercent"];
-//     double total = item["total"];
-//     String taxCode = item["taxCode"];
-
-//     if (!taxGroups.containsKey(taxID)) {
-//       taxGroups[taxID] = {
-//         "taxCode": taxCode,
-//         "taxPercent": taxPercent.toStringAsFixed(2),
-//         "taxAmount": 0.0,
-//         "salesAmountWithTax": 0.0
-//       };
-//     }
-
-//     // Calculate tax amount
-//     double taxAmount = (total * taxPercent) / (100 + taxPercent);
-//     taxGroups[taxID]!["taxAmount"] += taxAmount;
-//     taxGroups[taxID]!["salesAmountWithTax"] += total;
-//   }
-
-//   // Convert tax groups to a sorted list (optional: sort by taxCode)
-//   List<Map<String, dynamic>> sortedTaxes = taxGroups.values.toList()
-//     ..sort((a, b) => a["taxCode"].compareTo(b["taxCode"]));
-
-//   // Concatenate tax details in the required order
-//   return sortedTaxes.map((tax) {
-//     return "${tax["taxCode"]}${tax["taxPercent"]}${tax["taxAmount"].toStringAsFixed(2)}${tax["salesAmountWithTax"].toStringAsFixed(2)}";
-//   }).join("");
-// }
-// String generateTaxSummary(List<dynamic> receiptItems) {
-//   Map<int, Map<String, dynamic>> taxGroups = {};
-
-//   for (var item in receiptItems) {
-//     int taxID = item["taxID"];
-//     String taxPercent = item["taxPercent"];
-//     double total = item["total"];
-//     String taxCode = item["taxCode"];
-//     double taxPercentValue = double.parse(taxPercent);
-
-//     if (!taxGroups.containsKey(taxID)) {
-//       taxGroups[taxID] = {
-//         "taxCode": taxCode,
-//         "taxPercent": taxPercentValue % 1 == 0 ? "${taxPercentValue.toInt()}.00" : "${taxPercentValue.toStringAsFixed(2)}",
-//         "taxAmount": 0.0,
-//         "salesAmountWithTax": 0.0
-//       };
-//     }
-
-//     double taxAmount = (total * taxPercentValue) / (100 + taxPercentValue);
-//     taxGroups[taxID]!["taxAmount"] += taxAmount;
-//     taxGroups[taxID]!["salesAmountWithTax"] += total;
-//   }
-
-//   List<Map<String, dynamic>> sortedTaxes = taxGroups.values.toList()
-//     ..sort((a, b) => a["taxCode"].compareTo(b["taxCode"]));
-
-//   return sortedTaxes.map((tax) {
-//     return "${tax["taxCode"]}${tax["taxPercent"]}${(tax["taxAmount"] * 100).round().toString()}${(tax["salesAmountWithTax"] * 100).round().toString()}";
-//   }).join("");
-// }
-// String generateTaxSummary(List<dynamic> receiptItems) {
-//   Map<int, Map<String, dynamic>> taxGroups = {};
-
-//   for (var item in receiptItems) {
-//     int taxID = item["taxID"];
-//     double total = item["total"];
-//     String taxCode = item["taxCode"];
-
-//     // Ensure taxPercent is a valid number, defaulting to 0.0 if empty or null
-//     double taxPercentValue = (item["taxPercent"] == null || item["taxPercent"] == "")
-//         ? 0.0
-//         : double.parse(item["taxPercent"]);
-
-//     if (!taxGroups.containsKey(taxID)) {
-//       taxGroups[taxID] = {
-//         "taxCode": taxCode,
-//         "taxPercent": taxPercentValue % 1 == 0 
-//           ? "${taxPercentValue.toInt()}.00" 
-//           : taxPercentValue.toStringAsFixed(2),
-//         "taxAmount": 0.0,
-//         "salesAmountWithTax": 0.0
-//       };
-//     }
-
-//     double taxAmount = (total * taxPercentValue) / (100 + taxPercentValue);
-//     taxGroups[taxID]!["taxAmount"] += taxAmount;
-//     taxGroups[taxID]!["salesAmountWithTax"] += total;
-//   }
-
-//   List<Map<String, dynamic>> sortedTaxes = taxGroups.values.toList()
-//     ..sort((a, b) => a["taxCode"].compareTo(b["taxCode"]));
-
-//   return sortedTaxes.map((tax) {
-//     return "${tax["taxCode"]}${tax["taxPercent"]}${(tax["taxAmount"] * 100).round().toString()}${(tax["salesAmountWithTax"] * 100).round().toString()}";
-//   }).join("");
-// }
 String generateTaxSummary(List<dynamic> receiptItems) {
   Map<int, Map<String, dynamic>> taxGroups = {};
 
@@ -592,7 +389,12 @@ String generateTaxSummary(List<dynamic> receiptItems) {
         "salesAmountWithTax": 0.0
       };
     }
-    double taxAmount = (total * taxPercent) / (100 + taxPercent);
+    double taxAmount ;
+    if(taxPercentValue=="15.00"){
+      taxAmount = total - double.parse((total / 1.15).toString());
+    }else{
+      taxAmount = total * 0;
+    }
     taxGroups[taxID]!["taxAmount"] += taxAmount;
     taxGroups[taxID]!["salesAmountWithTax"] += total;
   }
@@ -634,7 +436,7 @@ String generateReceiptString({
     int currentGlobalNo = latestReceiptGlobalNo + 1;
     String getLatestReceiptHash = await dbHelper.getLatestReceiptHash();
     String receiptString = generateReceiptString(
-    deviceID: 21659,
+    deviceID: 22662,
     receiptType: "FISCALINVOICE",
     receiptCurrency: "USD",
     receiptGlobalNo: currentGlobalNo,
@@ -646,12 +448,13 @@ String generateReceiptString({
   print("Concatenated Receipt String: $receiptString");
   return receiptString;
   }
+
   generateHash() async {
     int latestReceiptGlobalNo = await dbHelper.getLatestReceiptGlobalNo();
     int currentGlobalNo = latestReceiptGlobalNo + 1;
     String getLatestReceiptHash = await dbHelper.getLatestReceiptHash();
     String receiptString = generateReceiptString(
-    deviceID: 21659,
+    deviceID: 22662,
     receiptType: "FISCALINVOICE",
     receiptCurrency: "USD",
     receiptGlobalNo: currentGlobalNo,
@@ -660,8 +463,8 @@ String generateReceiptString({
     receiptItems: receiptItems,
     getPreviousReceiptHash: getLatestReceiptHash,
   );
-  print("Concatenated Receipt String: $receiptString");
-
+  print("Concatenated Receipt String:$receiptString");
+  receiptString.trim();
     var bytes = utf8.encode(receiptString);
     var digest = sha256.convert(bytes);
     final hash = base64.encode(digest.bytes);
@@ -670,7 +473,7 @@ String generateReceiptString({
   }
   Future<String> ping() async {
   String apiEndpointPing =
-      "https://fdmsapitest.zimra.co.zw/Device/v1/21659/Ping";
+      "https://fdmsapitest.zimra.co.zw/Device/v1/22662/Ping";
   const String deviceModelName = "Server";
   const String deviceModelVersion = "v1"; 
 
@@ -745,7 +548,7 @@ String generateReceiptString({
       print("QR URL: $qrurl");
     if(pingResponse=="200"){
       String apiEndpointSubmitReceipt =
-      "https://fdmsapitest.zimra.co.zw/Device/v1/21659/SubmitReceipt";
+      "https://fdmsapitest.zimra.co.zw/Device/v1/22662/SubmitReceipt";
       const String deviceModelName = "Server";
       const String deviceModelVersion = "v1";  
 
@@ -1547,9 +1350,8 @@ String generateReceiptString({
                         const Center(child: const Text("Products" , style: TextStyle(color: Colors.black,fontSize: 18, fontWeight: FontWeight.w500),)),
                       ],
                     ),
-                    SizedBox(height: 15,),
-                    
-                    SizedBox(height: 10,),
+                    const SizedBox(height: 15,),
+                    const SizedBox(height: 10,),
                     Container(
                       height: 480,
                       decoration: BoxDecoration(

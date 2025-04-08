@@ -34,7 +34,7 @@ class _FiscalPageState extends State<FiscalPage> {
 
   final DatabaseHelper dbHelper  = DatabaseHelper();
   int currentFiscal = 0;
-  String deviceID = "21659";
+  String deviceID = "22662";
   String taxPayerName = "TestWellEast Investments";
   String tinNumber = "2000874913";
   String vatNumber = "220280877";
@@ -87,7 +87,7 @@ class _FiscalPageState extends State<FiscalPage> {
 
   try {
     final response = await http.post(
-      Uri.parse("https://fdmsapitest.zimra.co.zw/Device/v1/21659/OpenDay"), // Update this URL
+      Uri.parse("https://fdmsapitest.zimra.co.zw/Device/v1/22662/OpenDay"), // Update this URL
       headers: {
         "Content-Type": "application/json",
         "DeviceModelName": "Server",
@@ -110,7 +110,7 @@ class _FiscalPageState extends State<FiscalPage> {
 }
 
 Future<String> getConfig() async {
-  String apiEndpointGetConfig = "https://fdmsapitest.zimra.co.zw/Device/v1/21659/GetConfig"; // Replace with actual API endpoint
+  String apiEndpointGetConfig = "https://fdmsapitest.zimra.co.zw/Device/v1/22662/GetConfig"; // Replace with actual API endpoint
   String responseMessage = "There was no response from the server. Check your connection !!";
 
   try {
@@ -235,7 +235,7 @@ Future<String> getConfig() async {
   
   Future<void> getStatus() async {
     String apiEndpointGetStatus =
-      "https://fdmsapitest.zimra.co.zw/Device/v1/21659/GetStatus";
+      "https://fdmsapitest.zimra.co.zw/Device/v1/22662/GetStatus";
     const String deviceModelName = "Server";
     const String deviceModelVersion = "v1";
 
@@ -262,7 +262,7 @@ Future<String> getConfig() async {
 
   Future<String> ping() async {
   String apiEndpointPing =
-      "https://fdmsapitest.zimra.co.zw/Device/v1/21659/Ping";
+      "https://fdmsapitest.zimra.co.zw/Device/v1/22662/Ping";
   const String deviceModelName = "Server";
   const String deviceModelVersion = "v1"; 
 
@@ -297,7 +297,7 @@ Future<String> getConfig() async {
     // Get the database instance
     final db = await dbHelper.initDB();
     String apiEndpointSubmitReceipt =
-      "https://fdmsapitest.zimra.co.zw/Device/v1/21659/SubmitReceipt";
+      "https://fdmsapitest.zimra.co.zw/Device/v1/22662/SubmitReceipt";
     const String deviceModelName = "Server";
     const String deviceModelVersion = "v1"; 
     SSLContextProvider sslContextProvider = SSLContextProvider();

@@ -3,6 +3,24 @@ import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 class SSLContextProvider {
+  //void initState(){
+    //requestStoragePermission1();
+  //}
+  Future<void> requestStoragePermission1() async {
+  if (await Permission.storage.request().isGranted) {
+    print("✅ Storage permission granted!");
+  } else {
+    print("❌ Storage permission denied!");
+  }
+  
+  if (await Permission.manageExternalStorage.request().isGranted) {
+    print("✅ Manage External Storage permission granted!");
+  } else {
+    print("❌ Manage External Storage permission denied! Redirecting to settings...");
+    openAppSettings();  // Opens app settings for manual permission grant
+  }
+}
+
   Future<bool> requestStoragePermission() async {
   if (await Permission.storage.isGranted) {
     return true;
@@ -13,18 +31,19 @@ class SSLContextProvider {
 }
 
   Future<SecurityContext> createSSLContext() async {
+    requestStoragePermission1();
     // Get the local directory for app files
     Directory? appDir = await getApplicationDocumentsDirectory();
-    bool hasPermission = await requestStoragePermission();
+    //bool hasPermission = await requestStoragePermission();
     // Construct the correct path to the keystore
-    String keystorePath = "/storage/emulated/0/Pulse/Configurations/testwelleast_T_certificate.p12";
-    String keystorePassword = "testwelleast123"; // Replace with actual password
+    String keystorePath = "/storage/emulated/0/Pulse/Configurations/mindTest_T_certificate.p12";
+    String keystorePassword = "mindTest123"; // Replace with actual password
     SecurityContext securityContext = SecurityContext.defaultContext;
     
 
-  if (!hasPermission) {
-    print("Permission denied. Cannot access external storage.");
-  }
+  // if (!hasPermission) {
+  //   print("Permission denied. Cannot access external storage.");
+  // }
 
   File keystoreFile = File(keystorePath);
   if (!keystoreFile.existsSync()) {

@@ -83,6 +83,9 @@
 //         }
 //     }
 // }
+
+//second code////////
+
 package com.example.pulsepay
 
 import org.bouncycastle.jce.provider.BouncyCastleProvider
@@ -179,7 +182,7 @@ class MainActivity : FlutterActivity() {
             val messageDigest = MessageDigest.getInstance("SHA-256")
             val hashedData = messageDigest.digest(data.toByteArray(Charsets.UTF_8))
 
-            val signature = Signature.getInstance("NONEwithRSA") // Uses raw RSA signing
+            val signature = Signature.getInstance("SHA256withRSA") // Uses raw RSA signing
             signature.initSign(privateKey)
             signature.update(hashedData)
             val signedBytes = signature.sign()
@@ -188,18 +191,6 @@ class MainActivity : FlutterActivity() {
             val md = MessageDigest.getInstance("MD5")
             val digest = md.digest(signedBytes)
             val hexString = digest.joinToString("") { byte -> "%02x".format(byte) }
-
-            // Sign data using SHA256withRSA
-            // val signature = Signature.getInstance("SHA256withRSA")
-            // signature.initSign(privateKey)
-            // signature.update(data.toByteArray(Charsets.UTF_8))
-            // val signedBytes = signature.sign()
-
-            // // Compute MD5 hash
-            // val md = MessageDigest.getInstance("MD5")
-            // val digest = md.digest(signedBytes)
-            // val hexString = digest.joinToString("") { byte -> "%02x".format(byte) }
-
             // Convert signedBytes to Base64 string
             val base64Signature = Base64.encodeToString(signedBytes, Base64.NO_WRAP)
 
@@ -217,3 +208,45 @@ class MainActivity : FlutterActivity() {
         }
     }
 }
+
+
+// package com.example.yourapp
+
+// import android.os.Bundle
+// import io.flutter.embedding.android.FlutterActivity
+// import io.flutter.plugin.common.MethodChannel
+// import java.security.*
+
+// class MainActivity : FlutterActivity() {
+//     private val CHANNEL = "com.example.pulsepay/signature"
+
+//     override fun onCreate(savedInstanceState: Bundle?) {
+//         super.onCreate(savedInstanceState)
+
+//         MethodChannel(flutterEngine!!.dartExecutor.binaryMessenger, CHANNEL).setMethodCallHandler { call, result ->
+//             when (call.method) {
+//                 "SignatureHash" -> {
+//                     val input = call.argument<String>("data")
+//                     try {
+//                         val hash = InvoiceSigner.SignatureHash(input!!)
+//                         result.success(hash)
+//                     } catch (e: NoSuchAlgorithmException) {
+//                         result.error("HASH_ERROR", "Error generating hash", e.message)
+//                     }
+//                 }
+//                 "SignatureSignature" -> {
+//                     val input = call.argument<String>("data")
+//                     try {
+//                         val signatureResult = InvoiceSigner.SignatureSignature(input!!)
+//                         result.success(signatureResult)
+//                     } catch (e: Exception) {
+//                         result.error("SIGN_ERROR", "Error signing data", e.message)
+//                     }
+//                 }
+//                 else -> result.notImplemented()
+//             }
+//         }
+//     }
+// }
+
+

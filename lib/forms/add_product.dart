@@ -4,6 +4,7 @@ import 'package:pulsepay/JsonModels/json_models.dart';
 import 'package:pulsepay/SQLite/database_helper.dart';
 //import 'package:pulsepay/authentication/login.dart';
 import 'package:pulsepay/forms/view_products.dart';
+import 'package:pulsepay/home/home_page.dart';
 
 class AddProduct extends StatefulWidget{
   const AddProduct ({super.key});
@@ -290,10 +291,10 @@ class _AddproductState extends State<AddProduct>{
             ),
             FloatingActionButton(
                 onPressed: (){
-                 // Navigator.pushReplacement(
-                   // context,
-                   // MaterialPageRoute(builder: (context) => const Apply()),
-                  //);
+                 Navigator.pushReplacement(
+                   context,
+                   MaterialPageRoute(builder: (context) => const HomePage()),
+                  );
                 },
                 backgroundColor: Colors.white,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
