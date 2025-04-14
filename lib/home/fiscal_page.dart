@@ -9,11 +9,13 @@ import 'package:pulsepay/SQLite/database_helper.dart';
 import 'package:pulsepay/common/constants.dart';
 import 'package:pulsepay/common/custom_button.dart';
 import 'package:pulsepay/common/reusable_text.dart';
+import 'package:pulsepay/fiscalization/api_endPoints.dart';
 import 'package:pulsepay/fiscalization/get_status.dart';
 import 'package:pulsepay/fiscalization/ping.dart';
 import 'package:pulsepay/fiscalization/sslContextualization.dart';
 import 'package:pulsepay/fiscalization/submitReceipts.dart';
 import 'package:pulsepay/fiscalization/unsubmitted_receipt.dart';
+import 'package:pulsepay/forms/interact.dart';
 import 'package:pulsepay/home/home_page.dart';
 import 'package:pulsepay/home/settings.dart';
 import 'package:pulsepay/pointOfSale/pos.dart';
@@ -30,6 +32,10 @@ class _FiscalPageState extends State<FiscalPage> {
   void initState(){
     super.initState();
     getlatestFiscalDay();
+    fetchReceiptsPending();
+    fetchReceiptsSubmitted();
+    fetchAllReceipts();
+    fetchDayReceiptCounter();
   }
 
   final DatabaseHelper dbHelper  = DatabaseHelper();
@@ -43,6 +49,7 @@ class _FiscalPageState extends State<FiscalPage> {
   List<Map<String, dynamic>> receiptsPending= [];
   List<Map<String, dynamic>> receiptsSubmitted= [];
   List<Map<String , dynamic>> allReceipts=[];
+  List<Map<String,dynamic>> dayReceiptCounter = [];
 
   Future<void> fetchReceiptsPending() async {
     List<Map<String, dynamic>> data = await dbHelper.getReceiptsPending();
@@ -60,6 +67,12 @@ class _FiscalPageState extends State<FiscalPage> {
     List<Map<String ,dynamic>> data  = await dbHelper.getAllReceipts();
     setState(() {
       allReceipts = data;
+    });
+  }
+  Future<void> fetchDayReceiptCounter() async {
+    List<Map<String, dynamic>> data = await dbHelper.getReceiptsSubmittedToday(currentFiscal);
+    setState(() {
+      dayReceiptCounter = data;
     });
   }
 
@@ -288,12 +301,15 @@ Future<String> getConfig() async {
   return response;
 }
   Future<String> submitUnsubmittedReceipts(DatabaseHelper dbHelper) async {
-  String sql = "SELECT * FROM SubmittedReceipts WHERE StatustoFDMS = 'NotSubmitted'";
+  String sql = "SELECT * FROM submittedReceipts WHERE StatustoFDMS = 'NotSubmitted'";
   int resubmittedCount = 0;
 
-  String pingResponse = await ping();
+  // String pingResponse = await ping();
+  String pingResponse = "200";
+
   if (pingResponse == "200") {
     try {
+      print("entered submit missing");
     // Get the database instance
     final db = await dbHelper.initDB();
     String apiEndpointSubmitReceipt =
@@ -303,21 +319,29 @@ Future<String> getConfig() async {
     SSLContextProvider sslContextProvider = SSLContextProvider();
     SecurityContext securityContext = await sslContextProvider.createSSLContext();
     // Retrieve unsubmitted receipts
-    List<Map<String, dynamic>> receipts = await db.rawQuery(sql);
+    //List<Map<String, dynamic>> receipts = await db.rawQuery(sql);
+    List<Map<String, dynamic>> receipts = await dbHelper.getReceiptsNotSubmitted();
+    print(receipts);
+    File file = File("/storage/emulated/0/Pulse/Configurations/unsubmittedReceipts.txt");
+    await file.writeAsString(receipts.toString());
 
     for (var row in receipts) {
-      UnsubmittedReceipt receipt = UnsubmittedReceipt.fromMap(row);
-
+      print("submitting receipts");
+      //UnsubmittedReceipt receipt = UnsubmittedReceipt.fromMap(row);
+      final String unsubmittedJsonBody = row["receiptJsonbody"];
+      final int receiptGlobalNo = row["receiptGlobalNo"];
+      print("unsubmittedJsonBody: $unsubmittedJsonBody");
       // Submit the receipt via HTTP
       Map<String, dynamic> submitResponse = await SubmitReceipts.submitReceipts(
         apiEndpointSubmitReceipt: apiEndpointSubmitReceipt,
         deviceModelName: deviceModelName,
-        deviceModelVersion: deviceModelVersion,
+        deviceModelVersion: deviceModelVersion, 
         securityContext: securityContext,
-        receiptjsonBody:receipt.getReceiptJsonBody(),
+        receiptjsonBody: unsubmittedJsonBody,
       );
       Map<String, dynamic> responseBody = jsonDecode(submitResponse["responseBody"]);
       int statusCode = submitResponse["statusCode"];
+      print("server response is $submitResponse");
 
       if (statusCode == 200) {
         String submitReceiptServerresponseJson = responseBody.toString();
@@ -339,10 +363,19 @@ Future<String> getConfig() async {
           receiptID,
           receiptServerSignature,
           submitReceiptServerresponseJson,
-          receipt.receiptGlobalNo
+          //receipt.receiptGlobalNo
+          receiptGlobalNo
         ]);
 
         resubmittedCount++;
+      }
+      else{
+        Get.snackbar("Response message", "$submitResponse",
+          snackPosition: SnackPosition.TOP,
+          colorText: Colors.white,
+          backgroundColor: Colors.green,
+          icon: const Icon(Icons.message, color: Colors.white),
+        );
       }
     }
   } catch (e) {
@@ -433,7 +466,7 @@ Future<int> getlatestFiscalDay() async {
                         const SizedBox(height: 6,),
                         Text("TIME TO CLOSEDAY:" , style: TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16)),
                         const SizedBox(height: 6,),
-                        Text("RECEIPT COUNTER: ${allReceipts.length}" , style: TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16)),
+                        Text("RECEIPT COUNTER: ${dayReceiptCounter.length}" , style: TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16)),
                         const SizedBox(height: 6,),
                         Text("RECEIPTS SUBMITTED: ${receiptsSubmitted.length}" , style: TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16)),
                         const SizedBox(height: 6,),
@@ -500,6 +533,16 @@ Future<int> getlatestFiscalDay() async {
                   color2: kDark,
                   onTap: (){
                     submitUnsubmittedReceipts(dbHelper);
+                  },
+                  height: 50,
+                ),
+                const SizedBox(height: 10,),
+                CustomOutlineBtn(
+                  text: "TestAPI",
+                  color: kDark,
+                  color2: kDark,
+                  onTap: (){
+                    APIService.sendReceipt();
                   },
                   height: 50,
                 )

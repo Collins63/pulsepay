@@ -483,6 +483,16 @@ class DatabaseHelper {
       ''');
     }
 
+    //Get all customers
+
+    Future<List<Map<String, dynamic>>> getAllCustomers() async {
+      final db = await initDB();
+      return await db.rawQuery('''
+        SELECT customer.*
+        FROM customer
+      ''');
+    }
+
     Future<Map<String, dynamic>?> getProductByBarcode(String barcode) async {
     final db = await initDB();
     final result = await db.query(
@@ -563,7 +573,7 @@ class DatabaseHelper {
       return await db.rawQuery('''
         SELECT submittedReceipts.*
         FROM submittedReceipts
-        WHERE submittedReceipts.StatustoFDMS = unsubmitted
+        WHERE submittedReceipts.StatustoFDMS = 'NOTSubmitted'
       ''');
   }
     Future<List<Map<String,dynamic>>> getReceiptsSubmitted() async{
@@ -571,7 +581,7 @@ class DatabaseHelper {
       return await db.rawQuery('''
         SELECT submittedReceipts.*
         FROM submittedReceipts
-        WHERE submittedReceipts.StatustoFDMS = submitted
+        WHERE submittedReceipts.StatustoFDMS = 'Submitted'
       ''');
     }
 
@@ -581,5 +591,24 @@ class DatabaseHelper {
         SELECT submittedReceipts.*
         FROM submittedReceipts
       ''');
-    }
+  }
+
+  //get unsubmitted receipts
+  Future<List<Map<String,dynamic>>> getReceiptsNotSubmitted() async{
+      final db = await initDB();
+      return await db.rawQuery('''
+        SELECT submittedReceipts.*
+        FROM submittedReceipts
+        WHERE submittedReceipts.StatustoFDMS = 'NOTSubmitted'
+      ''');
+  }
+
+  Future<List<Map<String,dynamic>>> getReceiptsSubmittedToday(int dayNo) async{
+      final db = await initDB();
+      return await db.rawQuery('''
+          SELECT MAX(receiptCounter) as lastCounter
+          FROM submittedReceipts 
+          WHERE FiscalDayNo = ?
+      ''', [dayNo]);
+  }
 }

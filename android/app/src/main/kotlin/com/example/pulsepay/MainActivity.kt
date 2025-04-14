@@ -142,24 +142,50 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    // private fun getFirst16CharsOfSignature(signature: String): String {
+    //     if (signature.isBlank()) {
+    //         throw IllegalArgumentException("Input must be a non-empty string.")
+    //     }
+    
+    //     try {
+    //         // Decode Base64 string to bytes
+    //         val byteArray = Base64.decode(signature, Base64.DEFAULT)
+    
+    //         // Convert bytes to a hexadecimal string
+    //         val hexStr = byteArray.joinToString("") { "%02x".format(it) }
+    
+    //         // Compute MD5 hash of the hexadecimal string
+    //         val md = MessageDigest.getInstance("MD5")
+    //         //val md5Hash = md.digest(hexStr.toByteArray()).joinToString("") { "%02x".format(it) }
+    //         val md5Hash = md.digest(hexStr);
+    
+    //         // Return the first 16 characters of the MD5 hash
+    //         return md5Hash.take(16)
+    
+    //     } catch (e: IllegalArgumentException) {
+    //         throw IllegalArgumentException("Invalid Base64 string.", e)
+    //     }
+    // }
     private fun getFirst16CharsOfSignature(signature: String): String {
         if (signature.isBlank()) {
             throw IllegalArgumentException("Input must be a non-empty string.")
         }
     
-        try {
+        return try {
             // Decode Base64 string to bytes
             val byteArray = Base64.decode(signature, Base64.DEFAULT)
     
-            // Convert bytes to a hexadecimal string
+            // Convert bytes to hex string
             val hexStr = byteArray.joinToString("") { "%02x".format(it) }
     
-            // Compute MD5 hash of the hexadecimal string
-            val md = MessageDigest.getInstance("MD5")
-            val md5Hash = md.digest(hexStr.toByteArray()).joinToString("") { "%02x".format(it) }
+            // Convert hex string back to badminaytes (like bytes.fromhex in Python)
+            val hexBytes = hexStr.chunked(2).map { it.toInt(16).toByte() }.toByteArray()
     
-            // Return the first 16 characters of the MD5 hash
-            return md5Hash.take(16)
+            // Hash with MD5
+            val md5Hash = MessageDigest.getInstance("MD5").digest(hexBytes)
+    
+            // Return first 16 hex characters
+            md5Hash.joinToString("") { "%02x".format(it) }.substring(0, 16)
     
         } catch (e: IllegalArgumentException) {
             throw IllegalArgumentException("Invalid Base64 string.", e)
@@ -184,7 +210,8 @@ class MainActivity : FlutterActivity() {
 
             val signature = Signature.getInstance("SHA256withRSA") // Uses raw RSA signing
             signature.initSign(privateKey)
-            signature.update(hashedData)
+            //signature.update(hashedData)
+            signature.update(data.toByteArray(Charsets.UTF_8))
             val signedBytes = signature.sign()
 
             // Compute MD5 hash
