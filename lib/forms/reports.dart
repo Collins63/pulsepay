@@ -50,16 +50,6 @@ class Reports extends StatelessWidget {
                 const SizedBox(height: 10,),
                 CustomOutlineBtn(
                   height: 50,
-                  text: "Sales For User Shift",
-                  color: kDark ,
-                  color2: kDark,
-                  onTap: (){
-
-                  },
-                ),
-                const SizedBox(height: 10,),
-                CustomOutlineBtn(
-                  height: 50,
                   text: "Sales For Period All Users",
                   color: kDark ,
                   color2: kDark,
@@ -87,26 +77,8 @@ class Reports extends StatelessWidget {
 
                   },
                 ),
-                const SizedBox(height: 10,),
-                CustomOutlineBtn(
-                  height: 50,
-                  text: "Sales For User Shift",
-                  color: kDark ,
-                  color2: kDark,
-                  onTap: (){
-
-                  },
-                ),
-                const SizedBox(height: 10,),
-                CustomOutlineBtn(
-                  height: 50,
-                  text: "Sales For User Shift",
-                  color: kDark ,
-                  color2: kDark,
-                  onTap: (){
-
-                  },
-                ),
+                
+                
                 const SizedBox(height: 10,),
                 CustomOutlineBtn(
                   height: 50,
@@ -148,17 +120,7 @@ class Reports extends StatelessWidget {
 
                   },
                 ),
-                const SizedBox(height: 10,),
-                CustomOutlineBtn(
-                  height: 50,
-                  width: 340,
-                  text: "Sales For Company",
-                  color: kDark ,
-                  color2: kDark,
-                  onTap: (){
-
-                  },
-                ),
+                
                 const SizedBox(height: 10,),
                 CustomOutlineBtn(
                   height: 50,
@@ -268,27 +230,27 @@ class Reports extends StatelessWidget {
 
                   },
                 ),
-                const SizedBox(height: 20,),
-                const ReusableText(text: "Discounts Reports", style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 16)),
-                Container(
-                  height: 5,
-                  width: 140,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    color: kDark
-                  ),
-                ),
-                const SizedBox(height: 10,),
-                CustomOutlineBtn(
-                  height: 50,
-                  width: 340,
-                  text: "Discounts Given For Period",
-                  color: kDark ,
-                  color2: kDark,
-                  onTap: (){
+                // const SizedBox(height: 20,),
+                // const ReusableText(text: "Discounts Reports", style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 16)),
+                // Container(
+                //   height: 5,
+                //   width: 140,
+                //   decoration: BoxDecoration(
+                //     borderRadius: BorderRadius.circular(20),
+                //     color: kDark
+                //   ),
+                // ),
+                // const SizedBox(height: 10,),
+                // CustomOutlineBtn(
+                //   height: 50,
+                //   width: 340,
+                //   text: "Discounts Given For Period",
+                //   color: kDark ,
+                //   color2: kDark,
+                //   onTap: (){
 
-                  },
-                ),
+                //   },
+                // ),
                 const SizedBox(height: 20,),
                 const ReusableText(text: "Tax", style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 16)),
                 Container(

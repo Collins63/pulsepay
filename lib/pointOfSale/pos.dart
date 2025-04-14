@@ -192,7 +192,7 @@ class _PosState extends State<Pos>{
       //final Map<String, dynamic> signedDataMap = jsonDecode(signedDataString);
       receiptDeviceSignature_signature_hex = signedDataMap["receiptDeviceSignature_signature_hex"] ?? "";
       receiptDeviceSignature_signature = signedDataMap["receiptDeviceSignature_signature"] ?? "";
-      //first16Chars = signedDataMap["receiptDeviceSignature_signature_md5_first16"] ?? "";
+      first16Chars = signedDataMap["receiptDeviceSignature_signature_md5_first16"] ?? "";
       
     } catch (e) {
       Get.snackbar("Signing Error", "$e", snackPosition: SnackPosition.TOP);
@@ -278,9 +278,9 @@ class _PosState extends State<Pos>{
         },
         "buyerData": {
           "VATNumber": "123456789",
-          "buyerTradeName": "SAT ",
+          "buyerTradeName": "Cash Sale",
           "buyerTIN": "0000000000",
-          "buyerRegisterName": "SAT "
+          "buyerRegisterName": "Cash Sale"
         },
         "receiptTotal": totalAmount.toStringAsFixed(2),
         "receiptLinesTaxInclusive": true,
@@ -1442,7 +1442,7 @@ String generateReceiptString({
             child: Column(
               children: [
                 Container(
-                  height: 100,
+                  height: 200,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(10.0),
                     border: Border.all(width: 1 , color: const Color.fromARGB(255, 14, 19, 29)),

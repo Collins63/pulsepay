@@ -242,6 +242,7 @@ class DatabaseHelper {
           ''';
       return await db.rawQuery(query);
       }
+    
 
     ///Search Invoices By Invoice Number
     Future<List<Map<String, dynamic>>> searchInvoicesByNumber(String invoiceNumber) async {
@@ -405,6 +406,20 @@ class DatabaseHelper {
         FROM submittedReceipts
       ''');
     }
+
+    //Get receipts by date
+    Future<List<Map<String, dynamic>>> getReceiptsByDate() async {
+      final db = await initDB();
+      return await db.rawQuery('''
+        SELECT 
+          DATE(receiptDate) as sale_day,
+          SUM(SalesAmountwithTax) as total_sales
+          FROM submittedReceipts
+          GROUP BY sale_day
+          ORDER BY sale_day ASC;
+      ''');
+    }
+
     ///Get All Users From DB
     Future<List<Map<String, dynamic>>> getAllUsers() async {
       final db = await initDB(); // Initialize the database
