@@ -88,7 +88,7 @@ class _ViewInvoicesState extends State<ViewInvoices> {
                 ),
               ),
               const SizedBox(height: 10,),
-              TextField(
+              TextField(  
                 controller: reasonController,
                 obscureText: false,
                 decoration: const InputDecoration(

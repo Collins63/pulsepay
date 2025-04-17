@@ -220,7 +220,7 @@ class MainActivity : FlutterActivity() {
             val hexString = digest.joinToString("") { byte -> "%02x".format(byte) }
             // Convert signedBytes to Base64 string
             val base64Signature = Base64.encodeToString(signedBytes, Base64.NO_WRAP)
-
+            //val base64SignatureString = Base64.decode()
             // Compute first 16 chars of the MD5 hash from Base64 signature
             val first16Chars = getFirst16CharsOfSignature(base64Signature)
 

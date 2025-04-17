@@ -93,14 +93,6 @@ class StockManagement extends StatelessWidget {
                 const SizedBox(height: 15,),
                 CustomOutlineBtn(
                   height: 50,
-                  text: "Return Stock",
-                  color: kDark,
-                  color2: kDark,
-                  onTap: (){},
-                ),
-                const SizedBox(height: 15,),
-                CustomOutlineBtn(
-                  height: 50,
                   text: "Stock Take",
                   color: kDark,
                   color2: kDark,

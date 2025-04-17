@@ -109,7 +109,7 @@ class _editStockPurchasesState extends State<EditStockPurchases> {
                   CustomOutlineBtn(
                     width: 90,
                     height: 50,
-                    text: "Cancel",
+                    text: "Return Stock",
                     color:const Color.fromARGB(255, 14, 19, 29),
                     color2: const Color.fromARGB(255, 14, 19, 29) ,
                     onTap: (){

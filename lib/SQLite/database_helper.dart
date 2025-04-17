@@ -446,6 +446,25 @@ class DatabaseHelper {
         whereArgs: [productid]
       );
     }
+
+    //update product
+    Future<void> updateProduct(int productid, String name, String barcode , String hscode , String costPrice,
+      String sellingPrice, String tax) async{
+      final db = await initDB();
+      await db.update(
+        'products',
+        {
+          'productName': name,
+          'barcode': barcode,
+          'hsCode': hscode,
+          'costPrice': costPrice,
+          'sellingPrice': sellingPrice,
+          'tax': tax
+        },
+        where: 'productid = ?',
+        whereArgs: [productid]
+      );
+    }
     //Set Default Currency
     Future<void> setDefaultCurrency(int methodId , int defaultTag)async{
       final db = await initDB();
@@ -606,7 +625,7 @@ class DatabaseHelper {
   Future<List<Map<String,dynamic>>> getReceiptsSubmittedToday(int dayNo) async{
       final db = await initDB();
       return await db.rawQuery('''
-          SELECT MAX(receiptCounter) as lastCounter
+          SELECT submittedReceipts.*
           FROM submittedReceipts 
           WHERE FiscalDayNo = ?
       ''', [dayNo]);

@@ -70,6 +70,10 @@ class _FiscalPageState extends State<FiscalPage> {
     });
   }
   Future<void> fetchDayReceiptCounter() async {
+    int latestFiscDay = await dbHelper.getlatestFiscalDay();
+    setState(() {
+      currentFiscal = latestFiscDay;
+    });
     List<Map<String, dynamic>> data = await dbHelper.getReceiptsSubmittedToday(currentFiscal);
     setState(() {
       dayReceiptCounter = data;
@@ -400,7 +404,9 @@ Future<String> getConfig() async {
 }
 Future<int> getlatestFiscalDay() async {
   int latestFiscDay = await dbHelper.getlatestFiscalDay();
-  currentFiscal = latestFiscDay;
+  setState(() {
+    currentFiscal = latestFiscDay;
+  });
   return latestFiscDay;
 }
 
