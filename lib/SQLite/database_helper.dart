@@ -447,6 +447,27 @@ class DatabaseHelper {
       );
     }
 
+    ////UPdate stock purchase quantity
+    Future<void> updateStockPurchaseQty(int purchaseId , int newStockQty) async{
+      final db = await initDB();
+      await db.update(
+        'stockPurchases',
+        {'quantity': newStockQty},
+        where: 'purchaseId = ?',
+        whereArgs: [purchaseId]
+      );
+    }
+
+    //Get Stock Purchase by id
+    Future<List<Map<String , dynamic>>> getStockPurchaseById(int purchaseId) async{
+      final db = await initDB();
+      return await db.rawQuery('''
+        SELECT stockPurchases.*
+        FROM stockPurchases
+        WHERE purchaseId = ?
+      ''' , [purchaseId]);
+    }
+
     //update product
     Future<void> updateProduct(int productid, String name, String barcode , String hscode , String costPrice,
       String sellingPrice, String tax) async{

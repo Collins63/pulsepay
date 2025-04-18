@@ -5,6 +5,7 @@ import 'package:pulsepay/common/constants.dart';
 import 'package:pulsepay/common/custom_button.dart';
 import 'package:pulsepay/forms/edit_stock_purchases.dart';
 import 'package:pulsepay/forms/new_stock_purchase.dart';
+import 'package:pulsepay/forms/stock_take.dart';
 import 'package:pulsepay/forms/view_products.dart';
 import 'package:pulsepay/forms/view_stock_balances.dart';
 
@@ -96,7 +97,11 @@ class StockManagement extends StatelessWidget {
                   text: "Stock Take",
                   color: kDark,
                   color2: kDark,
-                  onTap: (){},
+                  onTap: (){
+                    Get.to(
+                      ()=> const StockTake()
+                    );
+                  },
                 )
               ],
             ),
