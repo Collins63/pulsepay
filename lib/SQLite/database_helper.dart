@@ -651,4 +651,13 @@ class DatabaseHelper {
           WHERE FiscalDayNo = ?
       ''', [dayNo]);
   }
+
+  Future<List<Map<String , dynamic>>> getReceiptSubmittedById(int invoiceNum) async{
+    final db = await initDB();
+    return await db.rawQuery('''
+      SELECT submittedReceipts.*
+      FROM submittedReceipts
+      WHERE InvoiceNo = ?
+    ''' , [invoiceNum]);
+  }
 }
