@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:pulsepay/authentication/login.dart';
 import 'package:pulsepay/forms/add_product.dart';
+import 'package:pulsepay/forms/cancelledInvoices.dart';
 //import 'package:pulsepay/forms/barcode_Tester.dart';
 //import 'package:pulsepay/forms/change_barcodes.dart';
 import 'package:pulsepay/forms/reports.dart';
@@ -159,14 +160,14 @@ class _HomePageState extends State<HomePage>{
                         borderRadius: BorderRadius.circular(15.0)
                       ),
                       child: TextButton(onPressed: (){
-                        //Get.to(()=> const BarcodeTester());
+                        Get.to(()=> const Cancelledinvoices());
                       },
                       child: const Padding(
                         padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
                         child: Column(
                           children: [
                             Icon(Icons.cancel , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
-                            Text('Cancel Invoice' ,textAlign: TextAlign.center,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
+                            Text('Cancelled Invoices' ,textAlign: TextAlign.center,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
                           ],
                         ),
                       )),

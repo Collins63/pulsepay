@@ -10,7 +10,11 @@ import 'package:intl/intl.dart';
 import 'package:pulsepay/SQLite/database_helper.dart';
 import 'package:pulsepay/common/custom_button.dart';
 import 'package:pulsepay/common/find_invoiceField.dart';
+import 'package:pulsepay/fiscalization/ping.dart';
+import 'package:pulsepay/fiscalization/sslContextualization.dart';
+import 'package:pulsepay/fiscalization/submitReceipts.dart';
 import 'package:pulsepay/main.dart';
+import 'package:sqflite/sqflite.dart';
 
 class ViewInvoices extends StatefulWidget {
   const ViewInvoices({super.key});
@@ -156,7 +160,7 @@ class _ViewInvoicesState extends State<ViewInvoices> {
 
 
 
-String createCreditNote(String receiptJsonString,
+Future<String> createCreditNote(String receiptJsonString,
 {
   required String fiscalDay ,
   required String newReceiptGlobalNo,
@@ -165,7 +169,7 @@ String createCreditNote(String receiptJsonString,
   required String receiptID,
   required String newSignature,
   required String newHash,
-}) {
+}) async {
   // Parse the original receipt
   final Map<String, dynamic> original = json.decode(receiptJsonString);
   final Map<String, dynamic> receipt = original["receipt"];
@@ -173,6 +177,7 @@ String createCreditNote(String receiptJsonString,
   // Clone the receipt to a new object
   final Map<String, dynamic> creditNoteBody = Map.from(receipt);
 
+  String creditNoteNumber = await dbHelper.getNextCreditNoteNumber();
   // 1. Negate receiptTaxes values
   List<dynamic> originalTaxes = creditNoteBody["receiptTaxes"];
   creditNoteBody["receiptTaxes"] = originalTaxes.map((tax) {
@@ -211,6 +216,7 @@ String createCreditNote(String receiptJsonString,
   creditNoteBody["receiptCounter"] = newReceiptCounter;
   creditNoteBody["receiptDate"] = newReceiptDate ;
   creditNoteBody["receiptNotes"] = creditReason ?? "Credit Note";
+  creditNoteBody["invoiceNo"] = creditNoteNumber;
   creditNoteBody["receiptType"] = "CREDITNOTE";
   creditNoteBody["receiptDeviceSignature"]={
     "signature" : newSignature,
@@ -234,6 +240,34 @@ String createCreditNote(String receiptJsonString,
   return json.encode(creditNote);
 }
 
+Future<String> ping() async {
+  String apiEndpointPing =
+      "https://fdmsapitest.zimra.co.zw/Device/v1/22662/Ping";
+  const String deviceModelName = "Server";
+  const String deviceModelVersion = "v1"; 
+
+  SSLContextProvider sslContextProvider = SSLContextProvider();
+  SecurityContext securityContext = await sslContextProvider.createSSLContext();
+
+  // Call the Ping function
+  final String response = await PingService.ping(
+    apiEndpointPing: apiEndpointPing,
+    deviceModelName: deviceModelName,
+    deviceModelVersion: deviceModelVersion,
+    securityContext: securityContext,
+  );
+
+  //print("Response: \n$response");
+  Get.snackbar(
+      "Zimra Response", "$response",
+      snackPosition: SnackPosition.TOP,
+      colorText: Colors.white,
+      backgroundColor: Colors.green,
+      icon: const Icon(Icons.message, color: Colors.white),
+    );
+  
+    return response;
+}
 
 Future<void> generateCreditFiscalJSON() async{
   final int invoiceId = selectedInvoices.first;
@@ -257,6 +291,7 @@ Future<void> generateCreditFiscalJSON() async{
     int deviceId = 22662;
     String receiptJsonbody = getSubmittedReceipt[0]['receiptJsonbody'].toString();
     String receiptID = getSubmittedReceipt[0]['receiptID'].toString();
+    String receiptGlobalNo = getSubmittedReceipt[0]['receiptGlobalNo'].toString();
     String receiptFiscDayNo = getSubmittedReceipt[0]['FiscalDayNo'].toString();
     Map<String, dynamic> jsonMap = jsonDecode(receiptJsonbody);
     Map<String, dynamic> receipt = jsonMap["receipt"];
@@ -319,8 +354,231 @@ Future<void> generateCreditFiscalJSON() async{
       
     }
     print("Signed Data: $receiptDeviceSignature_signature");
-    String creditNoteJson = createCreditNote(receiptJsonbody,newHash: hash , newSignature: receiptDeviceSignature_signature.toString()  , fiscalDay: receiptFiscDayNo ,newReceiptGlobalNo: nextReceiptGlobalNo.toString(), newReceiptCounter: nextReceiptCounter, newReceiptDate: formattedDate , receiptID: receiptID);
+    final futurecreditNoteJson = await createCreditNote(receiptJsonbody,newHash: hash , newSignature: receiptDeviceSignature_signature.toString()  , fiscalDay: receiptFiscDayNo ,newReceiptGlobalNo: nextReceiptGlobalNo.toString(), newReceiptCounter: nextReceiptCounter, newReceiptDate: formattedDate , receiptID: receiptID);
+    
+    //creditnote qrurl
+    DateTime parsedDate = DateTime.parse(formattedDate);
+    String ddMMDate = DateFormat('dd-MM-yyyy').format(parsedDate);
+    String formattedDeviceID = deviceID.toString().padLeft(10, '0');
+    String formattedReceiptGlobalNo = nextReceiptGlobalNo.toString().padLeft(10, '0');
+    String creditQrData  = first16Chars.toString();
+    String qrurl  = genericzimraqrurl + formattedDeviceID + ddMMDate + formattedReceiptGlobalNo + creditQrData;
+    print("QRURL: $qrurl");
+    String creditNoteJson = futurecreditNoteJson.toString();
+
+    // ping
+    String pingResponse = await ping();
+
+    Map<String , dynamic> jsonData  = jsonDecode(creditNoteJson);
+    final List<dynamic> receiptTaxes =jsonData['receipt']['receiptTaxes'];
+    double totalTaxAmount = 0.0;
+    double totalSalesAmountWithTax = 0.0;
+    for (var tax in receiptTaxes) {
+      // Parse taxAmount
+      double taxAmount = 0.0;
+      var taxAmountRaw = tax['taxAmount'];
+      if (taxAmountRaw is String) {
+        taxAmount = double.tryParse(taxAmountRaw) ?? 0.0;
+      } else if (taxAmountRaw is num) {
+        taxAmount = taxAmountRaw.toDouble();
+      }
+      totalTaxAmount += taxAmount;
+
+      // Parse SalesAmountwithTax
+      double salesAmount = 0.0;
+      var salesAmountRaw = tax['SalesAmountwithTax'];
+      if (salesAmountRaw is String) {
+        salesAmount = double.tryParse(salesAmountRaw) ?? 0.0;
+      } else if (salesAmountRaw is num) {
+        salesAmount = salesAmountRaw.toDouble();
+      }
+      totalSalesAmountWithTax += salesAmount;
+    }
+
     if (creditNoteJson.isNotEmpty) {
+      String creditNoteNumber = await dbHelper.getNextCreditNoteNumber();
+      if(pingResponse=="200"){
+        String apiEndpointSubmitReceipt =
+          "https://fdmsapitest.zimra.co.zw/Device/v1/22662/SubmitReceipt";
+        const String deviceModelName = "Server";
+        const String deviceModelVersion = "v1";  
+
+        SSLContextProvider sslContextProvider = SSLContextProvider();
+        SecurityContext securityContext = await sslContextProvider.createSSLContext();
+      
+        print(creditNoteJson);
+        // Call the Ping function
+        Map<String, dynamic> response = await SubmitReceipts.submitReceipts(
+          apiEndpointSubmitReceipt: apiEndpointSubmitReceipt,
+          deviceModelName: deviceModelName,
+          deviceModelVersion: deviceModelVersion,
+          securityContext: securityContext,
+          receiptjsonBody:creditNoteJson,
+        );
+        Get.snackbar(
+          "Zimra Response", "$response",
+          snackPosition: SnackPosition.TOP,
+          colorText: Colors.white,
+          backgroundColor: Colors.green,
+          icon: const Icon(Icons.message, color: Colors.white),
+        );
+        Map<String, dynamic> responseBody = jsonDecode(response["responseBody"]);
+        int statusCode = response["statusCode"];
+        String submitReceiptServerresponseJson = responseBody.toString();
+        print("your server server response is $submitReceiptServerresponseJson");
+        if(statusCode == 200){
+          print("Code is 200, saving receipt...");
+          try {
+            final Database dbinit= await dbHelper.initDB();
+            await dbinit.insert('submittedReceipts', {
+              'receiptCounter': jsonData['receipt']?['receiptCounter'] ?? 0,
+            'FiscalDayNo' : fiscalDayNo,
+            'InvoiceNo': int.tryParse(jsonData['receipt']?['invoiceNo']?.toString() ?? "0") ?? 0,
+            'receiptID': responseBody['receiptID'] ?? 0,
+            'receiptType': jsonData['receipt']['receiptType']?.toString() ?? "",
+            'receiptCurrency': jsonData['receipt']?['receiptCurrency']?.toString() ?? "",
+            'moneyType': jsonData['receipt']?['receiptCurrency']?.toString() ?? "",
+            'receiptDate': jsonData['receipt']?['receiptDate']?.toString() ?? "",
+            'receiptTime': jsonData['receipt']?['receiptDate']?.toString() ?? "",
+            'receiptTotal': jsonData['receipt']?['receiptTotal']?.toString() ?? "",
+            'taxCode': "C",
+            'taxPercent': "15.00",
+            'taxAmount': totalTaxAmount,
+            'SalesAmountwithTax': totalSalesAmountWithTax,
+            'receiptHash': jsonData['receipt']?['receiptDeviceSignature']?['hash']?.toString() ?? "",
+            'receiptJsonbody': creditNoteJson,
+            'StatustoFDMS': "Submitted".toString(),
+            'qrurl': qrurl,
+            'receiptServerSignature': responseBody['receiptServerSignature']?['signature'].toString() ?? "",
+            'submitReceiptServerresponseJSON': "$submitReceiptServerresponseJson" ?? "noresponse",
+            'Total15VAT': '0.0',
+            'TotalNonVAT': 0.0,
+            'TotalExempt': 0.0,
+            'TotalWT': 0.0,
+            },conflictAlgorithm: ConflictAlgorithm.replace);
+            print("Data inserted successfully!");
+          } catch (e) {
+            Get.snackbar(" Db Error",
+            "$e",
+            snackPosition: SnackPosition.TOP,
+            colorText: Colors.white,
+            backgroundColor: Colors.red,
+            icon: const Icon(Icons.error),
+            );
+          }
+        }
+        else{
+          try {
+            final Database dbinit= await dbHelper.initDB();
+            await dbinit.insert('submittedReceipts', {
+            'receiptCounter': jsonData['receipt']?['receiptCounter'] ?? 0,
+            'FiscalDayNo' : fiscalDayNo,
+            'InvoiceNo': int.tryParse(jsonData['receipt']?['invoiceNo']?.toString() ?? "0") ?? 0,
+            'receiptID': 0,
+            'receiptType': jsonData['receipt']['receiptType']?.toString() ?? "",
+            'receiptCurrency': jsonData['receipt']?['receiptCurrency']?.toString() ?? "",
+            'moneyType': jsonData['receipt']?['receiptCurrency']?.toString() ?? "",
+            'receiptDate': jsonData['receipt']?['receiptDate']?.toString() ?? "",
+            'receiptTime': jsonData['receipt']?['receiptDate']?.toString() ?? "",
+            'receiptTotal': jsonData['receipt']?['receiptTotal']?.toString() ?? "",
+            'taxCode': "C",
+            'taxPercent': "15.00",
+            'taxAmount': totalTaxAmount,
+            'SalesAmountwithTax': totalSalesAmountWithTax,
+            'receiptHash': jsonData['receipt']?['receiptDeviceSignature']?['hash']?.toString() ?? "",
+            'receiptJsonbody': creditNoteJson,
+            'StatustoFDMS': "NOTSubmitted".toString(),
+            'qrurl': qrurl,
+            'receiptServerSignature': "",
+            'submitReceiptServerresponseJSON': "noresponse",
+            'Total15VAT': '0.0',
+            'TotalNonVAT': 0.0,
+            'TotalExempt': 0.0,
+            'TotalWT': 0.0,
+            },conflictAlgorithm: ConflictAlgorithm.replace);
+            print("Data inserted successfully!");
+          } catch (e) {
+            Get.snackbar(" Db Error",
+            "$e",
+            snackPosition: SnackPosition.TOP,
+            colorText: Colors.white,
+            backgroundColor: Colors.red,
+            icon: const Icon(Icons.error),
+            );
+          }
+        }
+      }
+      else
+      {
+        try {
+            final Database dbinit= await dbHelper.initDB();
+            await dbinit.insert('submittedReceipts', {
+            'receiptCounter': jsonData['receipt']?['receiptCounter'] ?? 0,
+            'FiscalDayNo' : fiscalDayNo,
+            'InvoiceNo': int.tryParse(jsonData['receipt']?['invoiceNo']?.toString() ?? "0") ?? 0,
+            'receiptID': 0,
+            'receiptType': jsonData['receipt']['receiptType']?.toString() ?? "",
+            'receiptCurrency': jsonData['receipt']?['receiptCurrency']?.toString() ?? "",
+            'moneyType': jsonData['receipt']?['receiptCurrency']?.toString() ?? "",
+            'receiptDate': jsonData['receipt']?['receiptDate']?.toString() ?? "",
+            'receiptTime': jsonData['receipt']?['receiptDate']?.toString() ?? "",
+            'receiptTotal': jsonData['receipt']?['receiptTotal']?.toString() ?? "",
+            'taxCode': "C",
+            'taxPercent': "15.00",
+            'taxAmount': totalTaxAmount,
+            'SalesAmountwithTax': totalSalesAmountWithTax,
+            'receiptHash': jsonData['receipt']?['receiptDeviceSignature']?['hash']?.toString() ?? "",
+            'receiptJsonbody': creditNoteJson,
+            'StatustoFDMS': "NOTSubmitted".toString(),
+            'qrurl': qrurl,
+            'receiptServerSignature': "",
+            'submitReceiptServerresponseJSON': "noresponse",
+            'Total15VAT': '0.0',
+            'TotalNonVAT': 0.0,
+            'TotalExempt': 0.0,
+            'TotalWT': 0.0,
+            },conflictAlgorithm: ConflictAlgorithm.replace);
+            print("Data inserted successfully!");
+          } catch (e) {
+            Get.snackbar(" Db Error",
+            "$e",
+            snackPosition: SnackPosition.TOP,
+            colorText: Colors.white,
+            backgroundColor: Colors.red,
+            icon: const Icon(Icons.error),
+            );
+          }
+      }
+      
+      try {
+        final Database dbinit= await dbHelper.initDB();
+        await dbinit.insert('credit_notes',
+        {
+          'receiptGlobalNo': receiptGlobalNo,
+          'receiptID': receiptID,
+          'receiptDate': formattedDate,
+          'receiptTotal': totalAmountInCents /100,
+          'receiptNotes': creditReason,
+          'creditNoteNumber': creditNoteNumber,
+        },
+        conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      print("Saved to DB successfully");
+      Get.snackbar("Saved to DB", "Saved to DB successfully",
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+        icon: const Icon(Icons.check, color: Colors.white,),
+      );
+      } catch (e) {
+        print("Saving error  $e");
+        Get.snackbar("Saving Error", "$e",
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+        icon: const Icon(Icons.error, color: Colors.white,),
+        );
+      }
       cancelSelectedInvoice();
     }
     File file = File("/storage/emulated/0/Pulse/Configurations/jsonFile.txt");

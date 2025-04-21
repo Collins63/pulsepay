@@ -285,7 +285,7 @@ class StockPurchase {
 }
 
 
-///CustomerDetailsModel//////
+///Payment methods//////
 ///////////////////////////////////////////////////////
 PaymentMethod paymentMethodFromMap(String str) => PaymentMethod.fromMap(json.decode(str));
 
@@ -328,6 +328,54 @@ class PaymentMethod{
     "currency": currency,
     "vatNumber": vatNumber,
     "tinNumber": tinNumber
+  };
+}
+
+
+
+///CreditNote//////
+///////////////////////////////////////////////////////
+CreditNote creditNoteFromMap(String str) => CreditNote.fromMap(json.decode(str));
+
+String creditNoteToMap(CreditNote data) => json.encode(data.toMap());
+
+class CreditNote{
+  final int? id;
+  final String receiptGlobalNo;
+  final String receiptID;
+  final String receiptDate;
+  final double receiptTotal;
+  final String receiptNotes;
+  final String creditNoteNumber;
+
+  CreditNote({
+    this.id,
+    required this.receiptGlobalNo,
+    required this.receiptID,
+    required this.receiptDate,
+    required this.receiptTotal,
+    required this.receiptNotes,
+    required this.creditNoteNumber
+  });
+
+  factory CreditNote.fromMap(Map<String, dynamic> json) => CreditNote(
+    id: json["id"],
+    receiptGlobalNo: json["receiptGlobalNo"],
+    receiptID: json["receiptID"],
+    receiptDate: json["receiptDate"],
+    receiptTotal: json["receiptTotal"],
+    receiptNotes: json["receiptNotes"],
+    creditNoteNumber: json["creditNoteNumber"]
+  );
+
+  Map<String, dynamic> toMap() => {
+    "id": id,
+    "receiptGlobalNo": receiptGlobalNo,
+    "receiptID": receiptID,
+    "receiptDate": receiptDate,
+    "receiptTotal": receiptTotal,
+    "receiptNotes": receiptNotes,
+    "creditNoteNumber": creditNoteNumber
   };
 }
 

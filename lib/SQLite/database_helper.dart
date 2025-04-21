@@ -46,12 +46,38 @@ class DatabaseHelper {
   //====DATABASE FUNCTIONS =======/////////
 
 
-  Future<Database> initDB() async {
-    final databasePath = await getDatabasesPath();
-    final path = join(databasePath , databaseName);
-    //Sawait deleteDatabase(path);
+  // Future<Database> initDB() async {
+  //   final databasePath = await getDatabasesPath();
+  //   final path = join(databasePath , databaseName);
+  //   //Sawait deleteDatabase(path);
 
-    return openDatabase(path , version: 1 , onCreate: (db, version) async {
+  //   return openDatabase(path , version: 1 , onCreate: (db, version) async {
+  //     await db.execute(users);
+  //     await db.execute(products);
+  //     await db.execute(invoices);
+  //     await db.execute(sales);
+  //     await db.execute(customers);
+  //     await db.execute(stockPurchases);
+  //     await db.execute(companyDetails);
+  //     await db.execute(paymentMethods);
+  //     await db.execute(openDay);
+  //     await db.execute(submittedReceipts);
+  //     //await db.execute(dailyReports);
+  //   }  , onUpgrade: (db ,oldVersion , newVersion) async {
+  //     if(oldVersion > 2){
+  //       await db.execute(products);
+  //     }
+  //   });
+  // }
+  Future<Database> initDB() async {
+  final databasePath = await getDatabasesPath();
+  final path = join(databasePath, databaseName);
+
+  return openDatabase(
+    path,
+    version: 2, // ✅ bumped version
+    onCreate: (db, version) async {
+      // ✅ Tables created for new installs
       await db.execute(users);
       await db.execute(products);
       await db.execute(invoices);
@@ -62,13 +88,30 @@ class DatabaseHelper {
       await db.execute(paymentMethods);
       await db.execute(openDay);
       await db.execute(submittedReceipts);
-      //await db.execute(dailyReports);
-    }  , onUpgrade: (db ,oldVersion , newVersion) async {
-      if(oldVersion > 2){
-        await db.execute(products);
+      // await db.execute(dailyReports); // add when needed
+    },
+    onUpgrade: (db, oldVersion, newVersion) async {
+      if (oldVersion < 2) {
+        // ✅ Schema changes introduced in version 2
+        await db.execute(
+          '''CREATE TABLE IF NOT EXISTS credit_notes (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              receiptGlobalNo TEXT,
+              receiptID TEXT,
+              receiptDate TEXT,
+              receiptTotal REAL,
+              receiptNotes TEXT,
+              creditNoteNumber TEXT
+            )'''
+        );
       }
-    });
-  }
+
+      // future version upgrades:
+      // if (oldVersion < 3) { await db.execute(...); }
+    },
+  );
+}
+
 
   Future<bool> login(Users user) async{
     final Database db = await initDB();
@@ -659,5 +702,34 @@ class DatabaseHelper {
       FROM submittedReceipts
       WHERE InvoiceNo = ?
     ''' , [invoiceNum]);
+  }
+
+  //get creditnote numbers
+
+  Future<String> getNextCreditNoteNumber() async{
+    final db = await initDB();
+    final result = await db.rawQuery('SELECT MAX(creditNoteNumber) as maxCr FROM credit_notes');
+    final maxCr = result.first['maxCr'] as String?;
+    int nextNumber = 1;
+
+    if (maxCr != null) {
+      // Extract the numeric part by removing the 'cr' prefix
+      final numberPart = int.tryParse(maxCr.replaceFirst('cr', ''));
+      if (numberPart != null) {
+        nextNumber = numberPart + 1;
+      }
+    }
+
+    // Format the new credit note number
+    return 'cr$nextNumber';
+  }
+
+  //get call cancelled Receipts
+  Future<List<Map<String,dynamic>>> getAllCancelledInvoices() async{
+      final db = await initDB();
+      return await db.rawQuery('''
+        SELECT credit_notes.*
+        FROM credit_notes
+      ''');
   }
 }
