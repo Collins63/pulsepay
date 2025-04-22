@@ -75,7 +75,7 @@ class DatabaseHelper {
 
   return openDatabase(
     path,
-    version: 2, // ✅ bumped version
+    version: 3, // ✅ bumped version
     onCreate: (db, version) async {
       // ✅ Tables created for new installs
       await db.execute(users);
@@ -107,7 +107,12 @@ class DatabaseHelper {
       }
 
       // future version upgrades:
-      // if (oldVersion < 3) { await db.execute(...); }
+      if (oldVersion < 3) {
+        // v3 adds the `cancelled` flag to invoices
+        await db.execute(
+          'ALTER TABLE invoices ADD COLUMN cancelled INTEGER NOT NULL DEFAULT 0'
+        );
+      }
     },
   );
 }
@@ -308,9 +313,10 @@ class DatabaseHelper {
     ///Cancel Invoice
     Future<void> cancelInvoice(int invoiceId) async {
       final db = await initDB();
-      await db.delete(
-        'invoices', 
-        where: 'invoiceId = ?', 
+      await db.update(
+        'invoices',
+        { 'cancelled': 1 },
+        where: 'invoiceId = ?',
         whereArgs: [invoiceId],
       );
       await db.delete(
@@ -704,6 +710,16 @@ class DatabaseHelper {
     ''' , [invoiceNum]);
   }
 
+  //get day opened date
+  Future<List<Map<String , dynamic>>> getDayOpenedDate(int fiscDay) async{
+    final db = await initDB();
+    return await db.rawQuery('''
+      SELECT openDay.*
+      FROM openDay
+      WHERE FiscalDayNo = ?
+    ''',[fiscDay]);
+  }
+
   //get creditnote numbers
 
   Future<String> getNextCreditNoteNumber() async{
@@ -732,4 +748,14 @@ class DatabaseHelper {
         FROM credit_notes
       ''');
   }
+  Future<List<Map<String, dynamic>>> getCloseDayReceipts(int fiscalDayOpened) async{
+    final db = await initDB();
+    return await db.query(
+      'submittedReceipts',
+      columns: ['receiptType','receiptJsonbody'],
+      where: 'FiscalDayNo = ?',
+      whereArgs: [fiscalDayOpened],
+    );
+  }
+  
 }

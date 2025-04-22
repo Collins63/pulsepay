@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:crypto/crypto.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -10,6 +11,7 @@ import 'package:pulsepay/common/constants.dart';
 import 'package:pulsepay/common/custom_button.dart';
 import 'package:pulsepay/common/reusable_text.dart';
 import 'package:pulsepay/fiscalization/api_endPoints.dart';
+import 'package:pulsepay/fiscalization/closeday.dart';
 import 'package:pulsepay/fiscalization/get_status.dart';
 import 'package:pulsepay/fiscalization/ping.dart';
 import 'package:pulsepay/fiscalization/sslContextualization.dart';
@@ -18,6 +20,7 @@ import 'package:pulsepay/fiscalization/unsubmitted_receipt.dart';
 import 'package:pulsepay/forms/interact.dart';
 import 'package:pulsepay/home/home_page.dart';
 import 'package:pulsepay/home/settings.dart';
+import 'package:pulsepay/main.dart';
 import 'package:pulsepay/pointOfSale/pos.dart';
 
 class FiscalPage extends StatefulWidget {
@@ -50,6 +53,9 @@ class _FiscalPageState extends State<FiscalPage> {
   List<Map<String, dynamic>> receiptsSubmitted= [];
   List<Map<String , dynamic>> allReceipts=[];
   List<Map<String,dynamic>> dayReceiptCounter = [];
+  String? receiptDeviceSignature_signature_hex ;
+  String? first16Chars;
+  String? receiptDeviceSignature_signature;
 
   Future<void> fetchReceiptsPending() async {
     List<Map<String, dynamic>> data = await dbHelper.getReceiptsPending();
@@ -544,11 +550,86 @@ Future<int> getlatestFiscalDay() async {
                 ),
                 const SizedBox(height: 10,),
                 CustomOutlineBtn(
-                  text: "TestAPI",
+                  text: "Close Day",
                   color: kDark,
                   color2: kDark,
-                  onTap: (){
-                    APIService.sendReceipt();
+                  onTap: () async{
+                    String filePath = "/storage/emulated/0/Pulse/Configurations/mindTest_T_certificate.p12";
+                    String password = "mindTest123";
+                    int fiscalDay = currentFiscal;
+                    List<Map<String , dynamic>> openDayData = await dbHelper.getDayOpenedDate(fiscalDay);
+                    String openDayDate = openDayData[0]["FiscalDayOpened"];
+                    DateTime parseDate = DateTime.parse(openDayDate);
+                    String formattedDate = DateFormat('yyyy-MM-dd').format(parseDate);
+                    //APIService.sendReceipt();
+                    final (invoices, creditNotes, balances, concatStr) =
+                      await buildFiscalDayCountersAndConcat(fiscalDay);
+                    String finalStringConcat = "$deviceID$fiscalDay$formattedDate$concatStr";
+
+                    // Hash generation
+                    finalStringConcat.trim();
+
+                    var bytes = utf8.encode(finalStringConcat);
+                    var digest = sha256.convert(bytes);
+                    final hash = base64.encode(digest.bytes);
+                    print("Close day Hash :$hash");
+
+                    //signature generation
+                    try {
+                      final Map<String, String> signedDataMap = await signData(filePath, password, finalStringConcat);
+                      receiptDeviceSignature_signature_hex = signedDataMap["receiptDeviceSignature_signature_hex"] ?? "";
+                      receiptDeviceSignature_signature = signedDataMap["receiptDeviceSignature_signature"] ?? "";
+                      first16Chars = signedDataMap["receiptDeviceSignature_signature_md5_first16"] ?? "";
+                    } catch (e) {
+                      Get.snackbar("Signing Error", "$e", snackPosition: SnackPosition.TOP);
+                    }
+
+                    String apiEndpointCloseDay =
+                      "https://fdmsapitest.zimra.co.zw/Device/v1/22662/CloseDay";
+                    const String deviceModelName = "Server";
+                    const String deviceModelVersion = "v1";  
+
+                    SSLContextProvider sslContextProvider = SSLContextProvider();
+                    SecurityContext securityContext = await sslContextProvider.createSSLContext();
+
+
+
+                    // JSON payload:
+                    final payload = { 
+                    'deviceID': deviceID,
+                    'fiscalDayNo': fiscalDay,
+                    'fiscalDayCounters': [
+                      ...invoices.map((c) => c.toJson()),
+                      ...creditNotes.map((c) => c.toJson()),
+                      ...balances.map((c) => c.toJson()),
+                    ],
+                    'fiscalDayDeviceSignature': {
+                      'hash' : hash,
+                      'signature': receiptDeviceSignature_signature,
+                    },
+                    'receiptCounter': dayReceiptCounter.length,
+                    };
+
+                    Map<String , dynamic> response = await CloseDay.submitCloseDay(
+                      apiEndpoint: apiEndpointCloseDay,
+                      deviceModelName: deviceModelName,
+                      deviceModelVersion: deviceModelVersion,
+                      securityContext: securityContext,
+                      payload: payload,
+                    );
+                    Get.snackbar(
+                      "Zimra Response", "$response",
+                      snackPosition: SnackPosition.TOP,
+                      colorText: Colors.white,
+                      backgroundColor: Colors.green,
+                      icon: const Icon(Icons.message, color: Colors.white),
+                    );
+                    print("Response: $response");
+                     // And your concatenated string is:
+                    print(finalStringConcat);
+                    print(payload); 
+                    File file = File("/storage/emulated/0/Pulse/Configurations/jsonFile.txt");
+                    await file.writeAsString(jsonEncode(payload));
                   },
                   height: 50,
                 )
@@ -649,3 +730,497 @@ Future<int> getlatestFiscalDay() async {
     );
   }
 }
+
+
+// class FiscalDayCounter {
+//   final String type;
+//   final String currency;
+//   final double? percent;
+//   final int? taxID;
+//   final String? moneyType;
+//   double value;
+
+//   FiscalDayCounter({
+//     required this.type,
+//     required this.currency,
+//     this.percent,
+//     this.taxID,
+//     this.moneyType,
+//     this.value = 0,
+//   });
+
+//   String get key {
+//     if (type == 'BalanceByMoneyType') {
+//       return '$type|$currency|$moneyType';
+//     }
+//     return '$type|$currency|${percent!.toStringAsFixed(2)}|$taxID';
+//   }
+
+//   void accumulate(double addMe) => value += addMe;
+
+//   Map<String, dynamic> toJson() {
+//     final cents = (value * 100).round();
+//     final m = {
+//       'fiscalCounterType': type,
+//       'fiscalCounterCurrency': currency,
+//       'fiscalCounterValue': value,
+//     };
+//     if (percent != null) m['fiscalCounterTaxPercent'] = percent!.toStringAsFixed(2);
+//     if (taxID != null) m['fiscalCounterTaxID'] = taxID.toString();
+//     if (moneyType != null) m['fiscalCounterMoneyType'] = moneyType.toString();
+//     return m;
+//   }
+
+//   String toConcatString() {
+//     final buf = StringBuffer(type.toUpperCase());
+//     buf.write(currency.toUpperCase());
+//     if (type == 'BalanceByMoneyType') {
+//       buf.write(moneyType!.toUpperCase());
+//     } else {
+//       buf.write(percent!.toStringAsFixed(2));
+//     }
+//     buf.write((value * 100).round());
+//     return buf.toString();
+//   }
+// }
+
+// Future<(
+//   List<FiscalDayCounter> invoices,
+//   List<FiscalDayCounter> creditNotes,
+//   List<FiscalDayCounter> balances,
+//   String concatenatedString
+// )> buildFiscalDayCountersAndConcat(
+//     int fiscalDayNo,
+// ) async {
+//   final invMap  = <String, FiscalDayCounter>{};
+//   final crdMap  = <String, FiscalDayCounter>{};
+//   final balMap  = <String, FiscalDayCounter>{};
+
+//   DatabaseHelper dbHelper = DatabaseHelper();
+//   final db = await dbHelper.initDB();
+
+//   final rows = await db.query(
+//     'submittedReceipts',
+//     columns: ['receiptType','receiptJsonbody'],
+//     where: 'FiscalDayNo = ?',
+//     whereArgs: [fiscalDayNo],
+//   );
+
+//   for (final row in rows) {
+//     final receiptType = row['receiptType'] as String;
+//     final body        = json.decode(row['receiptJsonbody'] as String);
+//     final r           = body['receipt'] as Map<String, dynamic>;
+//     final curr        = r['receiptCurrency'] as String;
+//     final isCredit    = receiptType != 'FISCALINVOICE';
+
+//     for (final t in r['receiptTaxes'] as List<dynamic>) {
+//       final rawTaxAmt = t['taxAmount'];
+//       final rawSales  = t['salesAmountWithTax'];
+//       final taxAmt    = rawTaxAmt is num ? rawTaxAmt.toDouble() : double.tryParse(rawTaxAmt.toString()) ?? 0;
+//       final salesAmt  = rawSales is num ? rawSales.toDouble() : double.tryParse(rawSales.toString()) ?? 0;
+
+//       final perc      = double.parse(t['taxPercent'] as String);
+//       final taxId     = int.parse(t['taxID'].toString());
+
+//       final targetMap = isCredit ? crdMap : invMap;
+
+//       final sbtKey = 'SaleByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
+//       targetMap.putIfAbsent(sbtKey, () => FiscalDayCounter(
+//         type: 'SaleByTax', currency: curr, percent: perc, taxID: taxId))
+//         .accumulate(isCredit ? -salesAmt : salesAmt);
+
+//       final sttKey = 'SaleTaxByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
+//       targetMap.putIfAbsent(sttKey, () => FiscalDayCounter(
+//         type: 'SaleTaxByTax', currency: curr, percent: perc, taxID: taxId))
+//         .accumulate(isCredit ? -taxAmt : taxAmt);
+
+//       if (isCredit) {
+//         final cbtKey = 'CreditNoteByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
+//         crdMap.putIfAbsent(cbtKey, () => FiscalDayCounter(
+//           type: 'CreditNoteByTax', currency: curr, percent: perc, taxID: taxId))
+//           .accumulate(-salesAmt);
+
+//         final cttKey = 'CreditNoteTaxByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
+//         crdMap.putIfAbsent(cttKey, () => FiscalDayCounter(
+//           type: 'CreditNoteTaxByTax', currency: curr, percent: perc, taxID: taxId))
+//           .accumulate(-taxAmt);
+//       }
+//     }
+
+//     for (final p in r['receiptPayments'] as List<dynamic>) {
+//       final mType   = p['moneyTypeCode'] as String;
+//       final rawAmt  = p['paymentAmount'];
+//       final amt     = rawAmt is num ? rawAmt.toDouble() : double.tryParse(rawAmt.toString()) ?? 0;
+
+//       final bKey = 'BalanceByMoneyType|$curr|$mType';
+//       balMap.putIfAbsent(bKey, () => FiscalDayCounter(
+//         type: 'BalanceByMoneyType', currency: curr, moneyType: mType))
+//         .accumulate(amt);
+//     }
+//   }
+
+//   final allCounters = [
+//     ...invMap.values,
+//     ...crdMap.values,
+//     ...balMap.values,
+//   ];
+
+//   const counterOrder = [
+//     'SaleByTax',
+//     'SaleTaxByTax',
+//     'CreditNoteByTax',
+//     'CreditNoteTaxByTax',
+//     'BalanceByMoneyType',
+//   ];
+
+//   allCounters.sort((a, b) =>
+//     counterOrder.indexOf(a.type).compareTo(counterOrder.indexOf(b.type)));
+
+//   final concat = StringBuffer();
+//   for (final c in allCounters) {
+//     concat.write(c.toConcatString());
+//   }
+
+//   final invoices    = allCounters.where((c) => c.type.startsWith('Sale')).toList();
+//   final creditNotes = allCounters.where((c) => c.type.startsWith('CreditNote')).toList();
+//   final balances    = allCounters.where((c) => c.type == 'BalanceByMoneyType').toList();
+
+//   return (invoices, creditNotes, balances, concat.toString());
+// }
+
+
+
+// class FiscalDayCounter {
+//   final String type;
+//   final String currency;
+//   final double? percent;
+//   final int? taxID;
+//   final String? moneyType;
+//   double value;
+
+//   FiscalDayCounter({
+//     required this.type,
+//     required this.currency,
+//     this.percent,
+//     this.taxID,
+//     this.moneyType,
+//     this.value = 0,
+//   });
+
+//   String get key {
+//     if (type == 'BalanceByMoneyType') {
+//       return '$type|$currency|$moneyType';
+//     }
+//     return '$type|$currency|${percent!.toStringAsFixed(2)}|$taxID';
+//   }
+
+//   void accumulate(double addMe) => value += addMe;
+
+//   Map<String, dynamic> toJson() {
+//     final double roundedValue = double.parse(value.toStringAsFixed(2));
+//     if (roundedValue == 0.0) return {}; // skip if zero
+
+//     final m = {
+//       'fiscalCounterType': type,
+//       'fiscalCounterCurrency': currency,
+//       'fiscalCounterValue': roundedValue,
+//     };
+//     if (percent != null) m['fiscalCounterTaxPercent'] = percent!.toStringAsFixed(2);
+//     if (taxID != null) m['fiscalCounterTaxID'] = taxID.toString();
+//     if (moneyType != null) m['fiscalCounterMoneyType'] = moneyType.toString();
+//     return m;
+//   }
+
+//   String toConcatString() {
+//     final buf = StringBuffer(type.toUpperCase());
+//     buf.write(currency.toUpperCase());
+//     if (type == 'BalanceByMoneyType') {
+//       buf.write(moneyType!.toUpperCase());
+//     } else {
+//       buf.write(percent!.toStringAsFixed(2));
+//     }
+//     buf.write((value * 100).round());
+//     return buf.toString();
+//   }
+// }
+
+// Future<(
+//   List<FiscalDayCounter> invoices,
+//   List<FiscalDayCounter> creditNotes,
+//   List<FiscalDayCounter> balances,
+//   String concatenatedString
+// )> buildFiscalDayCountersAndConcat(
+//     int fiscalDayNo,
+// ) async {
+//   final invMap  = <String, FiscalDayCounter>{};
+//   final crdMap  = <String, FiscalDayCounter>{};
+//   final balMap  = <String, FiscalDayCounter>{};
+
+//   DatabaseHelper dbHelper = DatabaseHelper();
+//   final db = await dbHelper.initDB();
+
+//   final rows = await db.query(
+//     'submittedReceipts',
+//     columns: ['receiptType','receiptJsonbody'],
+//     where: 'FiscalDayNo = ?',
+//     whereArgs: [fiscalDayNo],
+//   );
+
+//   for (final row in rows) {
+//     final receiptType = row['receiptType'] as String;
+//     final body        = json.decode(row['receiptJsonbody'] as String);
+//     final r           = body['receipt'] as Map<String, dynamic>;
+//     final curr        = r['receiptCurrency'] as String;
+//     final isCredit    = receiptType != 'FISCALINVOICE';
+
+//     for (final t in r['receiptTaxes'] as List<dynamic>) {
+//       final rawTaxAmt = t['taxAmount'];
+//       final rawSales  = t['salesAmountWithTax'];
+//       final taxAmt    = rawTaxAmt is num ? rawTaxAmt.toDouble() : double.tryParse(rawTaxAmt.toString()) ?? 0;
+//       final salesAmt  = rawSales is num ? rawSales.toDouble() : double.tryParse(rawSales.toString()) ?? 0;
+
+//       final perc      = double.parse(t['taxPercent'] as String);
+//       final taxId     = int.parse(t['taxID'].toString());
+
+//       final targetMap = isCredit ? crdMap : invMap;
+
+//       final sbtKey = 'SaleByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
+//       targetMap.putIfAbsent(sbtKey, () => FiscalDayCounter(
+//         type: 'SaleByTax', currency: curr, percent: perc, taxID: taxId))
+//         .accumulate(salesAmt);
+
+//       final sttKey = 'SaleTaxByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
+//       targetMap.putIfAbsent(sttKey, () => FiscalDayCounter(
+//         type: 'SaleTaxByTax', currency: curr, percent: perc, taxID: taxId))
+//         .accumulate(taxAmt);
+
+//       if (isCredit) {
+//         final cbtKey = 'CreditNoteByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
+//         crdMap.putIfAbsent(cbtKey, () => FiscalDayCounter(
+//           type: 'CreditNoteByTax', currency: curr, percent: perc, taxID: taxId))
+//           .accumulate(-salesAmt);
+
+//         final cttKey = 'CreditNoteTaxByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
+//         crdMap.putIfAbsent(cttKey, () => FiscalDayCounter(
+//           type: 'CreditNoteTaxByTax', currency: curr, percent: perc, taxID: taxId))
+//           .accumulate(-taxAmt);
+//       }
+//     }
+
+//     for (final p in r['receiptPayments'] as List<dynamic>) {
+//       final mType   = p['moneyTypeCode'] as String;
+//       final rawAmt  = p['paymentAmount'];
+//       final amt     = rawAmt is num ? rawAmt.toDouble() : double.tryParse(rawAmt.toString()) ?? 0;
+
+//       final bKey = 'BalanceByMoneyType|$curr|$mType';
+//       balMap.putIfAbsent(bKey, () => FiscalDayCounter(
+//         type: 'BalanceByMoneyType', currency: curr, moneyType: mType))
+//         .accumulate(amt);
+//     }
+//   }
+
+//   final allCounters = [
+//     ...invMap.values,
+//     ...crdMap.values,
+//     ...balMap.values,
+//   ];
+
+//   const counterOrder = [
+//     'SaleByTax',
+//     'SaleTaxByTax',
+//     'CreditNoteByTax',
+//     'CreditNoteTaxByTax',
+//     'BalanceByMoneyType',
+//   ];
+
+//   allCounters.sort((a, b) =>
+//     counterOrder.indexOf(a.type).compareTo(counterOrder.indexOf(b.type)));
+
+//   final concat = StringBuffer();
+//   for (final c in allCounters) {
+//     concat.write(c.toConcatString());
+//   }
+
+//   final invoices = allCounters
+//       .where((c) => c.type.startsWith('Sale') && double.parse(c.value.toStringAsFixed(2)) != 0.0)
+//       .toList();
+//   final creditNotes = allCounters
+//       .where((c) => c.type.startsWith('CreditNote') && double.parse(c.value.toStringAsFixed(2)) != 0.0)
+//       .toList();
+//   final balances = allCounters
+//       .where((c) => c.type == 'BalanceByMoneyType' && double.parse(c.value.toStringAsFixed(2)) != 0.0)
+//       .toList();
+
+//   return (invoices, creditNotes, balances, concat.toString());
+// }
+
+// 
+
+class FiscalDayCounter {
+  final String type;
+  final String currency;
+  final double? percent;
+  final int? taxID;
+  final String? moneyType;
+  double value;
+
+  FiscalDayCounter({
+    required this.type,
+    required this.currency,
+    this.percent,
+    this.taxID,
+    this.moneyType,
+    this.value = 0,
+  });
+
+  String get key {
+    if (type == 'BalanceByMoneyType') {
+      return '$type|$currency|$moneyType';
+    }
+    return '$type|$currency|${percent!.toStringAsFixed(2)}|$taxID';
+  }
+
+  void accumulate(double addMe) => value += addMe;
+
+  Map<String, dynamic> toJson() {
+    final double roundedValue = double.parse(value.toStringAsFixed(2));
+    if (roundedValue == 0.0) return {}; // skip if zero
+
+    final m = {
+      'fiscalCounterType': type,
+      'fiscalCounterCurrency': currency,
+      'fiscalCounterValue': (type.startsWith('CreditNote') ? -roundedValue.abs() : roundedValue.abs()),
+    };
+    if (percent != null) m['fiscalCounterTaxPercent'] = percent!.toStringAsFixed(2);
+    if (taxID != null) m['fiscalCounterTaxID'] = taxID.toString();
+    if (moneyType != null) m['fiscalCounterMoneyType'] = moneyType.toString();
+    return m;
+  }
+
+  String toConcatString() {
+    if (type == 'SaleTaxByTax' && percent?.toStringAsFixed(2) != '15.00') {
+      return ''; // ❌ skip all but 15% VAT
+    }
+     if (type == 'CreditNoteTaxByTax' && percent?.toStringAsFixed(2) != '15.00') {
+      return ''; // ❌ skip all but 15% VAT
+    }
+    final buf = StringBuffer(type.toUpperCase());
+    buf.write(currency.toUpperCase());
+    if (type == 'BalanceByMoneyType') {
+      buf.write(moneyType!.toUpperCase());
+    } else {
+      buf.write(percent!.toStringAsFixed(2));
+    }
+    buf.write((value.abs() * 100).round()); // always positive in string
+    return buf.toString();
+  }
+}
+
+Future<(
+  List<FiscalDayCounter> invoices,
+  List<FiscalDayCounter> creditNotes,
+  List<FiscalDayCounter> balances,
+  String concatenatedString
+)> buildFiscalDayCountersAndConcat(
+    int fiscalDayNo,
+) async {
+  final invMap  = <String, FiscalDayCounter>{};
+  final crdMap  = <String, FiscalDayCounter>{};
+  final balMap  = <String, FiscalDayCounter>{};
+
+  DatabaseHelper dbHelper = DatabaseHelper();
+  final db = await dbHelper.initDB();
+
+  final rows = await db.query(
+    'submittedReceipts',
+    columns: ['receiptType','receiptJsonbody'],
+    where: 'FiscalDayNo = ?',
+    whereArgs: [fiscalDayNo],
+  );
+
+  for (final row in rows) {
+    final receiptType = row['receiptType'] as String;
+    final body        = json.decode(row['receiptJsonbody'] as String);
+    final r           = body['receipt'] as Map<String, dynamic>;
+    final curr        = r['receiptCurrency'] as String;
+    final isCredit    = receiptType != 'FISCALINVOICE';
+
+    for (final t in r['receiptTaxes'] as List<dynamic>) {
+      final rawTaxAmt = t['taxAmount'];
+      final rawSales  = t['salesAmountWithTax'];
+      final taxAmt    = rawTaxAmt is num ? rawTaxAmt.toDouble() : double.tryParse(rawTaxAmt.toString()) ?? 0;
+      final salesAmt  = rawSales is num ? rawSales.toDouble() : double.tryParse(rawSales.toString()) ?? 0;
+
+      final perc      = double.parse(t['taxPercent'] as String);
+      final taxId     = int.parse(t['taxID'].toString());
+
+      if (!isCredit) {
+        final sbtKey = 'SaleByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
+        invMap.putIfAbsent(sbtKey, () => FiscalDayCounter(
+          type: 'SaleByTax', currency: curr, percent: perc, taxID: taxId))
+          .accumulate(salesAmt);
+
+        final sttKey = 'SaleTaxByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
+        invMap.putIfAbsent(sttKey, () => FiscalDayCounter(
+          type: 'SaleTaxByTax', currency: curr, percent: perc, taxID: taxId))
+          .accumulate(taxAmt);
+      } else {
+        final cbtKey = 'CreditNoteByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
+        crdMap.putIfAbsent(cbtKey, () => FiscalDayCounter(
+          type: 'CreditNoteByTax', currency: curr, percent: perc, taxID: taxId))
+          .accumulate(salesAmt); // accumulate positive value
+
+        final cttKey = 'CreditNoteTaxByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
+        crdMap.putIfAbsent(cttKey, () => FiscalDayCounter(
+          type: 'CreditNoteTaxByTax', currency: curr, percent: perc, taxID: taxId))
+          .accumulate(taxAmt); // accumulate positive value
+      }
+    }
+
+    for (final p in r['receiptPayments'] as List<dynamic>) {
+      final mType   = p['moneyTypeCode'] as String;
+      final rawAmt  = p['paymentAmount'];
+      final amt     = rawAmt is num ? rawAmt.toDouble() : double.tryParse(rawAmt.toString()) ?? 0;
+
+      final bKey = 'BalanceByMoneyType|$curr|$mType';
+      balMap.putIfAbsent(bKey, () => FiscalDayCounter(
+        type: 'BalanceByMoneyType', currency: curr, moneyType: mType))
+        .accumulate(amt);
+    }
+  }
+
+  final allCounters = [
+    ...invMap.values,
+    ...crdMap.values,
+    ...balMap.values,
+  ];
+
+  const counterOrder = [
+    'SaleByTax',
+    'SaleTaxByTax',
+    'CreditNoteByTax',
+    'CreditNoteTaxByTax',
+    'BalanceByMoneyType',
+  ];
+
+  allCounters.sort((a, b) =>
+    counterOrder.indexOf(a.type).compareTo(counterOrder.indexOf(b.type)));
+
+  final concat = StringBuffer();
+  for (final c in allCounters) {
+    concat.write(c.toConcatString());
+  }
+
+  final invoices = allCounters
+      .where((c) => c.type.startsWith('Sale') && double.parse(c.value.toStringAsFixed(2)) != 0.0)
+      .toList();
+  final creditNotes = allCounters
+      .where((c) => c.type.startsWith('CreditNote') && double.parse(c.value.toStringAsFixed(2)) != 0.0)
+      .toList();
+  final balances = allCounters
+      .where((c) => c.type == 'BalanceByMoneyType' && double.parse(c.value.toStringAsFixed(2)) != 0.0)
+      .toList();
+
+  return (invoices, creditNotes, balances, concat.toString());
+}
+

@@ -68,12 +68,13 @@ class _PosState extends State<Pos>{
   List<Map<String, dynamic>> selectedCustomer =[];
   List<Map<String, dynamic>> selectedPayMethod =[];
   List<Map<String, dynamic>> productOnSale =[];
+  List<Map<String,dynamic>> dayReceiptCounter = [];
   final formKey = GlobalKey<FormState>();
   final paidKey = GlobalKey<FormState>();
   bool isActve = true;
   String? defaultCurrency;
   double? defaultRate;
-
+  int currentFiscal = 0;
   List<Map<String, dynamic>> receiptItems = [];
   double totalAmount = 0.0; 
   double taxAmount = 0.0;
@@ -407,6 +408,18 @@ String generateTaxSummary(List<dynamic> receiptItems) {
   }).join("");
 }
 
+  Future<void> fetchDayReceiptCounter() async {
+    int latestFiscDay = await dbHelper.getlatestFiscalDay();
+    setState(() {
+      currentFiscal = latestFiscDay;
+    });
+    List<Map<String, dynamic>> data = await dbHelper.getReceiptsSubmittedToday(currentFiscal);
+    setState(() {
+      dayReceiptCounter = data;
+    });
+  }
+
+
 /// Function to generate the final concatenated receipt string
 String generateReceiptString({
   required int deviceID,
@@ -432,37 +445,87 @@ String generateReceiptString({
   /// Generate SHA-256 Hash
   /// 
   useRawString() async {
+    int latestFiscDay = await dbHelper.getlatestFiscalDay();
+    setState(() {
+      currentFiscal = latestFiscDay;
+    });
+    List<Map<String, dynamic>> data = await dbHelper.getReceiptsSubmittedToday(currentFiscal);
+    setState(() {
+      dayReceiptCounter = data;
+    });
     int latestReceiptGlobalNo = await dbHelper.getLatestReceiptGlobalNo();
     int currentGlobalNo = latestReceiptGlobalNo + 1;
     String getLatestReceiptHash = await dbHelper.getLatestReceiptHash();
-    String receiptString = generateReceiptString(
-    deviceID: 22662,
-    receiptType: "FISCALINVOICE",
-    receiptCurrency: "USD",
-    receiptGlobalNo: currentGlobalNo,
-    receiptDate: DateTime.now(),
-    receiptTotal: totalAmount,
-    receiptItems: receiptItems,
-    getPreviousReceiptHash: getLatestReceiptHash,
-  );
-  print("Concatenated Receipt String: $receiptString");
-  return receiptString;
+    if (dayReceiptCounter.isEmpty){
+      String receiptString = generateReceiptString(
+        deviceID: 22662,
+        receiptType: "FISCALINVOICE",
+        receiptCurrency: "USD",
+        receiptGlobalNo: currentGlobalNo,
+        receiptDate: DateTime.now(),
+        receiptTotal: totalAmount,
+        receiptItems: receiptItems,
+        getPreviousReceiptHash:"",
+      );
+      print("Concatenated Receipt String: $receiptString");
+      return receiptString;
+    }else{
+      String receiptString = generateReceiptString(
+        deviceID: 22662,
+        receiptType: "FISCALINVOICE",
+        receiptCurrency: "USD",
+        receiptGlobalNo: currentGlobalNo,
+        receiptDate: DateTime.now(),
+        receiptTotal: totalAmount,
+        receiptItems: receiptItems,
+        getPreviousReceiptHash: getLatestReceiptHash,
+      );
+      print("Concatenated Receipt String: $receiptString");
+      return receiptString;
+    }
+    
+  
   }
 
   generateHash() async {
+    int latestFiscDay = await dbHelper.getlatestFiscalDay();
+    String receiptString;
+    setState(() {
+      currentFiscal = latestFiscDay;
+    });
+    List<Map<String, dynamic>> data = await dbHelper.getReceiptsSubmittedToday(currentFiscal);
+    setState(() {
+      dayReceiptCounter = data;
+    });
     int latestReceiptGlobalNo = await dbHelper.getLatestReceiptGlobalNo();
     int currentGlobalNo = latestReceiptGlobalNo + 1;
     String getLatestReceiptHash = await dbHelper.getLatestReceiptHash();
-    String receiptString = generateReceiptString(
-    deviceID: 22662,
-    receiptType: "FISCALINVOICE",
-    receiptCurrency: "USD",
-    receiptGlobalNo: currentGlobalNo,
-    receiptDate: DateTime.now(),
-    receiptTotal: totalAmount,
-    receiptItems: receiptItems,
-    getPreviousReceiptHash: getLatestReceiptHash,
-  );
+    if(dayReceiptCounter.isEmpty){
+      receiptString = generateReceiptString(
+        deviceID: 22662,
+        receiptType: "FISCALINVOICE",
+        receiptCurrency: "USD",
+        receiptGlobalNo: currentGlobalNo,
+        receiptDate: DateTime.now(),
+        receiptTotal: totalAmount,
+        receiptItems: receiptItems,
+        getPreviousReceiptHash:"",
+      );
+      print("Concatenated Receipt String:$receiptString");
+      receiptString.trim();
+    }
+    else{
+      receiptString = generateReceiptString(
+        deviceID: 22662,
+        receiptType: "FISCALINVOICE",
+        receiptCurrency: "USD",
+        receiptGlobalNo: currentGlobalNo,
+        receiptDate: DateTime.now(),
+        receiptTotal: totalAmount,
+        receiptItems: receiptItems,
+        getPreviousReceiptHash: getLatestReceiptHash,
+      );
+    }
   print("Concatenated Receipt String:$receiptString");
   receiptString.trim();
     var bytes = utf8.encode(receiptString);
@@ -612,7 +675,7 @@ String generateReceiptString({
           },
           conflictAlgorithm: ConflictAlgorithm.replace,
         );
-         print("Data inserted successfully!");
+         //print("Data inserted successfully!");
         
       } catch (e) {
         Get.snackbar(" Db Error",

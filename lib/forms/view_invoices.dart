@@ -195,6 +195,7 @@ Future<String> createCreditNote(String receiptJsonString,
       ...payment,
       "paymentAmount":
           (-1 * double.parse(payment["paymentAmount"])).toStringAsFixed(2),
+      
     };
   }).toList();
   // 2. Negate receiptLines totals
@@ -204,6 +205,7 @@ Future<String> createCreditNote(String receiptJsonString,
       ...line,
       "receiptLineTotal":
           (-1 * double.parse(line["receiptLineTotal"])).toStringAsFixed(2),
+      "receiptLinePrice": (-1 * double.parse(line["receiptLinePrice"])).toStringAsFixed(2) ,
     };
   }).toList();
 
@@ -271,6 +273,7 @@ Future<String> ping() async {
 
 Future<void> generateCreditFiscalJSON() async{
   final int invoiceId = selectedInvoices.first;
+  print (" creditted Invoice ID: $invoiceId");
   try {
     print("Entered generate credit FiscalJSON");
 
@@ -354,14 +357,28 @@ Future<void> generateCreditFiscalJSON() async{
       
     }
     print("Signed Data: $receiptDeviceSignature_signature");
+    print("gettinf to json body");
+    print("receipt json body is $receiptJsonbody");
+    print("new hash is $hash");
+    print("new signature is $receiptDeviceSignature_signature");
+    print("fiscal day no is $receiptFiscDayNo");
+    print("new receipt global no is $nextReceiptGlobalNo");
+    print("new receipt counter is $nextReceiptCounter");
+    print("new receipt date is $formattedDate");
+    print("receipt ID is $receiptID");
+  
     final futurecreditNoteJson = await createCreditNote(receiptJsonbody,newHash: hash , newSignature: receiptDeviceSignature_signature.toString()  , fiscalDay: receiptFiscDayNo ,newReceiptGlobalNo: nextReceiptGlobalNo.toString(), newReceiptCounter: nextReceiptCounter, newReceiptDate: formattedDate , receiptID: receiptID);
-    
+    print("Getting to date");
     //creditnote qrurl
     DateTime parsedDate = DateTime.parse(formattedDate);
-    String ddMMDate = DateFormat('dd-MM-yyyy').format(parsedDate);
+    String ddMMDate = DateFormat('ddMMyyyy').format(parsedDate);
+    print("Date : $ddMMDate");
     String formattedDeviceID = deviceID.toString().padLeft(10, '0');
+    print("device is :  $formattedDeviceID");
     String formattedReceiptGlobalNo = nextReceiptGlobalNo.toString().padLeft(10, '0');
+    print("global number $formattedReceiptGlobalNo ");
     String creditQrData  = first16Chars.toString();
+    print("qr data : $creditQrData");
     String qrurl  = genericzimraqrurl + formattedDeviceID + ddMMDate + formattedReceiptGlobalNo + creditQrData;
     print("QRURL: $qrurl");
     String creditNoteJson = futurecreditNoteJson.toString();
@@ -433,7 +450,7 @@ Future<void> generateCreditFiscalJSON() async{
             await dbinit.insert('submittedReceipts', {
               'receiptCounter': jsonData['receipt']?['receiptCounter'] ?? 0,
             'FiscalDayNo' : fiscalDayNo,
-            'InvoiceNo': int.tryParse(jsonData['receipt']?['invoiceNo']?.toString() ?? "0") ?? 0,
+            'InvoiceNo': jsonData['receipt']?['invoiceNo']?.toString(),
             'receiptID': responseBody['receiptID'] ?? 0,
             'receiptType': jsonData['receipt']['receiptType']?.toString() ?? "",
             'receiptCurrency': jsonData['receipt']?['receiptCurrency']?.toString() ?? "",
@@ -473,7 +490,7 @@ Future<void> generateCreditFiscalJSON() async{
             await dbinit.insert('submittedReceipts', {
             'receiptCounter': jsonData['receipt']?['receiptCounter'] ?? 0,
             'FiscalDayNo' : fiscalDayNo,
-            'InvoiceNo': int.tryParse(jsonData['receipt']?['invoiceNo']?.toString() ?? "0") ?? 0,
+            'InvoiceNo': jsonData['receipt']?['invoiceNo']?.toString(),
             'receiptID': 0,
             'receiptType': jsonData['receipt']['receiptType']?.toString() ?? "",
             'receiptCurrency': jsonData['receipt']?['receiptCurrency']?.toString() ?? "",
@@ -515,7 +532,7 @@ Future<void> generateCreditFiscalJSON() async{
             await dbinit.insert('submittedReceipts', {
             'receiptCounter': jsonData['receipt']?['receiptCounter'] ?? 0,
             'FiscalDayNo' : fiscalDayNo,
-            'InvoiceNo': int.tryParse(jsonData['receipt']?['invoiceNo']?.toString() ?? "0") ?? 0,
+            'InvoiceNo': jsonData['receipt']?['invoiceNo']?.toString(),
             'receiptID': 0,
             'receiptType': jsonData['receipt']['receiptType']?.toString() ?? "",
             'receiptCurrency': jsonData['receipt']?['receiptCurrency']?.toString() ?? "",
@@ -549,7 +566,7 @@ Future<void> generateCreditFiscalJSON() async{
             );
           }
       }
-      
+
       try {
         final Database dbinit= await dbHelper.initDB();
         await dbinit.insert('credit_notes',
