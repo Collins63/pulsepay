@@ -232,7 +232,7 @@ class _PosState extends State<Pos>{
         "receiptLines": receiptItems.asMap().entries.map((entry) {
           int index = entry.key + 1;
           var item = entry.value;
-          if (item["taxPercent"] != ""){
+          if (item["taxPercent"] != "0"){
             return {
             "receiptLineNo": "$index",
             "receiptLineHSCode": "04021099",
@@ -353,12 +353,25 @@ List<Map<String, dynamic>> generateReceiptTaxes(List<dynamic> receiptItems) {
   }
 
   // Convert map to list and round values
+  // return taxGroups.values.map((tax) {
+  //   return {
+  //     "taxID": tax["taxID"],
+  //     "taxPercent": tax["taxPercent"],  // Blank if empty
+  //     "taxCode": tax["taxCode"],
+  //     "taxAmount": tax["taxAmount"].toStringAsFixed(2), // Rounded to 2 decimal places
+  //     "salesAmountWithTax": tax["salesAmountWithTax"],
+  //   };
+  // }).toList();
   return taxGroups.values.map((tax) {
+    final taxID = tax["taxID"];
+    final taxCode = tax["taxCode"];
+    final isGroupA = (taxCode == "A" || taxID == 1);
+
     return {
-      "taxID": tax["taxID"],
-      "taxPercent": tax["taxPercent"],  // Blank if empty
-      "taxCode": tax["taxCode"],
-      "taxAmount": tax["taxAmount"].toStringAsFixed(2), // Rounded to 2 decimal places
+      "taxID": taxID.toString(),
+      if (!isGroupA) "taxPercent": tax["taxPercent"], // Omit if group A
+      "taxCode": taxCode,
+      "taxAmount": isGroupA ? "0" : tax["taxAmount"].toStringAsFixed(2),
       "salesAmountWithTax": tax["salesAmountWithTax"],
     };
   }).toList();
@@ -403,8 +416,21 @@ String generateTaxSummary(List<dynamic> receiptItems) {
   List<Map<String, dynamic>> sortedTaxes = taxGroups.values.toList()
     ..sort((a, b) => a["taxCode"].compareTo(b["taxCode"]));
 
+  // return sortedTaxes.map((tax) {
+  //   return "${tax["taxCode"]}${tax["taxPercent"]}${(tax["taxAmount"] * 100).round().toString()}${(tax["salesAmountWithTax"] * 100).round().toString()}";
+  // }).join("");
   return sortedTaxes.map((tax) {
-    return "${tax["taxCode"]}${tax["taxPercent"]}${(tax["taxAmount"] * 100).round().toString()}${(tax["salesAmountWithTax"] * 100).round().toString()}";
+    final taxCode = tax["taxCode"];
+    final taxPercent = tax["taxPercent"];
+    final taxAmount = (tax["taxAmount"] * 100).round().toString();
+    final salesAmount = (tax["salesAmountWithTax"] * 100).round().toString();
+
+    // Omit taxPercent for taxCode A
+    if (taxCode == "A") {
+      return "$taxCode$taxAmount$salesAmount";
+    }
+
+    return "$taxCode$taxPercent$taxAmount$salesAmount";
   }).join("");
 }
 
