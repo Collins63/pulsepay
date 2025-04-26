@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:pulsepay/authentication/login.dart';
 import 'package:pulsepay/forms/add_product.dart';
 import 'package:pulsepay/forms/cancelledInvoices.dart';
+import 'package:pulsepay/forms/my_taxes.dart';
 //import 'package:pulsepay/forms/barcode_Tester.dart';
 //import 'package:pulsepay/forms/change_barcodes.dart';
 import 'package:pulsepay/forms/reports.dart';
@@ -179,13 +180,15 @@ class _HomePageState extends State<HomePage>{
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(15.0)
                       ),
-                      child: TextButton(onPressed: (){},
+                      child: TextButton(onPressed: (){
+                        Get.to(()=> const MyTaxes());
+                      },
                       child: const Padding(
                         padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
                         child: Column(
                           children: [
-                            Icon(Icons.monetization_on , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
-                            Text('Sales' ,textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
+                            Icon(Icons.balance , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
+                            Text('My Taxes' ,textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
                           ],
                         ),
                       )),

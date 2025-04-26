@@ -757,5 +757,25 @@ class DatabaseHelper {
       whereArgs: [fiscalDayOpened],
     );
   }
+
+  Future<List<Map<String, dynamic>>> getAllFiscalInvoice() async{
+    final db = await initDB();
+    return await db.rawQuery(
+      '''
+        SELECT submittedReceipts.*
+        FROM submittedReceipts
+        WHERE receiptType = 'FISCALINVOICE'
+      '''
+    );
+  }
+
+
+  Future<List<Map<String , dynamic>>> getTotalTaxAmount() async{
+    final db = await initDB();
+    return await db.rawQuery('''
+      SELECT SUM(taxAmount) as totalTaxAmount
+      FROM submittedReceipts
+    ''');
+  }
   
 }
