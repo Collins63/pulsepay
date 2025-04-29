@@ -25,12 +25,17 @@ class _MyTaxesState extends State<MyTaxes> {
   double taxTotal1 = 0.0;
   double taxTotal2 = 0.0;
   double taxTotal3 = 0.0;
+  double tax1Percent = 0.0;
+  double tax2Percent = 0.0;
+  double tax3Percent = 0.0;
+
 
   @override
   void initState() {
     super.initState();
     getTotalTax();
     loadTaxTotals();
+   // percentageCalculator();
   }
 
   void loadTaxTotals() async{
@@ -40,6 +45,25 @@ class _MyTaxesState extends State<MyTaxes> {
       taxTotal2 = totals["2"] ?? 0.0;
       taxTotal3 = totals["3"] ?? 0.0;
     });
+    percentageCalculator();
+  }
+
+  void percentageCalculator(){
+    double totalTaxAmount = taxTotal1 + taxTotal2 + taxTotal3;
+    if(totalTaxAmount > 0){
+      double bRtax1Percent = (taxTotal1 / totalTaxAmount) * 100;
+      double bRtax2Percent = (taxTotal2 / totalTaxAmount) * 100;
+      double bRtax3Percent = (taxTotal3 / totalTaxAmount) * 100;
+      tax1Percent = double.parse(bRtax1Percent.toStringAsFixed(2));
+      tax2Percent = double.parse(bRtax2Percent.toStringAsFixed(2));
+      tax3Percent = double.parse(bRtax3Percent.toStringAsFixed(2));
+    }
+    else{
+      tax1Percent = 0.0;
+      tax2Percent = 0.0;
+      tax3Percent = 0.0;
+    }
+    print("total tax amount is $totalTaxAmount");
   }
   
   getTotalTax() async{
@@ -68,7 +92,7 @@ class _MyTaxesState extends State<MyTaxes> {
         final Map<String , dynamic> receiptData = jsonDecode(jsonBody);
         if(receiptData['receipt']['receiptTaxes'] is List){
           List<dynamic> taxes = receiptData['receipt']['receiptTaxes'];
-          print(taxes);
+          //print(taxes);
           for(var tax in taxes){
             if(tax is Map<String, dynamic>){
               final String taxID = tax['taxID'] ?? '';
@@ -89,7 +113,7 @@ class _MyTaxesState extends State<MyTaxes> {
           print("not taxes list");
         }
       } catch (e) {
-        print("json parsing error$e");
+        //print("json parsing error$e");
       }
     }
     totals.updateAll((key, value) => double.parse(value.toStringAsFixed(2)));
@@ -267,9 +291,9 @@ class _MyTaxesState extends State<MyTaxes> {
                     PieChartData(
                       sections: [
                         PieChartSectionData(
-                          value: 50,
+                          value: tax1Percent,
                           color: Colors.deepPurpleAccent,
-                          title: "50%",
+                          title: "$tax1Percent%",
                           titleStyle: const TextStyle(
                             fontSize: 14,
                             color: Colors.white,
@@ -277,9 +301,9 @@ class _MyTaxesState extends State<MyTaxes> {
                           radius: 50,
                         ),
                         PieChartSectionData(
-                          value: 20,
+                          value: tax2Percent,
                           color: Colors.green,
-                          title: '30%',
+                          title: '$tax2Percent%',
                           titleStyle: const TextStyle(
                             fontSize: 14,
                             color: Colors.white,
@@ -287,9 +311,9 @@ class _MyTaxesState extends State<MyTaxes> {
                           radius: 50,
                         ),
                         PieChartSectionData(
-                          value: 10,
+                          value: tax3Percent,
                           color: Colors.blue,
-                          title: '20%',
+                          title: '$tax3Percent%',
                           titleStyle: const TextStyle(
                             fontSize: 14,
                             color: Colors.white,
@@ -305,6 +329,16 @@ class _MyTaxesState extends State<MyTaxes> {
               CustomOutlineBtn(
                   height: 50,
                   text: "View Quarterly Tax",
+                  color: kDark ,
+                  color2: kDark,
+                  onTap: (){
+                    Get.to(()=> SalesReportPage());
+                  },
+              ),
+              const SizedBox(height: 10,),
+              CustomOutlineBtn(
+                  height: 50,
+                  text: "View Month's Tax",
                   color: kDark ,
                   color2: kDark,
                   onTap: (){

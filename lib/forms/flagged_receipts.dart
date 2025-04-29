@@ -1,0 +1,108 @@
+import 'package:flutter/cupertino.dart';
+import 'package:flutter/material.dart';
+import 'package:pulsepay/common/constants.dart';
+
+class FlaggedReceipts extends StatefulWidget {
+  const FlaggedReceipts({super.key});
+
+  @override
+  State<FlaggedReceipts> createState() => _FlaggedReceiptsState();
+}
+
+class _FlaggedReceiptsState extends State<FlaggedReceipts> {
+  bool isLoading = false;
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: PreferredSize(
+        preferredSize: Size.fromHeight(50)
+        ,child: AppBar(
+          centerTitle: true,
+          title: const Text("Flagged Receipts" , style: TextStyle(fontSize: 14, color: Colors.white, fontWeight:  FontWeight.normal),),
+          iconTheme: const IconThemeData(color: Colors.white),
+          backgroundColor: const Color.fromARGB(255, 14, 19, 29),
+          shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(25),
+                  bottomRight: Radius.circular(25)
+                )
+              ),
+        )
+      ),
+      body: SingleChildScrollView(
+        scrollDirection: Axis.vertical,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 10),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 20,),
+              Container(
+                height: 200,
+                width: 390,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  color: kDark
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 10,),
+                    Center(child: Icon(Icons.error , color:  Colors.white,size:  60,)),
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Container(
+                            width: 160,
+                            height: 100,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(10),
+                              color:Colors.white
+                            ),
+                            child: Center(
+                              child: Column(
+                                //crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const SizedBox(height: 15,),
+                                  Text("Receipts Analyzed" , style:  TextStyle(color: Colors.green ,  fontSize: 16 , fontWeight: FontWeight.bold ),),
+                                  const SizedBox(height: 15,),
+                                  Text("1000" , style:  TextStyle(color: kDark,  fontSize: 25 , fontWeight: FontWeight.bold ),),
+                                ],
+                              ),
+                            ),
+                          ),
+                          Container(
+                            width: 160,
+                            height: 100,
+                            decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(10),
+                            color:Colors.white
+                            ),
+                            child: Center(
+                              child: Column(
+                                //crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const SizedBox(height: 15,),
+                                  Text("Receipts Flagged" , style:  TextStyle(color: Colors.red ,  fontSize: 16 , fontWeight: FontWeight.bold ),),
+                                  const SizedBox(height: 15,),
+                                  Text("10" , style:  TextStyle(color: kDark,  fontSize: 25 , fontWeight: FontWeight.bold ),),
+                                ],
+                              ),
+                            ),
+                          )
+                        ],
+                      ),
+                    )
+                  ],
+                ),
+              )
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

@@ -311,6 +311,7 @@ Future<void> generateCreditFiscalJSON() async{
     String previousReceiptHash = await dbHelper.getLatestReceiptHash();
     List<dynamic> taxes = receipt['receiptTaxes'];
     print("taxes concat");
+    taxes.sort((a, b) => a['taxCode'].compareTo(b['taxCode']));
     for(var tax in taxes){
       String taxcode = tax['taxCode'].toString();
       String taxPercent = tax['taxPercent'].toString();
@@ -319,14 +320,18 @@ Future<void> generateCreditFiscalJSON() async{
       double taxAmount = tax['taxAmount'] is String
         ? double.parse(tax['taxAmount'])
         : tax['taxAmount'].toDouble();
-      
       int taxAmountInCents = (taxAmount * 100 *-1).round();
       //double SalesAmountwithTax = double.parse(tax['salesAmountWithTax']);
       double SalesAmountwithTax = tax['salesAmountWithTax'] is String
         ? double.parse(tax['salesAmountWithTax'])
         : tax['salesAmountWithTax'].toDouble();
       int salesAmountInCents = (SalesAmountwithTax * 100 *-1).round();
-      taxesConcat += "$taxcode$taxPercent$taxAmountInCents$salesAmountInCents";
+      if(taxcode == "A"){
+        taxesConcat += "$taxcode$taxAmountInCents$salesAmountInCents";
+      }else{
+        taxesConcat += "$taxcode$taxPercent$taxAmountInCents$salesAmountInCents";
+      }
+      
     }
     print(" after taxes concat");
     String finalString = "$deviceId$receiptType$currency$nextReceiptGlobalNo$formattedDate$totalAmountInCents$taxesConcat$previousReceiptHash";

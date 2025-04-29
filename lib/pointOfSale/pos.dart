@@ -25,6 +25,10 @@ import 'package:pulsepay/fiscalization/sslContextualization.dart';
 import 'package:pulsepay/fiscalization/submitReceipts.dart';
 import 'package:pulsepay/main.dart';
 import 'package:sqflite/sqflite.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:path/path.dart' as p;
+//import 'package:barcode_widget/barcode_widget.dart';
 //import 'package:pulsepay/home/home_page.dart';
 
 class Pos  extends StatefulWidget{
@@ -57,6 +61,7 @@ class _PosState extends State<Pos>{
   final TextEditingController paidController = TextEditingController();
   final TextEditingController searchCustomer = TextEditingController();
   final DatabaseHelper dbHelper  = DatabaseHelper();
+  final pdf = pw.Document();
 
 
   List<Map<String , dynamic>> defaultPayMethod = [];
@@ -94,6 +99,128 @@ class _PosState extends State<Pos>{
   String? receiptDeviceSignature_signature;
   String genericzimraqrurl = "https://fdmstest.zimra.co.zw/";
   int deviceID = 22662;
+
+  Future<void> generateInvoiceFromJson(Map<String , dynamic> receiptJson , String qrUrl) async{
+    final receipt = receiptJson['receipt'];
+    final supplier = {
+      'name': 'Pulse Pvt Ltd',
+      'tin': '1234567890',
+      'address': '16 Ganges Road, Harare',
+      'phone': '+263 77 14172798',
+    };
+    final customer = {
+      'name': receipt['buyerData']?['buyerTradeName'] ?? 'Customer',
+      'tin': receipt['buyerData']?['buyerTIN'] ?? '0000000000',
+      'vat': receipt['buyerData']?['VATNumber'] ?? '00000000',
+    };
+    String receiptGlobalNo = receipt['receiptGlobalNo'].toString().padLeft(10, '0');
+    String deviceID = "22162";
+    final receiptLines = List<Map<String, dynamic>>.from(receipt['receiptLines']);
+    final receiptTaxes = List<Map<String, dynamic>>.from(receipt['receiptTaxes']);
+    final receiptTotal = double.tryParse(receipt['receiptTotal'].toString()) ?? 0.0;
+    final signature = receipt['receiptDeviceSignature']?['signature'] ?? 'No Signature';
+    double totalTax = 0.0;
+    for (var tax in receiptTaxes) {
+      totalTax += double.tryParse(tax['taxAmount'].toString()) ?? 0.0;
+    }
+    pdf.addPage(
+      pw.Page(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(24),
+        build: (pw.Context context) {
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Row(
+                mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                children: [
+                  pw.Column(
+                    crossAxisAlignment: pw.CrossAxisAlignment.start,
+                    children: [
+                      pw.Text('FISCAL TAX INVOICE', style: pw.TextStyle(fontSize: 24, fontWeight: pw.FontWeight.bold)),
+                      pw.SizedBox(height: 8),
+                      pw.Text('Supplier: ${supplier['name']}'),
+                      pw.Text('TIN: ${supplier['tin']}'),
+                      pw.Text('Address: ${supplier['address']}'),
+                      pw.Text('Phone: ${supplier['phone']}'),
+                    ],
+                  ),
+                  pw.Container(
+                    width: 100,
+                    height: 100,
+                    child: pw.BarcodeWidget(
+                      barcode: pw.Barcode.qrCode(),
+                      data: qrUrl,
+                      drawText: false,
+                    ),
+                  ),
+                ],
+              ),
+              pw.Divider(
+                thickness: 5,
+                color: PdfColors.blue,
+              ),
+              pw.SizedBox(height: 8),
+              pw.Text('Customer: ${customer['name']}'),
+              pw.Text('TIN: ${customer['tin']}'),
+              pw.Text('VAT: ${customer['vat']}'),
+              pw.SizedBox(height: 12),
+              pw.Text('Invoice No: ${receipt['invoiceNo']}', style: pw.TextStyle(fontSize: 14)),
+              pw.Text('Date: ${receipt['receiptDate']}'),
+              pw.SizedBox(height: 12),
+              pw.Table.fromTextArray(
+                headers: ['No.', 'Item', 'Qty', 'Unit Price', 'Tax %', 'Total'],
+                data: receiptLines.map((item) {
+                  return [
+                    item['receiptLineNo'],
+                    item['receiptLineName'],
+                    item['receiptLineQuantity'].toString(),
+                    '\$${item['receiptLinePrice'].toString()}',
+                    '${item['taxPercent'] ?? '0'}%',
+                    '\$${item['receiptLineTotal'].toString()}',
+                  ];
+                }).toList(),
+              ),
+              pw.Divider(),
+              pw.SizedBox(height: 10),
+              pw.Align(
+                alignment: pw.Alignment.centerRight,
+                child: pw.Column(
+                  crossAxisAlignment: pw.CrossAxisAlignment.end,
+                  children: [
+                    pw.Text('Total Tax: \$${totalTax.toStringAsFixed(2)}'),
+                    pw.Text('Grand Total: \$${receiptTotal.toStringAsFixed(2)}', style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                  ],
+                ),
+              ),
+              pw.SizedBox(height: 20),
+              pw.Text('Signature Hash:', style: pw.TextStyle(fontSize: 10)),
+              pw.Text(receipt['receiptDeviceSignature']?['hash'] ?? '', style: pw.TextStyle(fontSize: 8)),
+              pw.Text("You can verify this manually at:", style: pw.TextStyle(fontSize: 10)),
+              pw.Text("https://fdmstest.zimra.co.zw", style: pw.TextStyle(fontSize: 8, color: PdfColors.blue)),
+              pw.Text("Device ID: $deviceID", style: pw.TextStyle(fontSize: 10)),
+              pw.Text("Receipt Global No: $receiptGlobalNo", style: pw.TextStyle(fontSize: 10)),
+            ],
+          );
+        },
+      ),
+    );
+    try {
+      final directory = Directory('/storage/emulated/0/Pulse/Invoices');
+
+      // Create the directory if it doesn't exist
+      if (!await directory.exists()) {
+        await directory.create(recursive: true);
+      }
+      final filePath = p.join(directory.path, 'invoice_${receipt['invoiceNo']}.pdf');
+      final file = File(filePath);
+      await file.writeAsBytes(await pdf.save());
+
+      print('Invoice saved at ${file.path}');
+    } catch (e) {
+      print('Error saving invoice: $e');
+    }
+  }
   
   Future<bool> requestStoragePermission() async {
   if (await Permission.storage.isGranted) {
@@ -635,6 +762,7 @@ String generateReceiptString({
       String testQrData = getReceiptQrData(testHash);
       String qrurl = genericzimraqrurl + formattedDeviceID + formattedDateStr + formatedReceiptGlobalNo + receiptQrData;
       print("QR URL: $qrurl");
+      
     if(pingResponse=="200"){
       String apiEndpointSubmitReceipt =
       "https://fdmsapitest.zimra.co.zw/Device/v1/22662/SubmitReceipt";
@@ -702,7 +830,7 @@ String generateReceiptString({
           conflictAlgorithm: ConflictAlgorithm.replace,
         );
          //print("Data inserted successfully!");
-        
+        generateInvoiceFromJson(jsonData, qrurl);
       } catch (e) {
         Get.snackbar(" Db Error",
           "$e",
@@ -747,6 +875,7 @@ String generateReceiptString({
           conflictAlgorithm: ConflictAlgorithm.replace,
         );
          print("Data inserted successfully!");
+         generateInvoiceFromJson(jsonData, qrurl);
       } catch (e) {
         Get.snackbar("Db Error",
           "$e",
@@ -792,6 +921,7 @@ String generateReceiptString({
           conflictAlgorithm: ConflictAlgorithm.replace,
         );
          print("Data inserted successfully!");
+         generateInvoiceFromJson(jsonData, qrurl);
       } catch (e) {
         Get.snackbar("DB error Error",
           "$e",
@@ -1486,9 +1616,15 @@ String generateReceiptString({
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.green,
         automaticallyImplyLeading: false,
         elevation: 0,
+        shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(25),
+                  bottomRight: Radius.circular(25)
+                )
+            ),
         title:  ClipRRect(
           borderRadius: BorderRadius.circular(25.0),
           child: Row(
@@ -1503,6 +1639,7 @@ String generateReceiptString({
                     child: Icon(
                       CupertinoIcons.arrow_left_circle,
                       size: 30,
+                      color: Colors.white,
                     ),
                   ),
               ),
@@ -1515,7 +1652,7 @@ String generateReceiptString({
                 child: const Icon(
                   CupertinoIcons.search_circle,
                   size: 30,
-                  color: Colors.black,
+                  color: Colors.white,
                 ),
               )
             ],
@@ -1530,6 +1667,7 @@ String generateReceiptString({
             padding:const  EdgeInsets.symmetric(horizontal: 5.0 , vertical: 10.0) ,
             child: Column(
               children: [
+                const SizedBox(height: 20,),
                 Container(
                   height: 200,
                   decoration: BoxDecoration(
@@ -1828,7 +1966,7 @@ String generateReceiptString({
                 Container(
                   height: 80,
                   decoration: BoxDecoration(
-                    color: const Color.fromARGB(255, 14, 19, 29),
+                    color: Colors.green,
                     borderRadius: BorderRadius.circular(10.0)
                   ),
                   child: Padding(

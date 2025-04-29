@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:pulsepay/authentication/login.dart';
 import 'package:pulsepay/forms/add_product.dart';
 import 'package:pulsepay/forms/cancelledInvoices.dart';
+import 'package:pulsepay/forms/flagged_receipts.dart';
 import 'package:pulsepay/forms/my_taxes.dart';
 //import 'package:pulsepay/forms/barcode_Tester.dart';
 //import 'package:pulsepay/forms/change_barcodes.dart';
@@ -196,65 +197,6 @@ class _HomePageState extends State<HomePage>{
                   ],
                 ),
                 const SizedBox(height: 15,),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    Container(
-                      height: 100,
-                      width: 100,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(15.0)
-                      ),
-                      child: TextButton(onPressed: (){},
-                      child: const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
-                        child: Column(
-                          children: [
-                            Icon(Icons.monetization_on , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
-                            Text('Sales',textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
-                          ],
-                        ),
-                      )),
-                    ),
-                    Container(
-                      height: 100,
-                      width: 100,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(15.0)
-                      ),
-                      child: TextButton(onPressed: (){},
-                      child: const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
-                        child: Column(
-                          children: [
-                            Icon(Icons.monetization_on , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
-                            Text('Sales',textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
-                          ],
-                        ),
-                      )),
-                    ),
-                    Container(
-                      height: 100,
-                      width: 100,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(15.0)
-                      ),
-                      child: TextButton(onPressed: (){},
-                      child: const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
-                        child: Column(
-                          children: [
-                            Icon(Icons.monetization_on , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
-                            Text('Sales',textAlign: TextAlign.center,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
-                          ],
-                        ),
-                      )),
-                    ),
-                  ],
-                ),
                 const SizedBox(height: 15,),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -288,14 +230,14 @@ class _HomePageState extends State<HomePage>{
                       ),
                       child: TextButton(onPressed: (){
                         Navigator.push(context,
-                        MaterialPageRoute(builder: (context)=> const UsersPage()));
+                        MaterialPageRoute(builder: (context)=> const FlaggedReceipts()));
                       },
                       child: const Padding(
                         padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
                         child: Column(
                           children: [
-                            Icon(Icons.person_2 , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
-                            Text('Users',textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
+                            Icon(Icons.error , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
+                            Text('Flagged Receipts',textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
                           ],
                         ),
                       )),
