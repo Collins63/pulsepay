@@ -1,4 +1,8 @@
+import 'dart:async';
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
+import 'package:pulsepay/SQLite/database_helper.dart';
 import 'package:pulsepay/authentication/login.dart';
 import 'package:pulsepay/forms/add_product.dart';
 import 'package:pulsepay/forms/cancelledInvoices.dart';
@@ -15,8 +19,10 @@ import 'package:pulsepay/forms/view_invoices.dart';
 import 'package:pulsepay/home/fiscal_page.dart';
 import 'package:pulsepay/home/settings.dart';
 import 'package:pulsepay/pointOfSale/pos.dart';
+import 'package:http/http.dart' as http;
 //import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
+import 'package:sqflite/sqflite.dart';
 
 class HomePage extends StatefulWidget{
   const HomePage({super.key});
@@ -25,6 +31,115 @@ class HomePage extends StatefulWidget{
 }
 
 class _HomePageState extends State<HomePage>{
+  DatabaseHelper dbHelper = DatabaseHelper();
+  Timer? _timer;
+  @override
+  void initState() {
+    super.initState();
+    // Run immediately on open
+    syncReceiptAnomalies();
+    // Schedule every 2 hours thereafter
+    _timer = Timer.periodic(
+      Duration(hours: 2),
+      (_) => syncReceiptAnomalies(),
+    );
+  }
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> syncReceiptAnomalies() async{
+    final receipts = await dbHelper.getReceiptsADetection();
+
+    for (final row in receipts) {
+    final int globalNo = row['receiptGlobalNo'] as int;
+    final String jsonBody = row['receiptJsonbody'] as String;
+
+    Map<String, dynamic> receiptMap;
+    try {
+      receiptMap = jsonDecode(jsonBody) as Map<String, dynamic>;
+    } catch (e) {
+      print('JSON decode error for receipt $globalNo: $e');
+      continue;
+    }
+
+    final receipt = receiptMap['receipt'] as Map<String, dynamic>?;
+    if (receipt == null) continue;
+
+    // Extract common fields
+    final dynamic totalRaw = receipt['receiptTotal'];
+    final double receiptTotal = totalRaw is String
+        ? double.tryParse(totalRaw) ?? 0.0
+        : (totalRaw as num).toDouble();
+
+    // Loop through each tax entry
+    final taxes = receipt['receiptTaxes'] as List<dynamic>?;
+    if (taxes == null) continue;
+
+    for (final taxEntry in taxes) {
+      final tax = taxEntry as Map<String, dynamic>;
+      final double taxAmount = tax['taxAmount'] is String
+          ? double.tryParse(tax['taxAmount']) ?? 0.0
+          : (tax['taxAmount'] as num).toDouble();
+      final double salesAmountWithTax = tax['salesAmountWithTax'] is String
+          ? double.tryParse(tax['salesAmountWithTax']) ?? 0.0
+          : (tax['salesAmountWithTax'] as num).toDouble();
+      // final double taxPercent = tax['taxPercent'] is String
+      //     ? double.tryParse(tax['taxPercent']) ?? 0.0
+      //     : (tax['taxPercent'] as num).toDouble();
+      final double taxPercent = double.tryParse(
+        tax['taxPercent']?.toString() ?? '0'
+      ) ?? 0.0;
+
+      // Prepare payload
+      final payload = jsonEncode({
+        'receiptGlobalNo': globalNo,
+        'receiptTotal': receiptTotal,
+        'taxAmount': taxAmount,
+        'salesAmountWithTax': salesAmountWithTax,
+        'taxPercent': taxPercent,
+      });
+
+      // Send to Flask API
+      try {
+        final response = await http.post(
+          Uri.parse('http://10.0.3.2:5000/analyze'),
+          headers: {'Content-Type': 'application/json'},
+          body: payload,
+        );
+
+        if (response.statusCode == 200) {
+          final Map<String, dynamic> result =
+              jsonDecode(response.body) as Map<String, dynamic>;
+          final int isAnomaly = result['is_anomaly'] == true ? 1 : 0;
+          final double score = (result['anomaly_score'] as num).toDouble();
+
+          // Insert into receiptAnomallies
+          final Database db = await dbHelper.initDB();
+          await db.insert(
+            'receiptAnomallies',
+            {
+              'receiptGlobalNo': globalNo,
+              'isAnomaly': isAnomaly,
+              'score': score,
+              'receiptTotal': receiptTotal,
+              'taxAmount': taxAmount,
+              'salesAmountWithTax': salesAmountWithTax,
+              'taxPercent': taxPercent.toString(),
+            },
+          );
+        } else {
+          print('API error ${response.statusCode}: ${response.body}');
+        }
+      } catch (e) {
+        print('HTTP error for receipt $globalNo: $e');
+      }
+    }
+  }
+
+  }
   @override
   Widget build(BuildContext context){
     return  Scaffold(

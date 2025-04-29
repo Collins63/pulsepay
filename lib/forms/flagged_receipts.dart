@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:pulsepay/SQLite/database_helper.dart';
 import 'package:pulsepay/common/constants.dart';
 
 class FlaggedReceipts extends StatefulWidget {
@@ -11,6 +12,41 @@ class FlaggedReceipts extends StatefulWidget {
 
 class _FlaggedReceiptsState extends State<FlaggedReceipts> {
   bool isLoading = false;
+  DatabaseHelper dbHelper = DatabaseHelper();
+  List<Map<String, dynamic>> flaggedReceipts = [];
+  List<Map<String, dynamic>> anomalyReceiptsList = [];
+  int anomalyReceipts = 0;
+  int flaggedReceiptsCount = 0;
+  void getFlaggedReceipts() async {
+    try {
+      // Fetch flagged receipts from the database
+      final dbflaggedReceipts = await dbHelper.getFlaggedReceipts();
+      if (dbflaggedReceipts.isNotEmpty) {
+        setState(() {
+          flaggedReceipts = dbflaggedReceipts;
+          flaggedReceiptsCount = flaggedReceipts.length;
+        });
+      } else {
+        print("No flagged receipts found.");
+      }
+
+      final scannedReceipts  = await dbHelper.getAnomalyTable();
+      if (scannedReceipts.isNotEmpty) {
+        setState(() {
+          anomalyReceiptsList = scannedReceipts;
+          anomalyReceipts = anomalyReceiptsList.length;
+        });
+      } else {
+        print("No flagged receipts found.");
+      }
+    } catch (e) {
+      print("Error fetching flagged receipts: $e");
+    } finally {
+      setState(() {
+
+      });
+    }
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -69,7 +105,7 @@ class _FlaggedReceiptsState extends State<FlaggedReceipts> {
                                   const SizedBox(height: 15,),
                                   Text("Receipts Analyzed" , style:  TextStyle(color: Colors.green ,  fontSize: 16 , fontWeight: FontWeight.bold ),),
                                   const SizedBox(height: 15,),
-                                  Text("1000" , style:  TextStyle(color: kDark,  fontSize: 25 , fontWeight: FontWeight.bold ),),
+                                  Text("$anomalyReceipts" , style:  TextStyle(color: kDark,  fontSize: 25 , fontWeight: FontWeight.bold ),),
                                 ],
                               ),
                             ),
@@ -88,7 +124,7 @@ class _FlaggedReceiptsState extends State<FlaggedReceipts> {
                                   const SizedBox(height: 15,),
                                   Text("Receipts Flagged" , style:  TextStyle(color: Colors.red ,  fontSize: 16 , fontWeight: FontWeight.bold ),),
                                   const SizedBox(height: 15,),
-                                  Text("10" , style:  TextStyle(color: kDark,  fontSize: 25 , fontWeight: FontWeight.bold ),),
+                                  Text("$flaggedReceiptsCount" , style:  TextStyle(color: kDark,  fontSize: 25 , fontWeight: FontWeight.bold ),),
                                 ],
                               ),
                             ),

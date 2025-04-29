@@ -331,6 +331,55 @@ class PaymentMethod{
   };
 }
 
+///Receipt Anomallies//////
+///////////////////////////////////////////////////////
+Anomaly anomalyFromMap(String str) => Anomaly.fromMap(json.decode(str));
+
+String anomalyToMap(Anomaly data) => json.encode(data.toMap());
+
+class Anomaly{
+  final int? id;
+  final int receiptGlobalNo;
+  final int isAnomaly;
+  final double score;
+  final double receiptTotal;
+  final double taxAmount;
+  final double salesAmountwithTax;
+  final String taxPercent;
+
+  Anomaly({
+    this.id,
+    required this.receiptGlobalNo,
+    required this.isAnomaly,
+    required this.score,
+    required this.receiptTotal,
+    required this.taxAmount,
+    required this.salesAmountwithTax,
+    required this.taxPercent
+  });
+
+  factory Anomaly.fromMap(Map<String, dynamic> json) => Anomaly(
+    id: json["anomallyId"],
+    receiptGlobalNo: json["receiptGlobalNo"],
+    isAnomaly: json["isAnomaly"],
+    score: json["score"],
+    receiptTotal: json["receiptTotal"],
+    taxAmount: json["taxAmount"],
+    salesAmountwithTax: json["salesAmountWithTax"],
+    taxPercent: json["taxPercent"]
+  );
+
+  Map<String, dynamic> toMap() => {
+    "anomallyId": id,
+    "receiptGlobalNo": receiptGlobalNo,
+    "isAnomaly": isAnomaly,
+    "score": score,
+    "receiptTotal": receiptTotal,
+    "taxAmount": taxAmount,
+    "salesAmountWithTax": salesAmountwithTax,
+    "taxPercent": taxPercent
+  };
+}
 
 
 ///CreditNote//////

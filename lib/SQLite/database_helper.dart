@@ -43,6 +43,8 @@ class DatabaseHelper {
   String paymentMethods =
     "create table paymentMethods (payMethodId INTEGER PRIMARY KEY AUTOINCREMENT, description TEXT , rate REAL , fiscalGroup INTEGER , currency TEXT , vatNumber TEXT , tinNumber TEXT , defaultMethod INTEGER DEFAULT 0 )";
 
+  String receiptAnomallies = "create table receiptAnomallies (anomallyId INTEGER PRIMARY KEY AUTOINCREMENT , receiptGlobalNo INTEGER ,isAnomaly INTEGER , score REAL , receiptTotal REAL , taxAmount REAL , salesAmountWithTax REAL , taxPercent TEXT)";
+
   //====DATABASE FUNCTIONS =======/////////
 
 
@@ -75,7 +77,7 @@ class DatabaseHelper {
 
   return openDatabase(
     path,
-    version: 3, // ✅ bumped version
+    version: 4, // ✅ bumped version
     onCreate: (db, version) async {
       // ✅ Tables created for new installs
       await db.execute(users);
@@ -112,6 +114,9 @@ class DatabaseHelper {
         await db.execute(
           'ALTER TABLE invoices ADD COLUMN cancelled INTEGER NOT NULL DEFAULT 0'
         );
+      }
+      if (oldVersion<4){
+        await db.execute(receiptAnomallies);
       }
     },
   );
@@ -748,6 +753,24 @@ class DatabaseHelper {
         FROM credit_notes
       ''');
   }
+  Future<List<Map<String, dynamic>>> getAnomalyTable() async{
+    final db = await initDB();
+    return await db.rawQuery('''
+      SELECT receiptAnomallies.*
+      FROM receiptAnomallies
+    ''');
+  }
+
+  Future<List<Map<String, dynamic>>> getFlaggedReceipts() async{
+    final db = await initDB();
+    return await db.rawQuery('''
+      SELECT receiptAnomallies.*
+      FROM receiptAnomallies
+      WHERE isAnomaly = 'true'
+    ''');
+  }
+
+
   Future<List<Map<String, dynamic>>> getCloseDayReceipts(int fiscalDayOpened) async{
     final db = await initDB();
     return await db.query(
@@ -755,6 +778,14 @@ class DatabaseHelper {
       columns: ['receiptType','receiptJsonbody'],
       where: 'FiscalDayNo = ?',
       whereArgs: [fiscalDayOpened],
+    );
+  }
+
+  Future<List<Map<String , dynamic>>> getReceiptsADetection() async {
+    final db = await initDB();
+    return await db.query(
+      'submittedReceipts',
+      columns: ['receiptGlobalNo' , 'receiptJsonbody']
     );
   }
 
@@ -777,5 +808,7 @@ class DatabaseHelper {
       FROM submittedReceipts
     ''');
   }
+
+
   
 }
