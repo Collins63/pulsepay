@@ -17,6 +17,13 @@ class _FlaggedReceiptsState extends State<FlaggedReceipts> {
   List<Map<String, dynamic>> anomalyReceiptsList = [];
   int anomalyReceipts = 0;
   int flaggedReceiptsCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    getFlaggedReceipts();
+  }
+
   void getFlaggedReceipts() async {
     try {
       // Fetch flagged receipts from the database
@@ -32,6 +39,7 @@ class _FlaggedReceiptsState extends State<FlaggedReceipts> {
 
       final scannedReceipts  = await dbHelper.getAnomalyTable();
       if (scannedReceipts.isNotEmpty) {
+        print("receipts found");
         setState(() {
           anomalyReceiptsList = scannedReceipts;
           anomalyReceipts = anomalyReceiptsList.length;
@@ -134,7 +142,31 @@ class _FlaggedReceiptsState extends State<FlaggedReceipts> {
                     )
                   ],
                 ),
-              )
+              ),
+              const SizedBox(height: 20,),
+              flaggedReceiptsCount==0 ?
+                Container(
+                  height: 100,
+                  width: 390,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(10),
+                    color: Colors.green,
+                  ),
+                  child: const Center(
+                    child: Text("No flagged receipts found !!" , style: TextStyle(color: Colors.white , fontSize: 20 , fontWeight: FontWeight.bold),),
+                  ),
+                )
+              : Container(
+                height: 100,
+                width: 390,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  color: Colors.red,
+                ),
+                child: const Center(
+                  child: Text("Flagged Receipts" , style: TextStyle(color: Colors.white , fontSize: 20 , fontWeight: FontWeight.bold),),
+                ),
+              ), 
             ],
           ),
         ),
