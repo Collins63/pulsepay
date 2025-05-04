@@ -1,0 +1,13 @@
+flutter_native_splash:
+  android: true
+  ios: true
+  web: false
+
+  color: "#d4e4ed" # Background color of the splash screen
+  image: "assets/splash.png"
+  branding: "assets/tax.PNG"
+
+  android_12:
+    color: "#d4e4ed" # Background color of the splash screen
+    image: "assets/splash.png"
+    branding: "assets/tax.PNG"

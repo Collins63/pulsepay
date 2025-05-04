@@ -50,6 +50,7 @@ dependencies:
   fl_chart: ^0.66.0
   google_fonts: ^6.2.1
   pdf: ^3.11.3
+  flutter_native_splash: ^2.4.4
 
 dev_dependencies:
   flutter_test:
@@ -79,6 +80,8 @@ flutter:
     - assets\zimra.PNG
     - assets\report.png
     - assets\accounting.png
+    - assets\login.PNG
+    - assets\taxCalculation.jpg
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
 

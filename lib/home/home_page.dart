@@ -143,7 +143,7 @@ class _HomePageState extends State<HomePage>{
   @override
   Widget build(BuildContext context){
     return  Scaffold(
-      backgroundColor: const Color.fromARGB(255, 14, 19, 29),
+      backgroundColor: Colors.white,
       body: SingleChildScrollView(
         scrollDirection: Axis.vertical,
         child: SafeArea(
@@ -152,32 +152,43 @@ class _HomePageState extends State<HomePage>{
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Row(
-                      children: [
-                         const Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                  padding: const EdgeInsets.all(10.0),
+                  child: Container(
+                    height: 100,
+                    width: 390,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      color: Colors.blue
+                    ),
+                    child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Row(
                           children: [
-                            Text("Welcome Back!",
-                              style: TextStyle(color: Colors.white),
+                             const Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text("Welcome Back!",
+                                  style: TextStyle(color: Colors.white),
+                                ),
+                                Text("User",
+                                  style: TextStyle(color: Colors.white, fontSize: 24 , fontWeight: FontWeight.bold),
+                                ),
+                              ],
                             ),
-                            Text("User",
-                              style: TextStyle(color: Colors.white, fontSize: 24 , fontWeight: FontWeight.bold),
-                            ),
+                            const Spacer(),
+                            IconButton.outlined(onPressed: (){
+                              Navigator.push(context,
+                              MaterialPageRoute(builder: (context)=> const Login()));
+                            }, icon: const Icon(Icons.logout_sharp, color: Colors.white, ), color: Colors.white, highlightColor: Colors.white,)
                           ],
                         ),
-                        const Spacer(),
-                        IconButton.outlined(onPressed: (){
-                          Navigator.push(context,
-                          MaterialPageRoute(builder: (context)=> const Login()));
-                        }, icon: const Icon(Icons.logout_rounded , color: Colors.white,))
-                      ],
                     ),
+                  ),
                 ),
-                const SizedBox(height: 20,),
+                //const SizedBox(height: 5,),
                 const Padding(
                   padding: EdgeInsets.all(16.0),
-                  child: Text("Quick Navigation" ,style: TextStyle(fontWeight: FontWeight.bold , fontSize: 24.0 , color: Colors.white ),),
+                  child: Text("Quick Navigation" ,style: TextStyle(fontWeight: FontWeight.bold , fontSize: 24.0 , color: Colors.black ),),
                 ),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -186,7 +197,7 @@ class _HomePageState extends State<HomePage>{
                       height: 100,
                       width: 100,
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: Colors.blue,
                         borderRadius: BorderRadius.circular(15.0)
                       ),
                       child: TextButton(onPressed: (){
@@ -196,8 +207,8 @@ class _HomePageState extends State<HomePage>{
                         padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
                         child: Column(
                           children: [
-                            Icon(Icons.monetization_on , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
-                            Text('Sales' ,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
+                            Icon(Icons.monetization_on , size: 30, color: Colors.white),
+                            Text('Sales Data' , textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.bold , fontSize: 12, color:Colors.white ),)
                           ],
                         ),
                       )),
@@ -206,7 +217,7 @@ class _HomePageState extends State<HomePage>{
                       height: 100,
                       width: 100,
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: Colors.blue,
                         borderRadius: BorderRadius.circular(15.0)
                       ),
                       child: TextButton(onPressed: (){
@@ -216,8 +227,8 @@ class _HomePageState extends State<HomePage>{
                         padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
                         child: Column(
                           children: [
-                            Icon(Icons.shopping_bag_sharp , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
-                            Text('Stock' ,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
+                            Icon(Icons.shopping_bag_sharp , size: 30, color: Colors.white,),
+                            Text('Stock Updates' , textAlign: TextAlign.center,style: TextStyle(fontWeight: FontWeight.bold , fontSize: 12, color:Colors.white ),)
                           ],
                         ),
                       )),
@@ -226,7 +237,7 @@ class _HomePageState extends State<HomePage>{
                       height: 100,
                       width: 100,
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: Colors.blue,
                         borderRadius: BorderRadius.circular(15.0)
                       ),
                       child: TextButton(onPressed: (){
@@ -237,8 +248,8 @@ class _HomePageState extends State<HomePage>{
                         padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
                         child: Column(
                           children: [
-                            Icon(Icons.add_box_rounded , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
-                            Text('Add Product' ,textAlign: TextAlign.center,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
+                            Icon(Icons.add_box_rounded , size: 30, color: Colors.white,),
+                            Text('Add Product' ,textAlign: TextAlign.center,style: TextStyle(fontWeight: FontWeight.bold , fontSize: 12, color:Colors.white),)
                           ],
                         ),
                       )),
@@ -253,7 +264,7 @@ class _HomePageState extends State<HomePage>{
                       height: 100,
                       width: 100,
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: Colors.blue,
                         borderRadius: BorderRadius.circular(15.0)
                       ),
                       child: TextButton(onPressed: (){
@@ -263,8 +274,8 @@ class _HomePageState extends State<HomePage>{
                         padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
                         child: Column(
                           children: [
-                            Icon(Icons.remove_red_eye , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
-                            Text('View Invoices' ,textAlign: TextAlign.center,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
+                            Icon(Icons.remove_red_eye , size: 30, color: Colors.white),
+                            Text('View Invoices' ,textAlign: TextAlign.center,style: TextStyle(fontWeight: FontWeight.bold , fontSize: 12, color:Colors.white ),)
                           ],
                         ),
                       )),
@@ -273,7 +284,7 @@ class _HomePageState extends State<HomePage>{
                       height: 100,
                       width: 100,
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: Colors.blue,
                         borderRadius: BorderRadius.circular(15.0)
                       ),
                       child: TextButton(onPressed: (){
@@ -283,8 +294,8 @@ class _HomePageState extends State<HomePage>{
                         padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
                         child: Column(
                           children: [
-                            Icon(Icons.cancel , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
-                            Text('Cancelled Invoices' ,textAlign: TextAlign.center,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
+                            Icon(Icons.cancel , size: 30, color: Colors.white),
+                            Text('Invoice Returns' ,textAlign: TextAlign.center,style: TextStyle(fontWeight: FontWeight.bold , fontSize: 12, color:Colors.white ),)
                           ],
                         ),
                       )),
@@ -293,7 +304,7 @@ class _HomePageState extends State<HomePage>{
                       height: 100,
                       width: 100,
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: Colors.blue,
                         borderRadius: BorderRadius.circular(15.0)
                       ),
                       child: TextButton(onPressed: (){
@@ -303,8 +314,8 @@ class _HomePageState extends State<HomePage>{
                         padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
                         child: Column(
                           children: [
-                            Icon(Icons.balance , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
-                            Text('My Taxes' ,textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
+                            Icon(Icons.balance , size: 30, color: Colors.white),
+                            Text('My Taxes' ,textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.bold , fontSize: 12, color:Colors.white  ),)
                           ],
                         ),
                       )),
@@ -320,7 +331,7 @@ class _HomePageState extends State<HomePage>{
                       height: 100,
                       width: 100,
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: Colors.blue,
                         borderRadius: BorderRadius.circular(15.0)
                       ),
                       child: TextButton(onPressed: (){
@@ -330,8 +341,8 @@ class _HomePageState extends State<HomePage>{
                         padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
                         child: Column(
                           children: [
-                            Icon(Icons.light_mode_sharp , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
-                            Text('Reports',textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
+                            Icon(Icons.light_mode_sharp , size: 30, color: Colors.white),
+                            Text('My Reports',textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.bold , fontSize: 12, color:Colors.white ),)
                           ],
                         ),
                       )),
@@ -340,7 +351,7 @@ class _HomePageState extends State<HomePage>{
                       height: 100,
                       width: 100,
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: Colors.blue,
                         borderRadius: BorderRadius.circular(15.0)
                       ),
                       child: TextButton(onPressed: (){
@@ -351,8 +362,8 @@ class _HomePageState extends State<HomePage>{
                         padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
                         child: Column(
                           children: [
-                            Icon(Icons.error , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
-                            Text('Flagged Receipts',textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
+                            Icon(Icons.error , size: 30, color: Colors.white),
+                            Text('Flagged Receipt',textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.bold , fontSize: 12, color:Colors.white  ),)
                           ],
                         ),
                       )),
@@ -361,7 +372,7 @@ class _HomePageState extends State<HomePage>{
                       height: 100,
                       width: 100,
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: Colors.orange,
                         borderRadius: BorderRadius.circular(15.0)
                       ),
                       child: TextButton(onPressed: (){},
@@ -369,14 +380,30 @@ class _HomePageState extends State<HomePage>{
                         padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
                         child: Column(
                           children: [
-                            Icon(Icons.print_rounded , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
-                            Text('Printer Settings' ,  textAlign: TextAlign.center,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
+                            Icon(Icons.print_rounded , size: 30, color: Colors.white),
+                            Text('Printer Settings' ,  textAlign: TextAlign.center,style: TextStyle(fontWeight: FontWeight.bold , fontSize: 12, color:Colors.white ),)
                           ],
                         ),
                       )),
                     ),
                   ],
-                )
+                ),
+                const SizedBox(height: 15,),
+                Padding(
+                  padding: const EdgeInsets.all(10.0),
+                  child: Container(
+                    height: 180,
+                    width: 390,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.grey, width: 5),
+                      image: const DecorationImage(
+                        image: AssetImage("assets/taxCalculation.jpg"),
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                  ),
+                ),
               ],
             )
         ),
@@ -425,7 +452,7 @@ class _HomePageState extends State<HomePage>{
                     MaterialPageRoute(builder: (context) => const Pos()),
                   );
                 },
-                backgroundColor: const Color.fromARGB(255, 14, 19, 29),
+                backgroundColor: Colors.blue,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                 child: const Icon(
                   Icons.calculate,
