@@ -1616,7 +1616,7 @@ String generateReceiptString({
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.green,
+        backgroundColor: Colors.blue,
         automaticallyImplyLeading: false,
         elevation: 0,
         shape: const RoundedRectangleBorder(
@@ -1966,7 +1966,7 @@ String generateReceiptString({
                 Container(
                   height: 80,
                   decoration: BoxDecoration(
-                    color: Colors.green,
+                    color: Colors.blue,
                     borderRadius: BorderRadius.circular(10.0)
                   ),
                   child: Padding(

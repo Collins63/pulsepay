@@ -133,7 +133,7 @@ class _MyTaxesState extends State<MyTaxes> {
           centerTitle: true,
           title: const Text("My Taxes" , style: TextStyle(fontSize: 14, color: Colors.white, fontWeight:  FontWeight.normal),),
           iconTheme: const IconThemeData(color: Colors.white),
-          backgroundColor: const Color.fromARGB(255, 14, 19, 29),
+          backgroundColor: Colors.blue,
           shape: const RoundedRectangleBorder(
                 borderRadius: BorderRadius.only(
                   bottomLeft: Radius.circular(25),
@@ -154,6 +154,7 @@ class _MyTaxesState extends State<MyTaxes> {
                 child: Image.asset(
                     'assets/accounting.png',
                     height: 100,
+                    color: Colors.black,
                   ),
               ),
               const SizedBox(height: 20,),
@@ -164,13 +165,13 @@ class _MyTaxesState extends State<MyTaxes> {
                     height: 120,
                     width: 190,
                     decoration: BoxDecoration(
-                      color: const Color.fromARGB(255, 14, 19, 29),
+                      color: Colors.blue.shade200,
                       borderRadius: BorderRadius.circular(10)
                     ),
                     child: Column(
                       children:[
                         const SizedBox(height: 15,),
-                        const Text("Total Tax Returns" , style: TextStyle(fontSize: 14, color: Colors.white,fontWeight:  FontWeight.w500),),
+                        const Text("Total Tax Returns" , style: TextStyle(fontSize: 14, color: Colors.black,fontWeight:  FontWeight.w500),),
                         const SizedBox(height: 10,),
                         Container(
                             height: 40,
@@ -180,10 +181,10 @@ class _MyTaxesState extends State<MyTaxes> {
                               borderRadius: BorderRadius.circular(50)
                             ),
                             child: Center(
-                              child: Icon(Icons.monetization_on_rounded , color: Colors.green, size: 30,),
+                              child: Icon(Icons.monetization_on_rounded , color: Colors.blue, size: 30,),
                             ),
                           ),
-                        Text("$totalTaxAmount", style: TextStyle(fontSize: 20  , fontWeight: FontWeight.bold , color: Colors.green),)
+                        Text("$totalTaxAmount", style: TextStyle(fontSize: 20  , fontWeight: FontWeight.bold , color: Colors.black),)
                       ] 
                     ),
                   ),
@@ -191,13 +192,13 @@ class _MyTaxesState extends State<MyTaxes> {
                     height: 120,
                     width: 190,
                     decoration: BoxDecoration(
-                      color: const Color.fromARGB(255, 14, 19, 29),
+                      color: Colors.blue.shade200,  
                       borderRadius: BorderRadius.circular(10)
                     ),
                     child: Column(
                       children:[
                         const SizedBox(height: 15,),
-                        const Text("15% Tax" , style: TextStyle(fontSize: 14, color: Colors.white,fontWeight:  FontWeight.w500),),
+                        const Text("15% Tax" , style: TextStyle(fontSize: 14, color: Colors.black,fontWeight:  FontWeight.w500),),
                         const SizedBox(height: 10,),
                          Container(
                             height: 40,
@@ -207,10 +208,10 @@ class _MyTaxesState extends State<MyTaxes> {
                               borderRadius: BorderRadius.circular(50)
                             ),
                             child: Center(
-                              child: Icon(Icons.monetization_on_rounded , color: Colors.green, size: 30,),
+                              child: Icon(Icons.monetization_on_rounded , color: Colors.blue, size: 30,),
                             ),
                           ),
-                        Text("$taxTotal3", style: TextStyle(fontSize: 20  , fontWeight: FontWeight.bold , color: Colors.green),)
+                        Text("$taxTotal3", style: TextStyle(fontSize: 20  , fontWeight: FontWeight.bold , color: Colors.black),)
                       ] 
                     ),
                   ),
@@ -224,13 +225,13 @@ class _MyTaxesState extends State<MyTaxes> {
                     height: 120,
                     width: 190,
                     decoration: BoxDecoration(
-                      color: const Color.fromARGB(255, 14, 19, 29),
+                      color: Colors.blue.shade200,
                       borderRadius: BorderRadius.circular(10)
                     ),
                     child: Column(
                       children:[
                         const SizedBox(height: 15,),
-                        const Text("Zero Tax" , style: TextStyle(fontSize: 14, color: Colors.white,fontWeight:  FontWeight.w500),),
+                        const Text("Zero Tax" , style: TextStyle(fontSize: 14, color: Colors.black,fontWeight:  FontWeight.w500),),
                         const SizedBox(height: 10,), 
                         Container(
                             height: 40,
@@ -240,10 +241,10 @@ class _MyTaxesState extends State<MyTaxes> {
                               borderRadius: BorderRadius.circular(50)
                             ),
                             child: Center(
-                              child: Icon(Icons.monetization_on_rounded , color: Colors.green, size: 30,),
+                              child: Icon(Icons.monetization_on_rounded , color: Colors.blue, size: 30,),
                             ),
                           ),
-                        Text("$taxTotal2", style: TextStyle(fontSize: 20  , fontWeight: FontWeight.bold , color: Colors.green),)
+                        Text("$taxTotal2", style: TextStyle(fontSize: 20  , fontWeight: FontWeight.bold , color: Colors.black),)
                       ] 
                     ),
                   ),
@@ -251,13 +252,13 @@ class _MyTaxesState extends State<MyTaxes> {
                     height: 120,
                     width: 190,
                     decoration: BoxDecoration(
-                      color: const Color.fromARGB(255, 14, 19, 29),
+                      color: Colors.blue.shade200,
                       borderRadius: BorderRadius.circular(10)
                     ),
                     child: Column(
                       children:[
                         const SizedBox(height: 15,),
-                        const Text("Tax Exempted" , style: TextStyle(fontSize: 14, color: Colors.white,fontWeight:  FontWeight.w500),),
+                        const Text("Tax Exempted" , style: TextStyle(fontSize: 14, color: Colors.black,fontWeight:  FontWeight.w500),),
                         const SizedBox(height: 10,),
                        Container(
                             height: 40,
@@ -267,10 +268,10 @@ class _MyTaxesState extends State<MyTaxes> {
                               borderRadius: BorderRadius.circular(50)
                             ),
                             child: Center(
-                              child: Icon(Icons.monetization_on_rounded , color: Colors.green, size: 30,),
+                              child: Icon(Icons.monetization_on_rounded , color: Colors.blue, size: 30,),
                             ),
                           ),
-                        Text("$taxTotal1", style: TextStyle(fontSize: 20  , fontWeight: FontWeight.bold , color: Colors.green),)
+                        Text("$taxTotal1", style: TextStyle(fontSize: 20  , fontWeight: FontWeight.bold , color: Colors.black),)
                       ] 
                     ),
                   ),
@@ -329,8 +330,8 @@ class _MyTaxesState extends State<MyTaxes> {
               CustomOutlineBtn(
                   height: 50,
                   text: "View Quarterly Tax",
-                  color: kDark ,
-                  color2: kDark,
+                  color: Colors.blue ,
+                  color2: Colors.blue,
                   onTap: (){
                     Get.to(()=> SalesReportPage());
                   },
@@ -339,8 +340,8 @@ class _MyTaxesState extends State<MyTaxes> {
               CustomOutlineBtn(
                   height: 50,
                   text: "View Month's Tax",
-                  color: kDark ,
-                  color2: kDark,
+                  color: Colors.blue ,
+                  color2: Colors.blue,
                   onTap: (){
                     Get.to(()=> SalesReportPage());
                   },
