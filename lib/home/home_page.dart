@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:lottie/lottie.dart';
 import 'package:pulsepay/SQLite/database_helper.dart';
 import 'package:pulsepay/authentication/login.dart';
 import 'package:pulsepay/forms/add_product.dart';
@@ -392,16 +393,17 @@ class _HomePageState extends State<HomePage>{
                 Padding(
                   padding: const EdgeInsets.all(10.0),
                   child: Container(
-                    height: 180,
+                    height: 200,
                     width: 390,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(color: Colors.grey, width: 5),
-                      image: const DecorationImage(
-                        image: AssetImage("assets/taxCalculation.jpg"),
-                        fit: BoxFit.cover,
-                      ),
+                      // image: const DecorationImage(
+                      //   image: Lottie.asset("assets/dash.json"),
+                      //   fit: BoxFit.cover,
+                      // ),
                     ),
+                    child: Lottie.asset('assets/dash.json'),
                   ),
                 ),
               ],

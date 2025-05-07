@@ -1,3 +1,4 @@
+import 'package:intl/intl.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:pulsepay/JsonModels/json_models.dart';
@@ -809,6 +810,71 @@ class DatabaseHelper {
     ''');
   }
 
+  Future<List<Map<String, dynamic>>> getTopProductsByQuantity() async {
+    final database = await initDB();
+    return await database.rawQuery('''
+      SELECT 
+        products.productId,
+        products.productName,
+        SUM(sales.quantity) as totalQuantity,
+        SUM(sales.quantity * sales.sellingPrice) as totalSales
+      FROM 
+        sales
+      INNER JOIN 
+        products ON sales.productId = products.productId
+      WHERE 
+        sales.tax > 0.0
+      GROUP BY 
+        sales.productId
+      ORDER BY 
+        totalQuantity DESC
+      LIMIT 2
+    ''');
+  }
 
-  
+    Future<Map<String, dynamic>> getCurrentMonthTaxDetails() async {
+    final Database database = await initDB();
+    final DateTime now = DateTime.now();
+    final int currentYear = now.year;
+    final int currentMonth = now.month;
+    final String monthName = DateFormat('MMMM').format(now);
+    
+    // Format for SQL substring comparison
+    final String yearMonthPattern = '${currentYear}-${currentMonth < 10 ? '0$currentMonth' : currentMonth}';
+    
+    // First and last day formatting for display purposes
+    final DateTime firstDay = DateTime(currentYear, currentMonth, 1);
+    final DateTime lastDay = DateTime(currentYear, currentMonth + 1, 0);
+    final String startDateFormatted = DateFormat('yyyy-MM-dd').format(firstDay);
+    final String endDateFormatted = DateFormat('yyyy-MM-dd').format(lastDay);
+    
+    // Query using substring to extract year-month part from ISO timestamp
+    final List<Map<String, dynamic>> result = await database.rawQuery('''
+      SELECT 
+        SUM(taxAmount) as totalTaxAmount,
+        COUNT(*) as receiptCount,
+        AVG(taxAmount) as averageTaxAmount,
+        SUM(SalesAmountwithTax) as totalSalesWithTax,
+        SUM(TotalExempt) as totalExempt,
+        SUM(TotalWT) as totalWithholdingTax
+      FROM submittedReceipts
+      WHERE substr(receiptDate, 1, 7) = ?
+    ''', [yearMonthPattern]);
+    
+    final Map<String, dynamic> taxDetails = {
+      'totalTaxAmount': result.first['totalTaxAmount'] as double? ?? 0.0,
+      'receiptCount': result.first['receiptCount'] as int? ?? 0,
+      'averageTaxAmount': result.first['averageTaxAmount'] as double? ?? 0.0,
+      'totalSalesWithTax': result.first['totalSalesWithTax'] as double? ?? 0.0,
+      'totalExempt': result.first['totalExempt'] as double? ?? 0.0,
+      'totalWithholdingTax': result.first['totalWithholdingTax'] as double? ?? 0.0,
+      'month': monthName,
+      'year': currentYear.toString(),
+      'startDate': startDateFormatted,
+      'endDate': endDateFormatted,
+    };
+    
+    return taxDetails;
+  }
+
 }

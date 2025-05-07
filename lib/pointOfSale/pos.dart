@@ -8,6 +8,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:logger/logger.dart';
+import 'package:lottie/lottie.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:pointycastle/digests/sha256.dart';
@@ -1607,7 +1608,12 @@ String generateReceiptString({
       }
     );
   }
+
+  //sale done modal
+
   
+  
+
   //=================END OF FUNCTIONS============================//a
   //======================================================//
   
@@ -1672,8 +1678,8 @@ String generateReceiptString({
                   height: 200,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(10.0),
-                    border: Border.all(width: 1 , color: const Color.fromARGB(255, 14, 19, 29)),
-                    color:const Color.fromARGB(255, 14, 19, 29),
+                    border: Border.all(width: 1 , color: Colors.grey.shade400),
+                    color:Colors.grey.shade400,
                   ),
                   child: ListView.builder(
                     itemCount: searchResults.length,
@@ -1861,12 +1867,13 @@ String generateReceiptString({
                 ),
                 Container(
                   height: 250,
+                  width: 390,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(10.0),
-                    border: Border.all(width: 1 , color: const Color.fromARGB(255, 14, 19, 29)),
-                    color: const Color.fromARGB(255, 14, 19, 29),
+                    border: Border.all(width: 1 , color: Colors.grey.shade400),
+                    color: Colors.grey.shade400,
                   ),
-                  child: ListView.builder(
+                  child: cartItems.isEmpty ? Lottie.asset('assets/cart.json'): ListView.builder(
                     itemCount: cartItems.length,
                     itemBuilder: (context , index){
                       final product = cartItems[index];
@@ -2001,7 +2008,7 @@ String generateReceiptString({
           ),
       ),
         bottomNavigationBar: BottomAppBar(
-        color: const Color.fromARGB(255, 14, 19, 29),
+        color: Colors.blue.shade900,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
@@ -2225,6 +2232,7 @@ String generateReceiptString({
                                             await submitReceipt();
                                             await completeSale();
                                             Navigator.pop(context);
+
                                             } catch (e) {
                                               Get.snackbar(
                                                 "Error",

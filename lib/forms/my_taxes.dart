@@ -4,6 +4,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:lottie/lottie.dart';
 import 'package:pulsepay/SQLite/database_helper.dart';
 import 'package:pulsepay/common/appStyle.dart';
 import 'package:pulsepay/common/constants.dart';
@@ -22,6 +23,8 @@ class _MyTaxesState extends State<MyTaxes> {
   DatabaseHelper dbHepler = DatabaseHelper();
   double totalTaxAmount = 0.0;
   late Future<Map<String, double>> taxIdTotals;
+  List<Map<String, dynamic>> topProducts = [];
+  Map<String, dynamic> monthlyTaxDetails = {};
   double taxTotal1 = 0.0;
   double taxTotal2 = 0.0;
   double taxTotal3 = 0.0;
@@ -36,6 +39,17 @@ class _MyTaxesState extends State<MyTaxes> {
     getTotalTax();
     loadTaxTotals();
    // percentageCalculator();
+   dbHepler.getTopProductsByQuantity().then((value) {
+     setState(() {
+       topProducts = value;
+     });
+   });
+
+   dbHepler.getCurrentMonthTaxDetails().then((value) {
+     setState(() {
+       monthlyTaxDetails = value;
+     });
+   });
   }
 
   void loadTaxTotals() async{
@@ -121,6 +135,114 @@ class _MyTaxesState extends State<MyTaxes> {
     return totals;
   }
 
+   void showMonthlyTax() {
+    final TextEditingController passwordController = TextEditingController();
+    final TextEditingController reasonController = TextEditingController();
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context){
+        return AlertDialog(
+          title:  const Text("Monthly Tax Calculations"),
+          content:Column(
+            mainAxisSize: MainAxisSize.min ,
+            children: [
+              Container(
+                height: 60,
+                width: 300,
+                //child: Text("Total Tax Amount: ${monthlyTaxDetails['totalTaxAmount']}"),
+                child: Column(
+                  
+                  children: [
+                    const Text("Month" , style: TextStyle(fontSize: 18, color: Colors.white,fontWeight:  FontWeight.w500),),
+                    //const SizedBox(height: 10,),
+                    Text("${monthlyTaxDetails['month']}", style: TextStyle(fontSize: 20  , fontWeight: FontWeight.bold , color: Colors.white),)
+                  ],
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.blue,
+                  borderRadius: BorderRadius.circular(10)
+                ),
+              ),
+              const SizedBox(height: 15),
+              Container(
+                height: 60,
+                width: 300,
+                //child: Text("Total Tax Amount: ${monthlyTaxDetails['totalTaxAmount']}"),
+                child: Column(
+                  
+                  children: [
+                    const Text("Receipt Count" , style: TextStyle(fontSize: 18, color: Colors.white,fontWeight:  FontWeight.w500),),
+                    //const SizedBox(height: 10,),
+                    Text("${monthlyTaxDetails['receiptCount']}", style: TextStyle(fontSize: 20  , fontWeight: FontWeight.bold , color: Colors.white),)
+                  ],
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.green,
+                  borderRadius: BorderRadius.circular(10)
+                ),
+              ),
+              const SizedBox(height: 15),
+              Container(
+                height: 60,
+                width: 300,
+                //child: Text("Total Tax Amount: ${monthlyTaxDetails['totalTaxAmount']}"),
+                child: Column(
+                  children: [
+                    const Text("Total Tax Amount" , style: TextStyle(fontSize: 18, color: Colors.white,fontWeight:  FontWeight.w500),),
+                    //const SizedBox(height: 10,),
+                    Text("\$${monthlyTaxDetails['totalTaxAmount']}", style: TextStyle(fontSize: 20  , fontWeight: FontWeight.bold , color: Colors.white),)
+                  ],
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.green,
+                  borderRadius: BorderRadius.circular(10)
+                ),
+              ),
+              const SizedBox(height: 15),
+              Container(
+                height: 60,
+                width: 300,
+                //child: Text("Total Tax Amount: ${monthlyTaxDetails['totalTaxAmount']}"),
+                child: Column(
+                  children: [
+                    const Text("Sales With Tax" , style: TextStyle(fontSize: 18, color: Colors.white,fontWeight:  FontWeight.w500),),
+                    //const SizedBox(height: 10,),
+                    Text("\$${monthlyTaxDetails['totalSalesWithTax']}", style: TextStyle(fontSize: 20  , fontWeight: FontWeight.bold , color: Colors.white),)
+                  ],
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.green,
+                  borderRadius: BorderRadius.circular(10)
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10.0),
+              ),
+            ),
+            onPressed: () {
+              Navigator.of(context).pop(); // Close the dialog
+            },
+            child: const Icon(Icons.close , color: Colors.white,),
+          ),
+          // ElevatedButton(
+          //   onPressed: () {
+          //   },
+          //   child: const Text('Submit'),
+          // ),
+          ],
+        );
+      }
+    );
+  }
+
 
 
   @override
@@ -149,13 +271,15 @@ class _MyTaxesState extends State<MyTaxes> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const SizedBox(height: 15,),
+
               Center(
-                child: Image.asset(
-                    'assets/accounting.png',
-                    height: 100,
-                    color: Colors.black,
+                child: Container(
+                  height: 200,
+                  width: 200,
+                  child: Lottie.asset(
+                    'assets/taxAnimation.json'
                   ),
+                ),
               ),
               const SizedBox(height: 20,),
               Row(
@@ -277,8 +401,8 @@ class _MyTaxesState extends State<MyTaxes> {
                   ),
                 ],
               ),
-              const SizedBox(height: 10,),
-              const Text("Quarterly Tax Returns" , style: TextStyle(fontSize: 16, color:  const Color.fromARGB(255, 14, 19, 29),fontWeight:  FontWeight.bold),),
+              const SizedBox(height:30,),
+              const Text("Percentage Sales Per Tax Group" , style: TextStyle(fontSize: 16, color:  const Color.fromARGB(255, 14, 19, 29),fontWeight:  FontWeight.bold),),
               Container(
                 height: 300,
                 width: 390,
@@ -327,6 +451,74 @@ class _MyTaxesState extends State<MyTaxes> {
                 ),
               ),
               const SizedBox(height: 10,),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    Container(
+                      height: 20,
+                      width: 20,
+                      decoration: BoxDecoration(
+                        color: Colors.deepPurpleAccent,
+                        borderRadius: BorderRadius.circular(50)
+                      ),
+                    ),
+                    Text(" Tax Exempted" , style: TextStyle(fontSize: 14, color: Colors.black,fontWeight:  FontWeight.w500),),
+                    const SizedBox(width: 30,),
+                    Container(
+                      height: 20,
+                      width: 20,
+                      decoration: BoxDecoration(
+                        color: Colors.green,
+                        borderRadius: BorderRadius.circular(50)
+                      ),
+                    ),
+                    Text(" Zero Tax" , style: TextStyle(fontSize: 14, color: Colors.black,fontWeight:  FontWeight.w500),),
+                    const SizedBox(width: 30,),
+                    Container(
+                      height: 20,
+                      width: 20,
+                      decoration: BoxDecoration(
+                        color: Colors.blue,
+                        borderRadius: BorderRadius.circular(50)
+                      ),
+                    ),
+                    Text(" 15 % Tax" , style: TextStyle(fontSize: 14, color: Colors.black,fontWeight:  FontWeight.w500),),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 30,),
+              const Text("Products with top VAT returns" , style: TextStyle(fontSize: 16, color:  const Color.fromARGB(255, 14, 19, 29),fontWeight:  FontWeight.bold),),
+              const SizedBox(height: 10,),
+              Container(
+                height: 200,
+                width: 390,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade400,
+                  borderRadius: BorderRadius.circular(10)
+                ),
+                  child: ListView.builder(
+                    itemCount: topProducts.length,
+                    itemBuilder:(context, index){
+                      final product = topProducts[index];
+                      return Container(
+                        margin: const EdgeInsets.symmetric(vertical: 5.0, horizontal: 10.0),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey, width: 1.0),
+                          borderRadius: BorderRadius.circular(10.0), 
+                          color: Colors.white, 
+                        ),
+                        child: ListTile(
+                          title: Text(product['productName']),
+                          subtitle: Text("Quantity: ${product['totalQuantity']}"),
+                          trailing: Text("\$${product['totalSales']}"),
+                        ),
+                      );
+                    } ,
+                  ),
+              ),
+              const SizedBox(height: 20,),
               CustomOutlineBtn(
                   height: 50,
                   text: "View Quarterly Tax",
@@ -343,9 +535,9 @@ class _MyTaxesState extends State<MyTaxes> {
                   color: Colors.blue ,
                   color2: Colors.blue,
                   onTap: (){
-                    Get.to(()=> SalesReportPage());
+                    showMonthlyTax();
                   },
-                ),
+              ),
             ],
           ),
         ),
