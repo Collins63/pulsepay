@@ -87,6 +87,8 @@ flutter:
     - assets\cart.json
     - assets\finishCart.json
     - assets\dash.json
+    - assets\settings.json
+    - assets\correct.json
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
 

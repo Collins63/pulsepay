@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:lottie/lottie.dart';
 import 'package:pulsepay/authentication/login.dart';
 import 'package:pulsepay/fiscalization/fiscal_tables.dart';
 import 'package:pulsepay/forms/add_product.dart';
@@ -21,40 +22,28 @@ class _SettingsState extends State<Settings>{
   @override
   Widget build(BuildContext context){
     return  Scaffold(
-      backgroundColor: const Color.fromARGB(255, 14, 19, 29),
+      backgroundColor: Colors.white,
+      appBar: PreferredSize(
+        preferredSize: Size.fromHeight(50)
+        ,child: AppBar(
+          centerTitle: true,
+          title: const Text("My Settings" , style: TextStyle(fontSize: 20, color: Colors.white, fontWeight:  FontWeight.bold),),
+          iconTheme: const IconThemeData(color: Colors.white),
+          backgroundColor: Colors.blue,
+          shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(25),
+                  bottomRight: Radius.circular(25)
+                )
+              ),
+        )
+      ),
       body: SafeArea(
         bottom: false,
           child:  Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Row(
-                    children: [
-                       const Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text("Welcome Back!",
-                            style: TextStyle(color: Colors.white),
-                          ),
-                          Text("User",
-                            style: TextStyle(color: Colors.white, fontSize: 24 , fontWeight: FontWeight.bold),
-                          ),
-                        ],
-                      ),
-                      const Spacer(),
-                      IconButton.outlined(onPressed: (){
-                        Navigator.push(context,
-                        MaterialPageRoute(builder: (context)=> const Login()));
-                      }, icon: const Icon(Icons.logout_rounded , color: Colors.white,))
-                    ],
-                  ),
-              ),
               const SizedBox(height: 20,),
-              const Padding(
-                padding: EdgeInsets.all(16.0),
-                child: Text("Settings" ,style: TextStyle(fontWeight: FontWeight.bold , fontSize: 24.0 , color: Colors.white ),),
-              ),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
@@ -62,7 +51,7 @@ class _SettingsState extends State<Settings>{
                     height: 100,
                     width: 100,
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Colors.blue,
                       borderRadius: BorderRadius.circular(15.0)
                     ),
                     child: TextButton(onPressed: (){
@@ -72,8 +61,8 @@ class _SettingsState extends State<Settings>{
                       padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
                       child: Column(
                         children: [
-                          Icon(Icons.person , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
-                          Text('User Management', textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
+                          Icon(Icons.person , size: 40, color: Colors.white,),
+                          Text('User Management', textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.bold , fontSize: 10 , color:Colors.white ),)
                         ],
                       ),
                     )),
@@ -82,7 +71,7 @@ class _SettingsState extends State<Settings>{
                     height: 100,
                     width: 100,
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Colors.blue,
                       borderRadius: BorderRadius.circular(15.0)
                     ),
                     child: TextButton(onPressed: (){
@@ -92,8 +81,8 @@ class _SettingsState extends State<Settings>{
                       padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
                       child: Column(
                         children: [
-                          Icon(Icons.table_chart , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
-                          Text('Fiscal Tables',textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
+                          Icon(Icons.table_chart , size: 40, color: Colors.white),
+                          Text('Fiscal Tables',textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10 , color:Colors.white),)
                         ],
                       ),
                     )),
@@ -102,7 +91,7 @@ class _SettingsState extends State<Settings>{
                     height: 100,
                     width: 100,
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Colors.blue,
                       borderRadius: BorderRadius.circular(15.0)
                     ),
                     child: TextButton(onPressed: (){
@@ -113,8 +102,8 @@ class _SettingsState extends State<Settings>{
                       padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
                       child: Column(
                         children: [
-                          Icon(Icons.settings , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
-                          Text('General Settings' ,textAlign: TextAlign.center,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
+                          Icon(Icons.settings , size: 40, color: Colors.white),
+                          Text('General Settings' ,textAlign: TextAlign.center,style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10 , color:Colors.white),)
                         ],
                       ),
                     )),
@@ -129,7 +118,7 @@ class _SettingsState extends State<Settings>{
                     height: 100,
                     width: 100,
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Colors.blue,
                       borderRadius: BorderRadius.circular(15.0)
                     ),
                     child: TextButton(onPressed: (){
@@ -139,8 +128,8 @@ class _SettingsState extends State<Settings>{
                       padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
                       child: Column(
                         children: [
-                          Icon(Icons.monetization_on_outlined , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
-                          Text('Payment Methods' ,textAlign: TextAlign.center,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
+                          Icon(Icons.monetization_on_outlined , size: 40, color: Colors.white),
+                          Text('Payment Methods' ,textAlign: TextAlign.center,style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10 , color:Colors.white ),)
                         ],
                       ),
                     )),
@@ -149,7 +138,7 @@ class _SettingsState extends State<Settings>{
                     height: 100,
                     width: 100,
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Colors.blue,
                       borderRadius: BorderRadius.circular(15.0)
                     ),
                     child: TextButton(onPressed: (){
@@ -159,8 +148,8 @@ class _SettingsState extends State<Settings>{
                       padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
                       child: Column(
                         children: [
-                          Icon(Icons.card_membership_sharp , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
-                          Text('Company Details' ,textAlign: TextAlign.center,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
+                          Icon(Icons.card_membership_sharp , size: 40, color: Colors.white),
+                          Text('Company Details' ,textAlign: TextAlign.center,style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10 , color:Colors.white),)
                         ],
                       ),
                     )),
@@ -169,7 +158,7 @@ class _SettingsState extends State<Settings>{
                     height: 100,
                     width: 100,
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Colors.blue,
                       borderRadius: BorderRadius.circular(15.0)
                     ),
                     child: TextButton(onPressed: (){},
@@ -177,8 +166,8 @@ class _SettingsState extends State<Settings>{
                       padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
                       child: Column(
                         children: [
-                          Icon(Icons.print_rounded , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
-                          Text('Printer Settings' ,textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
+                          Icon(Icons.print_rounded , size: 40, color: Colors.white),
+                          Text('Printer Settings' ,textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10 , color:Colors.white),)
                         ],
                       ),
                     )),
@@ -193,7 +182,7 @@ class _SettingsState extends State<Settings>{
                     height: 100,
                     width: 100,
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Colors.blue,
                       borderRadius: BorderRadius.circular(15.0)
                     ),
                     child: TextButton(onPressed: (){},
@@ -201,8 +190,8 @@ class _SettingsState extends State<Settings>{
                       padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
                       child: Column(
                         children: [
-                          Icon(Icons.check , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
-                          Text('Account Terms',textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
+                          Icon(Icons.check , size: 40, color: Colors.white),
+                          Text('Account Terms',textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10 , color:Colors.white),)
                         ],
                       ),
                     )),
@@ -211,7 +200,7 @@ class _SettingsState extends State<Settings>{
                     height: 100,
                     width: 100,
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Colors.blue,
                       borderRadius: BorderRadius.circular(15.0)
                     ),
                     child: TextButton(onPressed: (){},
@@ -219,8 +208,8 @@ class _SettingsState extends State<Settings>{
                       padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
                       child: Column(
                         children: [
-                          Icon(Icons.rotate_left , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
-                          Text('Shifts',textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
+                          Icon(Icons.rotate_left , size: 40, color: Colors.white),
+                          Text('Shifts',textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10 , color:Colors.white),)
                         ],
                       ),
                     )),
@@ -229,7 +218,7 @@ class _SettingsState extends State<Settings>{
                     height: 100,
                     width: 100,
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Colors.blue,
                       borderRadius: BorderRadius.circular(15.0)
                     ),
                     child: TextButton(onPressed: (){},
@@ -237,8 +226,8 @@ class _SettingsState extends State<Settings>{
                       padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
                       child: Column(
                         children: [
-                          Icon(Icons.storage , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
-                          Text('Backup',textAlign: TextAlign.center,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
+                          Icon(Icons.storage , size: 40, color: Colors.white),
+                          Text('Backup',textAlign: TextAlign.center,style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10 , color:Colors.white),)
                         ],
                       ),
                     )),
@@ -253,7 +242,7 @@ class _SettingsState extends State<Settings>{
                     height: 100,
                     width: 100,
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Colors.blue,
                       borderRadius: BorderRadius.circular(15.0)
                     ),
                     child: TextButton(onPressed: (){},
@@ -261,8 +250,8 @@ class _SettingsState extends State<Settings>{
                       padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
                       child: Column(
                         children: [
-                          Icon(Icons.badge_outlined , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
-                          Text('License',textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
+                          Icon(Icons.badge_outlined , size: 40, color: Colors.white),
+                          Text('License',textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10 , color:Colors.white),)
                         ],
                       ),
                     )),
@@ -271,7 +260,7 @@ class _SettingsState extends State<Settings>{
                     height: 100,
                     width: 100,
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Colors.blue,
                       borderRadius: BorderRadius.circular(15.0)
                     ),
                     child: TextButton(onPressed: (){
@@ -282,8 +271,8 @@ class _SettingsState extends State<Settings>{
                       padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
                       child: Column(
                         children: [
-                          Icon(Icons.email , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
-                          Text('Email',textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
+                          Icon(Icons.email , size: 40, color: Colors.white),
+                          Text('Email',textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10 , color:Colors.white),)
                         ],
                       ),
                     )),
@@ -292,7 +281,7 @@ class _SettingsState extends State<Settings>{
                     height: 100,
                     width: 100,
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: Colors.blue,
                       borderRadius: BorderRadius.circular(15.0)
                     ),
                     child: TextButton(onPressed: (){},
@@ -300,14 +289,31 @@ class _SettingsState extends State<Settings>{
                       padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
                       child: Column(
                         children: [
-                          Icon(Icons.question_mark_outlined , size: 40, color: Color.fromARGB(255, 14, 19, 29),),
-                          Text('About Us' ,  textAlign: TextAlign.center,style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 10 , color:Color.fromARGB(255, 14, 19, 29) ),)
+                          Icon(Icons.question_mark_outlined , size: 40, color: Colors.white),
+                          Text('About Us' ,  textAlign: TextAlign.center,style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10 , color:Colors.white),)
                         ],
                       ),
                     )),
                   ),
                 ],
-              )
+              ),
+              const SizedBox(height: 15,),
+                Padding(
+                  padding: const EdgeInsets.all(10.0),
+                  child: Container(
+                    height: 200,
+                    width: 390,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Colors.grey, width: 5),
+                      // image: const DecorationImage(
+                      //   image: Lottie.asset("assets/dash.json"),
+                      //   fit: BoxFit.cover,
+                      // ),
+                    ),
+                    child: Lottie.asset('assets/settings.json'),
+                  ),
+                ),
             ],
           )
       ),
@@ -357,7 +363,7 @@ class _SettingsState extends State<Settings>{
                     MaterialPageRoute(builder: (context) => const Pos()),
                   );
                 },
-                backgroundColor: const Color.fromARGB(255, 14, 19, 29),
+                backgroundColor: Colors.blue,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                 child: const Icon(
                   Icons.calculate,

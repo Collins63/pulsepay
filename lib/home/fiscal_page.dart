@@ -428,13 +428,19 @@ Future<int> getlatestFiscalDay() async {
       backgroundColor: Colors.white,
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.blue,
         leading: IconButton(
           onPressed: (){Get.back();},
-          icon: const Icon(Icons.arrow_circle_left_outlined , color: Colors.black ,size: 30,),
+          icon: const Icon(Icons.arrow_circle_left_outlined , color: Colors.white ,size: 30,),
         ),
         centerTitle: true,
-        title: const Text("Fiscal Configuration" , style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 16),),
+        title: const Text("Fiscal Configuration" , style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 16 , color: Colors.white),),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.only(
+            bottomLeft: Radius.circular(20),
+            bottomRight: Radius.circular(20),
+          ),
+        ),
       ),
       body: SafeArea(
         bottom: false,
@@ -445,6 +451,7 @@ Future<int> getlatestFiscalDay() async {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const SizedBox(height: 30,),
                 Center(
                   child: Image.asset(
                     'assets/zimra.PNG',
@@ -456,7 +463,7 @@ Future<int> getlatestFiscalDay() async {
                   height:350,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(10),
-                    color: kDark,
+                    color: Colors.blue,
                   ),
                   child: Padding(
                     padding: const EdgeInsets.only(left: 10.0 ,top: 10.0),
@@ -488,11 +495,12 @@ Future<int> getlatestFiscalDay() async {
                   ),
                 ),
                 const SizedBox(height: 15,),
-                const Center(child: ReusableText(text: "Functions", style: TextStyle(fontWeight: FontWeight.w500 ))),
+                const Center(child: ReusableText(text: "Functions", style: TextStyle(fontWeight: FontWeight.bold , fontSize: 20),)),
+                const SizedBox(height: 10),
                 CustomOutlineBtn(
                   text: "Manual Open Day",
-                  color: kDark,
-                  color2: kDark,
+                  color: Colors.blue,
+                  color2: Colors.blue,
                   onTap: (){
                     openDayManual();
                   },
@@ -501,8 +509,8 @@ Future<int> getlatestFiscalDay() async {
                 const SizedBox(height: 10,),
                 CustomOutlineBtn(
                   text: "Device Configuration",
-                  color: kDark,
-                  color2: kDark,
+                  color: Colors.blue,
+                  color2: Colors.blue,
                   onTap: () {
                     getConfig();
                   },
@@ -511,8 +519,8 @@ Future<int> getlatestFiscalDay() async {
                 const SizedBox(height: 10,),
                 CustomOutlineBtn(
                   text: "Device Status",
-                  color: kDark,
-                  color2: kDark,
+                  color: Colors.blue,
+                  color2: Colors.blue,
                   onTap: (){
                     getStatus();
                   },
@@ -521,8 +529,8 @@ Future<int> getlatestFiscalDay() async {
                 const SizedBox(height: 10,),
                 CustomOutlineBtn(
                   text: "Ping Tests",
-                  color: kDark,
-                  color2: kDark,
+                  color: Colors.blue,
+                  color2: Colors.blue,
                   onTap: (){
                     ping();
                   },
@@ -531,8 +539,8 @@ Future<int> getlatestFiscalDay() async {
                 const SizedBox(height: 10,),
                 CustomOutlineBtn(
                   text: "Manual Close Day",
-                  color:kDark,
-                  color2: kDark,
+                  color: Colors.blue,
+                  color2: Colors.blue,
                   onTap: (){
           
                   },
@@ -541,8 +549,8 @@ Future<int> getlatestFiscalDay() async {
                 const SizedBox(height: 10,),
                 CustomOutlineBtn(
                   text: "Submit Missing Receipts",
-                  color: kDark,
-                  color2: kDark,
+                  color: Colors.blue,
+                  color2: Colors.blue,
                   onTap: (){
                     submitUnsubmittedReceipts(dbHelper);
                   },
@@ -551,8 +559,8 @@ Future<int> getlatestFiscalDay() async {
                 const SizedBox(height: 10,),
                 CustomOutlineBtn(
                   text: "Close Day",
-                  color: kDark,
-                  color2: kDark,
+                  color: Colors.blue,
+                  color2: Colors.blue,
                   onTap: () async{
                     String filePath = "/storage/emulated/0/Pulse/Configurations/mindTest_T_certificate.p12";
                     String password = "mindTest123";

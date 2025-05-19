@@ -137,35 +137,47 @@ class MainActivity : FlutterActivity() {
                         result.error("INVALID_ARGS", "File path, password, or data is null", null)
                     }
                 }
+
+                "verifySignature" -> {
+                    val filePath: String? = call.argument("filePath")
+                    val password: String? = call.argument("password")
+                    val data: String? = call.argument("data")
+                    val signature: String? = call.argument("signature")
+                    if (filePath != null && password != null && data != null && signature != null) {
+                        val isValid: Boolean = verifySignature(filePath, password, data, signature)
+                        result.success(isValid)
+                    } else {
+                        result.error("INVALID_ARGS", "File path, password, data, or signature is null", null)
+                    }
+                }
                 else -> result.notImplemented()
             }
         }
     }
 
-    // private fun getFirst16CharsOfSignature(signature: String): String {
-    //     if (signature.isBlank()) {
-    //         throw IllegalArgumentException("Input must be a non-empty string.")
-    //     }
-    
-    //     try {
-    //         // Decode Base64 string to bytes
-    //         val byteArray = Base64.decode(signature, Base64.DEFAULT)
-    
-    //         // Convert bytes to a hexadecimal string
-    //         val hexStr = byteArray.joinToString("") { "%02x".format(it) }
-    
-    //         // Compute MD5 hash of the hexadecimal string
-    //         val md = MessageDigest.getInstance("MD5")
-    //         //val md5Hash = md.digest(hexStr.toByteArray()).joinToString("") { "%02x".format(it) }
-    //         val md5Hash = md.digest(hexStr);
-    
-    //         // Return the first 16 characters of the MD5 hash
-    //         return md5Hash.take(16)
-    
-    //     } catch (e: IllegalArgumentException) {
-    //         throw IllegalArgumentException("Invalid Base64 string.", e)
-    //     }
-    // }
+    private fun verifySignature(filePath: String, password: String, data: String, base64Signature: String): Boolean {
+        return try {
+            val fis = FileInputStream(filePath)
+            val keystore = KeyStore.getInstance("PKCS12", "BC")
+            keystore.load(fis, password.toCharArray())
+
+            val alias = keystore.aliases().nextElement()
+            val cert = keystore.getCertificate(alias)
+            val publicKey = cert.publicKey
+
+            val signedBytes = Base64.decode(base64Signature, Base64.NO_WRAP)
+
+            val signature = Signature.getInstance("SHA256withRSA")
+            signature.initVerify(publicKey)
+            signature.update(data.toByteArray(Charsets.UTF_8))
+
+            signature.verify(signedBytes)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            false
+        }
+    }
+
     private fun getFirst16CharsOfSignature(signature: String): String {
         if (signature.isBlank()) {
             throw IllegalArgumentException("Input must be a non-empty string.")

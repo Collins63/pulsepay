@@ -1,5 +1,6 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:lottie/lottie.dart';
 import 'package:pulsepay/SQLite/database_helper.dart';
 import 'package:pulsepay/common/constants.dart';
 
@@ -63,9 +64,9 @@ class _FlaggedReceiptsState extends State<FlaggedReceipts> {
         preferredSize: Size.fromHeight(50)
         ,child: AppBar(
           centerTitle: true,
-          title: const Text("Flagged Receipts" , style: TextStyle(fontSize: 14, color: Colors.white, fontWeight:  FontWeight.normal),),
+          title: const Text("Flagged Receipts" , style: TextStyle(fontSize: 20, color: Colors.white, fontWeight:  FontWeight.bold),),
           iconTheme: const IconThemeData(color: Colors.white),
-          backgroundColor: const Color.fromARGB(255, 14, 19, 29),
+          backgroundColor: Colors.blue,
           shape: const RoundedRectangleBorder(
                 borderRadius: BorderRadius.only(
                   bottomLeft: Radius.circular(25),
@@ -87,7 +88,7 @@ class _FlaggedReceiptsState extends State<FlaggedReceipts> {
                 width: 390,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(10),
-                  color: kDark
+                  color: Colors.grey.shade400
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -145,16 +146,21 @@ class _FlaggedReceiptsState extends State<FlaggedReceipts> {
               ),
               const SizedBox(height: 20,),
               flaggedReceiptsCount==0 ?
-                Container(
-                  height: 100,
-                  width: 390,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(10),
-                    color: Colors.green,
-                  ),
-                  child: const Center(
-                    child: Text("No flagged receipts found !!" , style: TextStyle(color: Colors.white , fontSize: 20 , fontWeight: FontWeight.bold),),
-                  ),
+                Column(
+                  children: [
+                    Container(
+                      height: 100,
+                      width: 390,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        color: Colors.green,
+                      ),
+                      child: const Center(
+                        child: Text("No flagged receipts found !!" , style: TextStyle(color: Colors.white , fontSize: 20 , fontWeight: FontWeight.bold),),
+                      ),
+                    ),
+                    Lottie.asset('assets/correct.json', )
+                  ],
                 )
               : Container(
                 height: 100,

@@ -323,6 +323,8 @@ class _PosState extends State<Pos>{
       receiptDeviceSignature_signature = signedDataMap["receiptDeviceSignature_signature"] ?? "";
       first16Chars = signedDataMap["receiptDeviceSignature_signature_md5_first16"] ?? "";
       
+      verifySignatureAndShowResult(context, filePath, password, data, receiptDeviceSignature_signature.toString());
+      
     } catch (e) {
       Get.snackbar("Signing Error", "$e", snackPosition: SnackPosition.TOP);
       return "{}";

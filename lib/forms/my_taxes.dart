@@ -25,12 +25,14 @@ class _MyTaxesState extends State<MyTaxes> {
   late Future<Map<String, double>> taxIdTotals;
   List<Map<String, dynamic>> topProducts = [];
   Map<String, dynamic> monthlyTaxDetails = {};
+  List<Map<String, dynamic>> receiptsPending = [];
   double taxTotal1 = 0.0;
   double taxTotal2 = 0.0;
   double taxTotal3 = 0.0;
   double tax1Percent = 0.0;
   double tax2Percent = 0.0;
   double tax3Percent = 0.0;
+  double monthTotalTaxAmount = 0.0;
 
 
   @override
@@ -48,8 +50,15 @@ class _MyTaxesState extends State<MyTaxes> {
    dbHepler.getCurrentMonthTaxDetails().then((value) {
      setState(() {
        monthlyTaxDetails = value;
+       double getMonthTaxTotal = monthlyTaxDetails['totalTaxAmount'] ?? 0.0;
+        monthTotalTaxAmount = double.parse(getMonthTaxTotal.toStringAsFixed(2));
      });
    });
+    dbHepler.getReceiptsPending().then((value) {
+      setState(() {
+        receiptsPending = value;
+      });
+    });
   }
 
   void loadTaxTotals() async{
@@ -192,7 +201,7 @@ class _MyTaxesState extends State<MyTaxes> {
                   children: [
                     const Text("Total Tax Amount" , style: TextStyle(fontSize: 18, color: Colors.white,fontWeight:  FontWeight.w500),),
                     //const SizedBox(height: 10,),
-                    Text("\$${monthlyTaxDetails['totalTaxAmount']}", style: TextStyle(fontSize: 20  , fontWeight: FontWeight.bold , color: Colors.white),)
+                    Text("\$${(monthlyTaxDetails['totalTaxAmount'] as double).toStringAsFixed(2)}", style: TextStyle(fontSize: 20  , fontWeight: FontWeight.bold , color: Colors.white),)
                   ],
                 ),
                 decoration: BoxDecoration(
@@ -281,6 +290,31 @@ class _MyTaxesState extends State<MyTaxes> {
                   ),
                 ),
               ),
+
+              receiptsPending.isEmpty?
+              Container(
+                width: 390,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: Colors.green,
+                  borderRadius: BorderRadius.circular(10)
+                ),
+                child: const Center(
+                  child: Text("100% Tax Compliance!!😁" , style: TextStyle(fontSize: 18, color: Colors.white,fontWeight:  FontWeight.w500),),
+                ),
+              ) :
+              Container(
+                width: 300,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: Colors.red,
+                  borderRadius: BorderRadius.circular(10)
+                ),
+                child: const Center(
+                  child: Text("Pending Receipts" , style: TextStyle(fontSize: 18, color: Colors.white,fontWeight:  FontWeight.w500),),
+                ),
+              ),
+
               const SizedBox(height: 20,),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -519,15 +553,15 @@ class _MyTaxesState extends State<MyTaxes> {
                   ),
               ),
               const SizedBox(height: 20,),
-              CustomOutlineBtn(
-                  height: 50,
-                  text: "View Quarterly Tax",
-                  color: Colors.blue ,
-                  color2: Colors.blue,
-                  onTap: (){
-                    Get.to(()=> SalesReportPage());
-                  },
-              ),
+              // CustomOutlineBtn(
+              //     height: 50,
+              //     text: "View Quarterly Tax",
+              //     color: Colors.blue ,
+              //     color2: Colors.blue,
+              //     onTap: (){
+              //       Get.to(()=> SalesReportPage());
+              //     },
+              // ),
               const SizedBox(height: 10,),
               CustomOutlineBtn(
                   height: 50,
