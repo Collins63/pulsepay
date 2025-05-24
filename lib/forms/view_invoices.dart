@@ -692,9 +692,16 @@ void cancelSelectedInvoice() async {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.blue,
         automaticallyImplyLeading: false,
         elevation: 0,
+        toolbarHeight: 80,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.only(
+            bottomLeft: Radius.circular(25),
+            bottomRight: Radius.circular(25),
+          ),
+        ),
         title:  ClipRRect(
           borderRadius: BorderRadius.circular(25.0),
           child: Row(
@@ -709,6 +716,7 @@ void cancelSelectedInvoice() async {
                     child: Icon(
                       CupertinoIcons.arrow_left_circle,
                       size: 30,
+                      color: Colors.white,
                     ),
                   ),
               ),
@@ -722,7 +730,7 @@ void cancelSelectedInvoice() async {
                 child: const Icon(
                   CupertinoIcons.search_circle,
                   size: 30,
-                  color: Colors.black,
+                  color: Colors.white,
                 ),
               )
             ],
@@ -745,6 +753,12 @@ void cancelSelectedInvoice() async {
                   scrollDirection: Axis.horizontal,
                   child: SingleChildScrollView(
                     child: DataTable(
+                      headingTextStyle: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                      headingRowColor: MaterialStateProperty.all(Colors.blue),
                       columns: const [
                         DataColumn(label: Text('Select')),
                         DataColumn(label: Text('Invoice ID')),
@@ -781,8 +795,8 @@ void cancelSelectedInvoice() async {
                     width: 90,
                     height: 50,
                     text: "View",
-                    color:const Color.fromARGB(255, 14, 19, 29),
-                    color2: const Color.fromARGB(255, 14, 19, 29),
+                    color:Colors.blue,
+                    color2: Colors.blue,
                     onTap: (){
                       final invoiceId = selectedInvoices.first;
                       fetchSalesForInvoice(invoiceId);
@@ -792,8 +806,8 @@ void cancelSelectedInvoice() async {
                     width: 90,
                     height: 50,
                     text: "Cancel",
-                    color:const Color.fromARGB(255, 14, 19, 29),
-                    color2: const Color.fromARGB(255, 14, 19, 29) ,
+                    color:Colors.blue,
+                    color2: Colors.blue ,
                     onTap: (){
                       showPasswordPrompt();
                     },
@@ -802,8 +816,8 @@ void cancelSelectedInvoice() async {
                     width: 90,
                     height: 50,
                     text: "Edit",
-                    color:const Color.fromARGB(255, 14, 19, 29),
-                    color2: const Color.fromARGB(255, 14, 19, 29),
+                    color:Colors.blue,
+                    color2: Colors.blue,
                     onTap: (){
                     },
                   ),

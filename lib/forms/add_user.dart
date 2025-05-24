@@ -79,15 +79,18 @@ class _AddUserState extends State<AddUser>{
   Widget build(BuildContext context){
     return Scaffold(
       appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(50),
-        child: CustomAppBar(
-          text: "User Management",
-          child: GestureDetector(
-            onTap: (){
-              Get.to(()=> const UsersPage());
-            },
-            child: const Icon(CupertinoIcons.arrow_left),
-          )
+        preferredSize: Size.fromHeight(50)
+        ,child: AppBar(
+          centerTitle: true,
+          title: const Text("Add User" , style: TextStyle(fontSize: 20, color: Colors.white, fontWeight:  FontWeight.bold),),
+          iconTheme: const IconThemeData(color: Colors.white),
+          backgroundColor: Colors.blue,
+          shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(25),
+                  bottomRight: Radius.circular(25)
+                )
+              ),
         )
       ),
       backgroundColor: const Color.fromARGB(255,255,255,255),
@@ -101,11 +104,13 @@ class _AddUserState extends State<AddUser>{
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  const SizedBox(height: 30,),
                   Text(
                     "Enter Details Below To Register Account",
                     style: TextStyle(
-                      color: Colors.grey.shade800,
+                      color: Colors.black,
                       fontSize: 16,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 24,),

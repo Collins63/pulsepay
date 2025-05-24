@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pulsepay/SQLite/database_helper.dart';
 import 'package:pulsepay/common/custom_button.dart';
 
@@ -42,18 +43,37 @@ class _viewStockBalanceState extends State<ViewStockBalances> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Products'),
+        automaticallyImplyLeading: false,
+        backgroundColor: Colors.blue,
+        leading: IconButton(
+          onPressed: (){Get.back();},
+          icon: const Icon(Icons.arrow_circle_left_outlined , color: Colors.white ,size: 30,),
+        ),
         centerTitle: true,
+        title: const Text("Stock Balances" , style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 16 , color: Colors.white),),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.only(
+            bottomLeft: Radius.circular(20),
+            bottomRight: Radius.circular(20),
+          ),
+        ),
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              const SizedBox(height: 20,),
               SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: SingleChildScrollView(
                     child: DataTable(
+                      headingTextStyle: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                      headingRowColor: MaterialStateProperty.all(Colors.blue),
                       columns: const [
                         DataColumn(label: Text("Select")),
                         DataColumn(label: Text('ProductName')),

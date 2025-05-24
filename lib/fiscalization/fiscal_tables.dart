@@ -14,17 +14,21 @@ class FiscalTables extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white ,
-      appBar: PreferredSize(preferredSize: Size.fromHeight(50),
-      child: CustomAppBar(
-        text: 'Fiscal Tables',
-        child: GestureDetector(
-            onTap: (){
-              Get.back();
-            },
-            child: const Icon(CupertinoIcons.arrow_left),
-          )
-      )
-    ),
+      appBar: PreferredSize(
+        preferredSize: Size.fromHeight(50)
+        ,child: AppBar(
+          centerTitle: true,
+          title: const Text("Fiscal Tables" , style: TextStyle(fontSize: 20, color: Colors.white, fontWeight:  FontWeight.bold),),
+          iconTheme: const IconThemeData(color: Colors.white),
+          backgroundColor: Colors.blue,
+          shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(25),
+                  bottomRight: Radius.circular(25)
+                )
+              ),
+        )
+      ),
     body: SafeArea(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -34,8 +38,8 @@ class FiscalTables extends StatelessWidget {
           children: [
             const SizedBox(height: 20), 
             CustomOutlineBtn(text: "Open Day", 
-              color: kDark,
-              color2: kDark,
+              color: Colors.blue,
+              color2: Colors.blue,
               height: 50,
               onTap: (){
                 Get.to(()=> const OpenDayTable());
@@ -43,8 +47,8 @@ class FiscalTables extends StatelessWidget {
             ),
             const SizedBox(height: 20), 
             CustomOutlineBtn(text: "Daily Reports", 
-              color: kDark,
-              color2: kDark,
+              color: Colors.blue,
+              color2: Colors.blue,
               height: 50,
               onTap: (){
                 
@@ -52,8 +56,8 @@ class FiscalTables extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             CustomOutlineBtn(text: "Submitted Receipts", 
-              color: kDark,
-              color2: kDark,
+              color: Colors.blue,
+              color2: Colors.blue,
               height: 50,
               onTap: (){
                 Get.to(()=> const SubmittedReceiptsTable());  

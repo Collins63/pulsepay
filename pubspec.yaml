@@ -89,6 +89,7 @@ flutter:
     - assets\dash.json
     - assets\settings.json
     - assets\correct.json
+    - assets\users2.json
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
 

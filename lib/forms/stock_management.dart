@@ -17,13 +17,19 @@ class StockManagement extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text("Stock Management" , style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 18),),
-        centerTitle: true,
+        automaticallyImplyLeading: false,
+        backgroundColor: Colors.blue,
         leading: IconButton(
-          onPressed: (){
-            Get.back();
-          },
-          icon: const Icon(Icons.arrow_back)
+          onPressed: (){Get.back();},
+          icon: const Icon(Icons.arrow_circle_left_outlined , color: Colors.white ,size: 30,),
+        ),
+        centerTitle: true,
+        title: const Text("Stock Management" , style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 16 , color: Colors.white),),
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.only(
+            bottomLeft: Radius.circular(20),
+            bottomRight: Radius.circular(20),
+          ),
         ),
       ),
       body: SafeArea(
@@ -34,11 +40,12 @@ class StockManagement extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const SizedBox(height: 20,),
                 CustomOutlineBtn(
                   height: 50,
                   text: "View Stock Balances",
-                  color: kDark,
-                  color2: kDark,
+                  color: Colors.blue,
+                  color2: Colors.blue,
                   onTap: (){
                     Get.to(()=>const ViewStockBalances());
                   },
@@ -47,8 +54,8 @@ class StockManagement extends StatelessWidget {
                 CustomOutlineBtn(
                   height: 50,
                   text: "Edit Product Details",
-                  color: kDark,
-                  color2: kDark,
+                  color: Colors.blue,
+                  color2: Colors.blue,
                   onTap: (){
                     Get.to(()=> const ViewProducts());
                   },
@@ -57,24 +64,24 @@ class StockManagement extends StatelessWidget {
                 CustomOutlineBtn(
                   height: 50,
                   text: "Add/Change BarCode",
-                  color: kDark,
-                  color2: kDark,
+                  color: Colors.blue,
+                  color2: Colors.blue,
                   onTap: (){},
                 ),
                 const SizedBox(height: 15,),
                 CustomOutlineBtn(
                   height: 50,
                   text: "Add/Change HSCode",
-                  color: kDark,
-                  color2: kDark,
+                  color: Colors.blue,
+                  color2: Colors.blue,
                   onTap: (){},
                 ),
                 const SizedBox(height: 15,),
                 CustomOutlineBtn(
                   height: 50,
                   text: "New Stock Purchase",
-                  color: kDark,
-                  color2: kDark,
+                  color: Colors.blue,
+                  color2: Colors.blue,
                   onTap: (){
                     Get.to(()=> const NewStockPurchase());
                   },
@@ -83,8 +90,8 @@ class StockManagement extends StatelessWidget {
                 CustomOutlineBtn(
                   height: 50,
                   text: "Edit Stock Purchaes",
-                  color: kDark,
-                  color2: kDark,
+                  color: Colors.blue,
+                  color2:Colors.blue,
                   onTap: (){
                     Get.to(
                       ()=> const EditStockPurchases()
@@ -95,8 +102,8 @@ class StockManagement extends StatelessWidget {
                 CustomOutlineBtn(
                   height: 50,
                   text: "Stock Take",
-                  color: kDark,
-                  color2: kDark,
+                  color: Colors.blue,
+                  color2: Colors.blue,
                   onTap: (){
                     Get.to(
                       ()=> const StockTake()

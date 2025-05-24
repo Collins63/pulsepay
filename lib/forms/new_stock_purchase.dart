@@ -96,7 +96,7 @@ class _NewStockPurchaseState extends State<NewStockPurchase> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Colors.blue,
         automaticallyImplyLeading: false,
         elevation: 0,
         title:  ClipRRect(
@@ -113,6 +113,7 @@ class _NewStockPurchaseState extends State<NewStockPurchase> {
                     child: Icon(
                       CupertinoIcons.arrow_left_circle,
                       size: 30,
+                      color: Colors.white,
                     ),
                   ),
               ),
@@ -125,10 +126,17 @@ class _NewStockPurchaseState extends State<NewStockPurchase> {
                 child: const Icon(
                   CupertinoIcons.search_circle,
                   size: 30,
-                  color: Colors.black,
+                  color: Colors.white,
                 ),
               )
             ],
+          ),
+        ),
+        toolbarHeight: 80,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.only(
+            bottomLeft: Radius.circular(25),
+            bottomRight: Radius.circular(25),
           ),
         ),
       ),
@@ -140,12 +148,14 @@ class _NewStockPurchaseState extends State<NewStockPurchase> {
             child: Form(
               child: Column(
                 children: [
+                  const SizedBox(height: 15,),
+                  const Text("Products" , style: TextStyle(fontWeight: FontWeight.w500),),
                   Container(
-                    height: 100,
+                    height: 150,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(10.0),
-                      border: Border.all(width: 1 , color: const Color.fromARGB(255, 14, 19, 29)),
-                      color:const Color.fromARGB(255, 14, 19, 29),
+                      border: Border.all(width: 1 , color: Colors.grey.shade400),
+                      color: Colors.grey.shade400,
                     ),
                     child: ListView.builder(
                       itemCount: searchResults.length,
@@ -184,7 +194,7 @@ class _NewStockPurchaseState extends State<NewStockPurchase> {
                     height: 100,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(10.0),
-                      color: kDark,
+                      color: Colors.blue,
                     ),
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 10.0),

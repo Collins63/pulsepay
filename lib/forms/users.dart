@@ -1,11 +1,13 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:lottie/lottie.dart';
 import 'package:pulsepay/common/app_bar.dart';
 import 'package:pulsepay/common/custom_button.dart';
 import 'package:pulsepay/forms/add_user.dart';
 import 'package:pulsepay/forms/manage_users.dart';
 import 'package:pulsepay/home/home_page.dart';
+import 'package:pulsepay/home/settings.dart';
 
 class UsersPage extends StatelessWidget{
   const UsersPage({super.key});
@@ -13,17 +15,20 @@ class UsersPage extends StatelessWidget{
   @override
   Widget build(BuildContext context){
     return Scaffold(
+      backgroundColor: Colors.white ,
       appBar: PreferredSize(
-        preferredSize: const Size.fromHeight(50),
-        child: CustomAppBar(
-          text: "User Management",
-          child: GestureDetector(
-            onTap: (){
-              Navigator.push(context,
-               MaterialPageRoute(builder: (context) => const HomePage()));
-            },
-            child: const Icon(CupertinoIcons.arrow_left),
-          )
+        preferredSize: Size.fromHeight(50)
+        ,child: AppBar(
+          centerTitle: true,
+          title: const Text("User Management" , style: TextStyle(fontSize: 20, color: Colors.white, fontWeight:  FontWeight.bold),),
+          iconTheme: const IconThemeData(color: Colors.white),
+          backgroundColor: Colors.blue,
+          shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(25),
+                  bottomRight: Radius.circular(25)
+                )
+              ),
         )
       ),
       body:  SafeArea(
@@ -33,11 +38,12 @@ class UsersPage extends StatelessWidget{
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Lottie.asset('assets/users2.json'),
               const SizedBox(height: 20,),
               CustomOutlineBtn(
                 text:"Manage Permissions",
-                color: const Color.fromARGB(255, 14, 19, 29),
-                color2:const Color.fromARGB(255, 14, 19, 29) ,
+                color: Colors.blue,
+                color2:Colors.blue ,
                 onTap: (){
           
                 },
@@ -46,8 +52,8 @@ class UsersPage extends StatelessWidget{
               const SizedBox(height: 20,),
               CustomOutlineBtn(
                 text:"Manage Users",
-                color: const Color.fromARGB(255, 14, 19, 29),
-                color2:const Color.fromARGB(255, 14, 19, 29) ,
+                color: Colors.blue,
+                color2:Colors.blue ,
                 onTap: (){
                   Get.to(()=> const ManageUsers());
                 },
@@ -56,8 +62,8 @@ class UsersPage extends StatelessWidget{
               const SizedBox(height: 20,),
               CustomOutlineBtn(
                 text:"Add User",
-                color: const Color.fromARGB(255, 14, 19, 29),
-                color2:const Color.fromARGB(255, 14, 19, 29) ,
+                color: Colors.blue,
+                color2:Colors.blue ,
                 onTap: (){
                   Get.to(()=> const AddUser());
                 },
@@ -66,8 +72,8 @@ class UsersPage extends StatelessWidget{
               const SizedBox(height: 20,),
               CustomOutlineBtn(
                 text:"Assign Roles",
-                color: const Color.fromARGB(255, 14, 19, 29),
-                color2:const Color.fromARGB(255, 14, 19, 29) ,
+                color: Colors.blue,
+                color2:Colors.blue,
                 onTap: (){
           
                 },
@@ -106,7 +112,7 @@ class UsersPage extends StatelessWidget{
                 children: [
                   Icon(Icons.list_alt, color: Colors.grey),
                   Text(
-                    "Products",
+                    "Fiscalization",
                     style: TextStyle(fontSize: 10),
                   )
                 ],
@@ -119,7 +125,7 @@ class UsersPage extends StatelessWidget{
                    // MaterialPageRoute(builder: (context) => const Apply()),
                   //);
                 },
-                backgroundColor: const Color.fromARGB(255, 14, 19, 29),
+                backgroundColor: Colors.blue,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                 child: const Icon(
                   Icons.calculate,
@@ -149,6 +155,7 @@ class UsersPage extends StatelessWidget{
                  // context,
                  // MaterialPageRoute(builder: (context) => Profile()),
                // );
+               Get.to(()=> const Settings());
               },
               icon: const Column(
                 children: [
