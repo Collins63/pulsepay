@@ -38,12 +38,12 @@ class _HomePageState extends State<HomePage>{
   void initState() {
     super.initState();
     // Run immediately on open
-    syncReceiptAnomalies();
-    // Schedule every 2 hours thereafter
-    _timer = Timer.periodic(
-      Duration(hours: 2),
-      (_) => syncReceiptAnomalies(),
-    );
+    // syncReceiptAnomalies();
+    // // Schedule every 2 hours thereafter
+    // _timer = Timer.periodic(
+    //   Duration(hours: 2),
+    //   (_) => syncReceiptAnomalies(),
+    // );
   }
   @override
   void dispose() {

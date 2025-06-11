@@ -11,6 +11,8 @@ import 'package:pulsepay/home/home_page.dart';
 import 'package:pulsepay/pointOfSale/pos.dart';
 //import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
+import 'package:pulsepay/settings/backUp.dart';
+import 'package:pulsepay/settings/printer_settings.dart';
 
 class Settings extends StatefulWidget{
   const Settings({super.key});
@@ -40,281 +42,288 @@ class _SettingsState extends State<Settings>{
       ),
       body: SafeArea(
         bottom: false,
-          child:  Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 20,),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  Container(
-                    height: 100,
-                    width: 100,
-                    decoration: BoxDecoration(
-                      color: Colors.blue,
-                      borderRadius: BorderRadius.circular(15.0)
-                    ),
-                    child: TextButton(onPressed: (){
-                      Get.to(() => const UsersPage());
-                    },
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
-                      child: Column(
-                        children: [
-                          Icon(Icons.person , size: 40, color: Colors.white,),
-                          Text('User Management', textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.bold , fontSize: 10 , color:Colors.white ),)
-                        ],
+          child:  SingleChildScrollView(
+            scrollDirection: Axis.vertical,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 20,),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    Container(
+                      height: 100,
+                      width: 100,
+                      decoration: BoxDecoration(
+                        color: Colors.blue,
+                        borderRadius: BorderRadius.circular(15.0)
                       ),
-                    )),
-                  ),
-                  Container(
-                    height: 100,
-                    width: 100,
-                    decoration: BoxDecoration(
-                      color: Colors.blue,
-                      borderRadius: BorderRadius.circular(15.0)
+                      child: TextButton(onPressed: (){
+                        Get.to(() => const UsersPage());
+                      },
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
+                        child: Column(
+                          children: [
+                            Icon(Icons.person , size: 40, color: Colors.white,),
+                            Text('User Management', textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.bold , fontSize: 10 , color:Colors.white ),)
+                          ],
+                        ),
+                      )),
                     ),
-                    child: TextButton(onPressed: (){
-                      Get.to(()=> const FiscalTables());
-                    },
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
-                      child: Column(
-                        children: [
-                          Icon(Icons.table_chart , size: 40, color: Colors.white),
-                          Text('Fiscal Tables',textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10 , color:Colors.white),)
-                        ],
+                    Container(
+                      height: 100,
+                      width: 100,
+                      decoration: BoxDecoration(
+                        color: Colors.blue,
+                        borderRadius: BorderRadius.circular(15.0)
                       ),
-                    )),
-                  ),
-                  Container(
-                    height: 100,
-                    width: 100,
-                    decoration: BoxDecoration(
-                      color: Colors.blue,
-                      borderRadius: BorderRadius.circular(15.0)
+                      child: TextButton(onPressed: (){
+                        Get.to(()=> const FiscalTables());
+                      },
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
+                        child: Column(
+                          children: [
+                            Icon(Icons.table_chart , size: 40, color: Colors.white),
+                            Text('Fiscal Tables',textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10 , color:Colors.white),)
+                          ],
+                        ),
+                      )),
                     ),
-                    child: TextButton(onPressed: (){
-                      Navigator.push(context,
-                      MaterialPageRoute(builder: (context) => const AddProduct()  ));
-                    },
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
-                      child: Column(
-                        children: [
-                          Icon(Icons.settings , size: 40, color: Colors.white),
-                          Text('General Settings' ,textAlign: TextAlign.center,style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10 , color:Colors.white),)
-                        ],
+                    Container(
+                      height: 100,
+                      width: 100,
+                      decoration: BoxDecoration(
+                        color: Colors.blue,
+                        borderRadius: BorderRadius.circular(15.0)
                       ),
-                    )),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 15,),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  Container(
-                    height: 100,
-                    width: 100,
-                    decoration: BoxDecoration(
-                      color: Colors.blue,
-                      borderRadius: BorderRadius.circular(15.0)
+                      child: TextButton(onPressed: (){
+                        Navigator.push(context,
+                        MaterialPageRoute(builder: (context) => const AddProduct()  ));
+                      },
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
+                        child: Column(
+                          children: [
+                            Icon(Icons.settings , size: 40, color: Colors.white),
+                            Text('General Settings' ,textAlign: TextAlign.center,style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10 , color:Colors.white),)
+                          ],
+                        ),
+                      )),
                     ),
-                    child: TextButton(onPressed: (){
-                      Get.to(()=> const PaymentMethods());
-                    },
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
-                      child: Column(
-                        children: [
-                          Icon(Icons.monetization_on_outlined , size: 40, color: Colors.white),
-                          Text('Payment Methods' ,textAlign: TextAlign.center,style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10 , color:Colors.white ),)
-                        ],
-                      ),
-                    )),
-                  ),
-                  Container(
-                    height: 100,
-                    width: 100,
-                    decoration: BoxDecoration(
-                      color: Colors.blue,
-                      borderRadius: BorderRadius.circular(15.0)
-                    ),
-                    child: TextButton(onPressed: (){
-                      Get.to(()=> const Companydetails());
-                    },
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
-                      child: Column(
-                        children: [
-                          Icon(Icons.card_membership_sharp , size: 40, color: Colors.white),
-                          Text('Company Details' ,textAlign: TextAlign.center,style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10 , color:Colors.white),)
-                        ],
-                      ),
-                    )),
-                  ),
-                  Container(
-                    height: 100,
-                    width: 100,
-                    decoration: BoxDecoration(
-                      color: Colors.blue,
-                      borderRadius: BorderRadius.circular(15.0)
-                    ),
-                    child: TextButton(onPressed: (){},
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
-                      child: Column(
-                        children: [
-                          Icon(Icons.print_rounded , size: 40, color: Colors.white),
-                          Text('Printer Settings' ,textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10 , color:Colors.white),)
-                        ],
-                      ),
-                    )),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 15,),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  Container(
-                    height: 100,
-                    width: 100,
-                    decoration: BoxDecoration(
-                      color: Colors.blue,
-                      borderRadius: BorderRadius.circular(15.0)
-                    ),
-                    child: TextButton(onPressed: (){},
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
-                      child: Column(
-                        children: [
-                          Icon(Icons.check , size: 40, color: Colors.white),
-                          Text('Account Terms',textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10 , color:Colors.white),)
-                        ],
-                      ),
-                    )),
-                  ),
-                  Container(
-                    height: 100,
-                    width: 100,
-                    decoration: BoxDecoration(
-                      color: Colors.blue,
-                      borderRadius: BorderRadius.circular(15.0)
-                    ),
-                    child: TextButton(onPressed: (){},
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
-                      child: Column(
-                        children: [
-                          Icon(Icons.rotate_left , size: 40, color: Colors.white),
-                          Text('Shifts',textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10 , color:Colors.white),)
-                        ],
-                      ),
-                    )),
-                  ),
-                  Container(
-                    height: 100,
-                    width: 100,
-                    decoration: BoxDecoration(
-                      color: Colors.blue,
-                      borderRadius: BorderRadius.circular(15.0)
-                    ),
-                    child: TextButton(onPressed: (){},
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
-                      child: Column(
-                        children: [
-                          Icon(Icons.storage , size: 40, color: Colors.white),
-                          Text('Backup',textAlign: TextAlign.center,style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10 , color:Colors.white),)
-                        ],
-                      ),
-                    )),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 15,),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  Container(
-                    height: 100,
-                    width: 100,
-                    decoration: BoxDecoration(
-                      color: Colors.blue,
-                      borderRadius: BorderRadius.circular(15.0)
-                    ),
-                    child: TextButton(onPressed: (){},
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
-                      child: Column(
-                        children: [
-                          Icon(Icons.badge_outlined , size: 40, color: Colors.white),
-                          Text('License',textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10 , color:Colors.white),)
-                        ],
-                      ),
-                    )),
-                  ),
-                  Container(
-                    height: 100,
-                    width: 100,
-                    decoration: BoxDecoration(
-                      color: Colors.blue,
-                      borderRadius: BorderRadius.circular(15.0)
-                    ),
-                    child: TextButton(onPressed: (){
-                      Navigator.push(context,
-                      MaterialPageRoute(builder: (context)=> const UsersPage()));
-                    },
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
-                      child: Column(
-                        children: [
-                          Icon(Icons.email , size: 40, color: Colors.white),
-                          Text('Email',textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10 , color:Colors.white),)
-                        ],
-                      ),
-                    )),
-                  ),
-                  Container(
-                    height: 100,
-                    width: 100,
-                    decoration: BoxDecoration(
-                      color: Colors.blue,
-                      borderRadius: BorderRadius.circular(15.0)
-                    ),
-                    child: TextButton(onPressed: (){},
-                    child: const Padding(
-                      padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
-                      child: Column(
-                        children: [
-                          Icon(Icons.question_mark_outlined , size: 40, color: Colors.white),
-                          Text('About Us' ,  textAlign: TextAlign.center,style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10 , color:Colors.white),)
-                        ],
-                      ),
-                    )),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 15,),
-                Padding(
-                  padding: const EdgeInsets.all(10.0),
-                  child: Container(
-                    height: 200,
-                    width: 390,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: Colors.grey, width: 5),
-                      // image: const DecorationImage(
-                      //   image: Lottie.asset("assets/dash.json"),
-                      //   fit: BoxFit.cover,
-                      // ),
-                    ),
-                    child: Lottie.asset('assets/settings.json'),
-                  ),
+                  ],
                 ),
-            ],
+                const SizedBox(height: 15,),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    Container(
+                      height: 100,
+                      width: 100,
+                      decoration: BoxDecoration(
+                        color: Colors.blue,
+                        borderRadius: BorderRadius.circular(15.0)
+                      ),
+                      child: TextButton(onPressed: (){
+                        Get.to(()=> const PaymentMethods());
+                      },
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
+                        child: Column(
+                          children: [
+                            Icon(Icons.monetization_on_outlined , size: 40, color: Colors.white),
+                            Text('Payment Methods' ,textAlign: TextAlign.center,style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10 , color:Colors.white ),)
+                          ],
+                        ),
+                      )),
+                    ),
+                    Container(
+                      height: 100,
+                      width: 100,
+                      decoration: BoxDecoration(
+                        color: Colors.blue,
+                        borderRadius: BorderRadius.circular(15.0)
+                      ),
+                      child: TextButton(onPressed: (){
+                        Get.to(()=> const Companydetails());
+                      },
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
+                        child: Column(
+                          children: [
+                            Icon(Icons.card_membership_sharp , size: 40, color: Colors.white),
+                            Text('Company Details' ,textAlign: TextAlign.center,style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10 , color:Colors.white),)
+                          ],
+                        ),
+                      )),
+                    ),
+                    Container(
+                      height: 100,
+                      width: 100,
+                      decoration: BoxDecoration(
+                        color: Colors.blue,
+                        borderRadius: BorderRadius.circular(15.0)
+                      ),
+                      child: TextButton(onPressed: (){
+                        Get.to(()=> SunmiPrinterPage());
+                      },
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
+                        child: Column(
+                          children: [
+                            Icon(Icons.print_rounded , size: 40, color: Colors.white),
+                            Text('Printer Settings' ,textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10 , color:Colors.white),)
+                          ],
+                        ),
+                      )),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 15,),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    Container(
+                      height: 100,
+                      width: 100,
+                      decoration: BoxDecoration(
+                        color: Colors.blue,
+                        borderRadius: BorderRadius.circular(15.0)
+                      ),
+                      child: TextButton(onPressed: (){},
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
+                        child: Column(
+                          children: [
+                            Icon(Icons.check , size: 40, color: Colors.white),
+                            Text('Account Terms',textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10 , color:Colors.white),)
+                          ],
+                        ),
+                      )),
+                    ),
+                    Container(
+                      height: 100,
+                      width: 100,
+                      decoration: BoxDecoration(
+                        color: Colors.blue,
+                        borderRadius: BorderRadius.circular(15.0)
+                      ),
+                      child: TextButton(onPressed: (){},
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
+                        child: Column(
+                          children: [
+                            Icon(Icons.rotate_left , size: 40, color: Colors.white),
+                            Text('Shifts',textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10 , color:Colors.white),)
+                          ],
+                        ),
+                      )),
+                    ),
+                    Container(
+                      height: 100,
+                      width: 100,
+                      decoration: BoxDecoration(
+                        color: Colors.blue,
+                        borderRadius: BorderRadius.circular(15.0)
+                      ),
+                      child: TextButton(onPressed: (){
+                        Get.to(()=> const DatabaseBackup());
+                      },
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
+                        child: Column(
+                          children: [
+                            Icon(Icons.storage , size: 40, color: Colors.white),
+                            Text('Backup',textAlign: TextAlign.center,style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10 , color:Colors.white),)
+                          ],
+                        ),
+                      )),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 15,),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    Container(
+                      height: 100,
+                      width: 100,
+                      decoration: BoxDecoration(
+                        color: Colors.blue,
+                        borderRadius: BorderRadius.circular(15.0)
+                      ),
+                      child: TextButton(onPressed: (){},
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
+                        child: Column(
+                          children: [
+                            Icon(Icons.badge_outlined , size: 40, color: Colors.white),
+                            Text('License',textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10 , color:Colors.white),)
+                          ],
+                        ),
+                      )),
+                    ),
+                    Container(
+                      height: 100,
+                      width: 100,
+                      decoration: BoxDecoration(
+                        color: Colors.blue,
+                        borderRadius: BorderRadius.circular(15.0)
+                      ),
+                      child: TextButton(onPressed: (){
+                        Navigator.push(context,
+                        MaterialPageRoute(builder: (context)=> const UsersPage()));
+                      },
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
+                        child: Column(
+                          children: [
+                            Icon(Icons.email , size: 40, color: Colors.white),
+                            Text('Email',textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10 , color:Colors.white),)
+                          ],
+                        ),
+                      )),
+                    ),
+                    Container(
+                      height: 100,
+                      width: 100,
+                      decoration: BoxDecoration(
+                        color: Colors.blue,
+                        borderRadius: BorderRadius.circular(15.0)
+                      ),
+                      child: TextButton(onPressed: (){},
+                      child: const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
+                        child: Column(
+                          children: [
+                            Icon(Icons.question_mark_outlined , size: 40, color: Colors.white),
+                            Text('About Us' ,  textAlign: TextAlign.center,style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10 , color:Colors.white),)
+                          ],
+                        ),
+                      )),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 15,),
+                  Padding(
+                    padding: const EdgeInsets.all(10.0),
+                    child: Container(
+                      height: 200,
+                      width: 390,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: Colors.grey, width: 5),
+                        // image: const DecorationImage(
+                        //   image: Lottie.asset("assets/dash.json"),
+                        //   fit: BoxFit.cover,
+                        // ),
+                      ),
+                      child: Lottie.asset('assets/settings.json'),
+                    ),
+                  ),
+              ],
+            ),
           )
       ),
       bottomNavigationBar: BottomAppBar(

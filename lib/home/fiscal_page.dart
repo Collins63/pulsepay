@@ -43,11 +43,11 @@ class _FiscalPageState extends State<FiscalPage> {
 
   final DatabaseHelper dbHelper  = DatabaseHelper();
   int currentFiscal = 0;
-  String deviceID = "22662";
-  String taxPayerName = "TestWellEast Investments";
-  String tinNumber = "2000874913";
-  String vatNumber = "220280877";
-  String serialNumber = "testwelleast-1";
+  String deviceID = "25395";
+  String taxPayerName = "STEAM TEAM (PVT)LTD";
+  String tinNumber = "2000002740";
+  String vatNumber = "220022786";
+  String serialNumber = "steamTest-1";
   String modelName = "Server";
   List<Map<String, dynamic>> receiptsPending= [];
   List<Map<String, dynamic>> receiptsSubmitted= [];
@@ -110,7 +110,7 @@ class _FiscalPageState extends State<FiscalPage> {
 
   try {
     final response = await http.post(
-      Uri.parse("https://fdmsapitest.zimra.co.zw/Device/v1/22662/OpenDay"), // Update this URL
+      Uri.parse("https://fdmsapitest.zimra.co.zw/Device/v1/25395/OpenDay"), // Update this URL
       headers: {
         "Content-Type": "application/json",
         "DeviceModelName": "Server",
@@ -133,7 +133,7 @@ class _FiscalPageState extends State<FiscalPage> {
 }
 
 Future<String> getConfig() async {
-  String apiEndpointGetConfig = "https://fdmsapitest.zimra.co.zw/Device/v1/22662/GetConfig"; // Replace with actual API endpoint
+  String apiEndpointGetConfig = "https://fdmsapitest.zimra.co.zw/Device/v1/25395/GetConfig"; // Replace with actual API endpoint
   String responseMessage = "There was no response from the server. Check your connection !!";
 
   try {
@@ -258,7 +258,7 @@ Future<String> getConfig() async {
   
   Future<void> getStatus() async {
     String apiEndpointGetStatus =
-      "https://fdmsapitest.zimra.co.zw/Device/v1/22662/GetStatus";
+      "https://fdmsapitest.zimra.co.zw/Device/v1/25395/GetStatus";
     const String deviceModelName = "Server";
     const String deviceModelVersion = "v1";
 
@@ -285,7 +285,7 @@ Future<String> getConfig() async {
 
   Future<String> ping() async {
   String apiEndpointPing =
-      "https://fdmsapitest.zimra.co.zw/Device/v1/22662/Ping";
+      "https://fdmsapitest.zimra.co.zw/Device/v1/25395/Ping";
   const String deviceModelName = "Server";
   const String deviceModelVersion = "v1"; 
 
@@ -323,7 +323,7 @@ Future<String> getConfig() async {
     // Get the database instance
     final db = await dbHelper.initDB();
     String apiEndpointSubmitReceipt =
-      "https://fdmsapitest.zimra.co.zw/Device/v1/22662/SubmitReceipt";
+      "https://fdmsapitest.zimra.co.zw/Device/v1/25395/SubmitReceipt";
     const String deviceModelName = "Server";
     const String deviceModelVersion = "v1"; 
     SSLContextProvider sslContextProvider = SSLContextProvider();
@@ -562,8 +562,8 @@ Future<int> getlatestFiscalDay() async {
                   color: Colors.blue,
                   color2: Colors.blue,
                   onTap: () async{
-                    String filePath = "/storage/emulated/0/Pulse/Configurations/mindTest_T_certificate.p12";
-                    String password = "mindTest123";
+                    String filePath = "/storage/emulated/0/Pulse/Configurations/steamTest_T_certificate.p12";
+                    String password = "steamTest123";
                     int fiscalDay = currentFiscal;
                     List<Map<String , dynamic>> openDayData = await dbHelper.getDayOpenedDate(fiscalDay);
                     String openDayDate = openDayData[0]["FiscalDayOpened"];
@@ -593,7 +593,7 @@ Future<int> getlatestFiscalDay() async {
                     }
 
                     String apiEndpointCloseDay =
-                      "https://fdmsapitest.zimra.co.zw/Device/v1/22662/CloseDay";
+                      "https://fdmsapitest.zimra.co.zw/Device/v1/25395/CloseDay";
                     const String deviceModelName = "Server";
                     const String deviceModelVersion = "v1";  
 

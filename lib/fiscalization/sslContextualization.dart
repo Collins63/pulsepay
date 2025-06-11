@@ -16,8 +16,11 @@ class SSLContextProvider {
   if (await Permission.manageExternalStorage.request().isGranted) {
     print("✅ Manage External Storage permission granted!");
   } else {
-    print("❌ Manage External Storage permission denied! Redirecting to settings...");
-    openAppSettings();  // Opens app settings for manual permission grant
+    // print("❌ Manage External Storage permission denied! Redirecting to settings...");
+    // openAppSettings();  // Opens app settings for manual permission grant
+    if (await Permission.manageExternalStorage.isPermanentlyDenied) {
+      openAppSettings(); // Only do this once and show a dialog beforehand
+    }
   }
 }
 
@@ -36,8 +39,8 @@ class SSLContextProvider {
     Directory? appDir = await getApplicationDocumentsDirectory();
     //bool hasPermission = await requestStoragePermission();
     // Construct the correct path to the keystore
-    String keystorePath = "/storage/emulated/0/Pulse/Configurations/mindTest_T_certificate.p12";
-    String keystorePassword = "mindTest123"; // Replace with actual password
+    String keystorePath = "/storage/emulated/0/Pulse/Configurations/steamTest_T_certificate.p12";
+    String keystorePassword = "steamTest123"; // Replace with actual password
     SecurityContext securityContext = SecurityContext.defaultContext;
     
 

@@ -321,7 +321,7 @@ class _MyTaxesState extends State<MyTaxes> {
                 children: [
                   Container(
                     height: 120,
-                    width: 190,
+                    width: 160,
                     decoration: BoxDecoration(
                       color: Colors.blue.shade200,
                       borderRadius: BorderRadius.circular(10)
@@ -348,7 +348,7 @@ class _MyTaxesState extends State<MyTaxes> {
                   ),
                   Container(
                     height: 120,
-                    width: 190,
+                    width: 160,
                     decoration: BoxDecoration(
                       color: Colors.blue.shade200,  
                       borderRadius: BorderRadius.circular(10)
@@ -381,7 +381,7 @@ class _MyTaxesState extends State<MyTaxes> {
                 children: [
                   Container(
                     height: 120,
-                    width: 190,
+                    width: 160,
                     decoration: BoxDecoration(
                       color: Colors.blue.shade200,
                       borderRadius: BorderRadius.circular(10)
@@ -408,7 +408,7 @@ class _MyTaxesState extends State<MyTaxes> {
                   ),
                   Container(
                     height: 120,
-                    width: 190,
+                    width: 160,
                     decoration: BoxDecoration(
                       color: Colors.blue.shade200,
                       borderRadius: BorderRadius.circular(10)
@@ -499,7 +499,7 @@ class _MyTaxesState extends State<MyTaxes> {
                       ),
                     ),
                     Text(" Tax Exempted" , style: TextStyle(fontSize: 14, color: Colors.black,fontWeight:  FontWeight.w500),),
-                    const SizedBox(width: 30,),
+                    const SizedBox(width: 15,),
                     Container(
                       height: 20,
                       width: 20,
@@ -509,7 +509,7 @@ class _MyTaxesState extends State<MyTaxes> {
                       ),
                     ),
                     Text(" Zero Tax" , style: TextStyle(fontSize: 14, color: Colors.black,fontWeight:  FontWeight.w500),),
-                    const SizedBox(width: 30,),
+                    const SizedBox(width: 15,),
                     Container(
                       height: 20,
                       width: 20,
@@ -518,7 +518,7 @@ class _MyTaxesState extends State<MyTaxes> {
                         borderRadius: BorderRadius.circular(50)
                       ),
                     ),
-                    Text(" 15 % Tax" , style: TextStyle(fontSize: 14, color: Colors.black,fontWeight:  FontWeight.w500),),
+                    Text(" 15 %" , style: TextStyle(fontSize: 14, color: Colors.black,fontWeight:  FontWeight.w500),),
                   ],
                 ),
               ),

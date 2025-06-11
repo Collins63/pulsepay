@@ -332,6 +332,16 @@ class DatabaseHelper {
       );
     }
 
+    //Delete Paymenth method
+     Future<void> deletePayMethod(int methodId) async{
+      final db = await initDB();
+      await db.delete(
+        'paymentMethods',
+        where: 'payMethodId = ?',
+        whereArgs: [methodId],
+      );
+     }
+
 
     ////Get Sales By Invoice
     Future<List<Map<String, dynamic>>> getSalesByInvoice(int invoiceId) async {

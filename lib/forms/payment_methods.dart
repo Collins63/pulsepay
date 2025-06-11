@@ -50,6 +50,21 @@ class _PaymentMethodsState extends State<PaymentMethods> {
     });
   }
 
+  void deleteByID() async{
+    int payMethodID = 9999;
+    payMethodID = selectedMethod[0];
+    //String methodName = selectedMethod[1].toString();
+    if(payMethodID != 9999){
+      await  dbHelper.deletePayMethod(payMethodID);
+      Get.snackbar("Delete Message", " deleted successfully!!",
+        snackPosition: SnackPosition.TOP,
+        colorText: Colors.white,
+        backgroundColor: Colors.green,
+        icon: const Icon(Icons.message_outlined)
+      );
+    }
+  }
+
   ///=====Add Paymethods=====//////////
   //////////////////////////////////////
   addPaymethods(){
@@ -361,7 +376,7 @@ class _PaymentMethodsState extends State<PaymentMethods> {
                     color:const Color.fromARGB(255, 14, 19, 29),
                     color2: const Color.fromARGB(255, 14, 19, 29) ,
                     onTap: (){
-                      //showPasswordPrompt();
+                      deleteByID();
                     },
                   ),
                   CustomOutlineBtn(

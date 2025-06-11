@@ -34,7 +34,7 @@ class _ViewInvoicesState extends State<ViewInvoices> {
   String? first16Chars;
   String? receiptDeviceSignature_signature;
   String genericzimraqrurl = "https://fdmstest.zimra.co.zw/";
-  int deviceID = 22662;
+  int deviceID = 25395;
   String? generatedJson;
   String? fiscalResponse;
   String? creditReason;
@@ -244,7 +244,7 @@ Future<String> createCreditNote(String receiptJsonString,
 
 Future<String> ping() async {
   String apiEndpointPing =
-      "https://fdmsapitest.zimra.co.zw/Device/v1/22662/Ping";
+      "https://fdmsapitest.zimra.co.zw/Device/v1/25395/Ping";
   const String deviceModelName = "Server";
   const String deviceModelVersion = "v1"; 
 
@@ -277,8 +277,8 @@ Future<void> generateCreditFiscalJSON() async{
   try {
     print("Entered generate credit FiscalJSON");
 
-    String filePath = "/storage/emulated/0/Pulse/Configurations/mindTest_T_certificate.p12";
-    String password = "mindTest123";
+    String filePath = "/storage/emulated/0/Pulse/Configurations/steamTest_T_certificate.p12";
+    String password = "steamTest123";
 
 
     int fiscalDayNo = await dbHelper.getlatestFiscalDay();
@@ -421,7 +421,7 @@ Future<void> generateCreditFiscalJSON() async{
       String creditNoteNumber = await dbHelper.getNextCreditNoteNumber();
       if(pingResponse=="200"){
         String apiEndpointSubmitReceipt =
-          "https://fdmsapitest.zimra.co.zw/Device/v1/22662/SubmitReceipt";
+          "https://fdmsapitest.zimra.co.zw/Device/v1/25395/SubmitReceipt";
         const String deviceModelName = "Server";
         const String deviceModelVersion = "v1";  
 
