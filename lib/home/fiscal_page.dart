@@ -1062,7 +1062,1103 @@ Future<int> getlatestFiscalDay() async {
 //   return (invoices, creditNotes, balances, concat.toString());
 // }
 
-// 
+///////////////////////
+// changes made from this line onwards
+
+// class FiscalDayCounter {
+//   final String type;
+//   final String currency;
+//   final double? percent;
+//   final int? taxID;
+//   final String? moneyType;
+//   double value;
+
+//   FiscalDayCounter({
+//     required this.type,
+//     required this.currency,
+//     this.percent,
+//     this.taxID,
+//     this.moneyType,
+//     this.value = 0,
+//   });
+
+//   String get key {
+//     if (type == 'BalanceByMoneyType') {
+//       return '$type|$currency|$moneyType';
+//     }
+//     return '$type|$currency|${percent!.toStringAsFixed(2)}|$taxID';
+//   }
+
+//   void accumulate(double addMe) => value += addMe;
+
+//   Map<String, dynamic> toJson() {
+//     final double roundedValue = double.parse(value.toStringAsFixed(2));
+//     if (roundedValue == 0.0) return {}; // skip if zero
+
+//     final m = {
+//       'fiscalCounterType': type,
+//       'fiscalCounterCurrency': currency,
+//       'fiscalCounterValue': (type.startsWith('CreditNote') ? -roundedValue.abs() : roundedValue.abs()),
+//     };
+//     if (percent != null) m['fiscalCounterTaxPercent'] = percent!.toStringAsFixed(2);
+//     if (taxID != null) m['fiscalCounterTaxID'] = taxID.toString();
+//     if (moneyType != null) m['fiscalCounterMoneyType'] = moneyType.toString();
+//     return m;
+//   }
+
+//   String toConcatString() {
+//     if (type == 'SaleTaxByTax' && percent?.toStringAsFixed(2) != '15.00') {
+//       return ''; // ❌ skip all but 15% VAT
+//     }
+//      if (type == 'CreditNoteTaxByTax' && percent?.toStringAsFixed(2) != '15.00') {
+//       return ''; // ❌ skip all but 15% VAT
+//     }
+//     final buf = StringBuffer(type.toUpperCase());
+//     buf.write(currency.toUpperCase());
+//     if (type == 'BalanceByMoneyType') {
+//       buf.write(moneyType!.toUpperCase());
+//     } else if(taxID != 1 && percent != null) {
+//       buf.write(percent!.toStringAsFixed(2));
+//     }
+//     buf.write((value.abs() * 100).round()); // always positive in string
+//     return buf.toString();
+//   }
+// }
+
+// Future<(
+//   List<FiscalDayCounter> invoices,
+//   List<FiscalDayCounter> creditNotes,
+//   List<FiscalDayCounter> balances,
+//   String concatenatedString
+// )> buildFiscalDayCountersAndConcat(
+//     int fiscalDayNo,
+// ) async {
+//   final invMap  = <String, FiscalDayCounter>{};
+//   final crdMap  = <String, FiscalDayCounter>{};
+//   final balMap  = <String, FiscalDayCounter>{};
+
+//   DatabaseHelper dbHelper = DatabaseHelper();
+//   final db = await dbHelper.initDB();
+
+//   final rows = await db.query(
+//     'submittedReceipts',
+//     columns: ['receiptType','receiptJsonbody'],
+//     where: 'FiscalDayNo = ?',
+//     whereArgs: [fiscalDayNo],
+//   );
+
+//   for (final row in rows) {
+//     final receiptType = row['receiptType'] as String;
+//     final body        = json.decode(row['receiptJsonbody'] as String);
+//     final r           = body['receipt'] as Map<String, dynamic>;
+//     final curr        = r['receiptCurrency'] as String;
+//     final isCredit    = receiptType != 'FISCALINVOICE';
+
+//     for (final t in r['receiptTaxes'] as List<dynamic>) {
+//       final rawTaxAmt = t['taxAmount'];
+//       final rawSales  = t['salesAmountWithTax'];
+//       final taxAmt    = rawTaxAmt is num ? rawTaxAmt.toDouble() : double.tryParse(rawTaxAmt.toString()) ?? 0;
+//       final salesAmt  = rawSales is num ? rawSales.toDouble() : double.tryParse(rawSales.toString()) ?? 0;
+//       final taxCode = t['taxCode'];
+//       final perc;
+//       if (taxCode == "A"){
+//         perc  = 0.0;
+//       }else{
+//         final percT = double.parse(t['taxPercent'] as String);
+//         perc = percT;
+//       }
+      
+//       final taxId     = int.parse(t['taxID'].toString());
+
+//       if (!isCredit) {
+//         if(taxCode == "A"){
+//           //continue; // skip tax code A
+//           final sbtKey = 'SaleByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
+//           invMap.putIfAbsent(sbtKey, () => FiscalDayCounter(
+//           type: 'SaleByTax', currency: curr, taxID: taxId))
+//           .accumulate(salesAmt);
+
+//           final sttKey = 'SaleTaxByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
+//           invMap.putIfAbsent(sttKey, () => FiscalDayCounter(
+//           type: 'SaleTaxByTax', currency: curr, taxID: taxId))
+//           .accumulate(taxAmt);
+//         }else{
+//           final sbtKey = 'SaleByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
+//           invMap.putIfAbsent(sbtKey, () => FiscalDayCounter(
+//           type: 'SaleByTax', currency: curr, percent: perc, taxID: taxId))
+//           .accumulate(salesAmt);
+
+//           final sttKey = 'SaleTaxByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
+//           invMap.putIfAbsent(sttKey, () => FiscalDayCounter(
+//           type: 'SaleTaxByTax', currency: curr, percent: perc, taxID: taxId))
+//           .accumulate(taxAmt);
+//         }
+
+//       } else {
+//         if(taxCode =="A"){
+//           final cbtKey = 'CreditNoteByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
+//           crdMap.putIfAbsent(cbtKey, () => FiscalDayCounter(
+//           type: 'CreditNoteByTax', currency: curr, taxID: taxId))
+//           .accumulate(salesAmt); // accumulate positive value
+
+//           final cttKey = 'CreditNoteTaxByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
+//           crdMap.putIfAbsent(cttKey, () => FiscalDayCounter(
+//           type: 'CreditNoteTaxByTax', currency: curr, taxID: taxId))
+//           .accumulate(taxAmt); // accumulate positive value
+//         }else{
+//           final cbtKey = 'CreditNoteByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
+//           crdMap.putIfAbsent(cbtKey, () => FiscalDayCounter(
+//           type: 'CreditNoteByTax', currency: curr, percent: perc, taxID: taxId))
+//           .accumulate(salesAmt); // accumulate positive value
+
+//           final cttKey = 'CreditNoteTaxByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
+//           crdMap.putIfAbsent(cttKey, () => FiscalDayCounter(
+//           type: 'CreditNoteTaxByTax', currency: curr, percent: perc, taxID: taxId))
+//           .accumulate(taxAmt); // accumulate positive value
+//         }
+        
+//       }
+//     }
+
+//     for (final p in r['receiptPayments'] as List<dynamic>) {
+//       final mType   = p['moneyTypeCode'] as String;
+//       final rawAmt  = p['paymentAmount'];
+//       final amt     = rawAmt is num ? rawAmt.toDouble() : double.tryParse(rawAmt.toString()) ?? 0;
+
+//       final bKey = 'BalanceByMoneyType|$curr|$mType';
+//       balMap.putIfAbsent(bKey, () => FiscalDayCounter(
+//         type: 'BalanceByMoneyType', currency: curr, moneyType: mType))
+//         .accumulate(amt);
+//     }
+//   }
+
+//   final allCounters = [
+//     ...invMap.values,
+//     ...crdMap.values,
+//     ...balMap.values,
+//   ];
+
+//   const counterOrder = [
+//     'SaleByTax',
+//     'SaleTaxByTax',
+//     'CreditNoteByTax',
+//     'CreditNoteTaxByTax',
+//     'BalanceByMoneyType',
+//   ];
+
+//   allCounters.sort((a, b) =>
+//     counterOrder.indexOf(a.type).compareTo(counterOrder.indexOf(b.type)));
+
+//   final concat = StringBuffer();
+//   for (final c in allCounters) {
+//     concat.write(c.toConcatString());
+//   }
+
+//   final invoices = allCounters
+//       .where((c) => c.type.startsWith('Sale') && double.parse(c.value.toStringAsFixed(2)) != 0.0)
+//       .toList();
+//   final creditNotes = allCounters
+//       .where((c) => c.type.startsWith('CreditNote') && double.parse(c.value.toStringAsFixed(2)) != 0.0)
+//       .toList();
+//   final balances = allCounters
+//       .where((c) => c.type == 'BalanceByMoneyType' && double.parse(c.value.toStringAsFixed(2)) != 0.0)
+//       .toList();
+
+//   return (invoices, creditNotes, balances, concat.toString());
+// }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// code below couldnt handle creditnotes
+
+// class FiscalDayCounter {
+//   final String type;
+//   final String currency;
+//   final double? percent;
+//   final int? taxID;
+//   final String? moneyType;
+//   double value;
+
+//   FiscalDayCounter({
+//     required this.type,
+//     required this.currency,
+//     this.percent,
+//     this.taxID,
+//     this.moneyType,
+//     this.value = 0,
+//   });
+
+//   String get key {
+//     if (type == 'BalanceByMoneyType') {
+//       return '$type|$currency|$moneyType';
+//     }
+//     return '$type|$currency|${percent!.toStringAsFixed(2)}|$taxID';
+//   }
+
+//   void accumulate(double addMe) => value += addMe;
+
+//   Map<String, dynamic> toJson() {
+//     final double roundedValue = double.parse(value.toStringAsFixed(2));
+//     if (roundedValue == 0.0) return {}; // skip if zero
+
+//     final m = {
+//       'fiscalCounterType': type,
+//       'fiscalCounterCurrency': currency,
+//       'fiscalCounterValue': (type.startsWith('CreditNote') ? -roundedValue.abs() : roundedValue.abs()),
+//     };
+//     if (percent != null) m['fiscalCounterTaxPercent'] = percent!.toStringAsFixed(2);
+//     if (taxID != null) m['fiscalCounterTaxID'] = taxID.toString();
+//     if (moneyType != null) m['fiscalCounterMoneyType'] = moneyType.toString();
+//     return m;
+//   }
+
+//   String toConcatString() {
+//     if (type == 'SaleTaxByTax' && percent?.toStringAsFixed(2) != '15.00') {
+//       return ''; // ❌ skip all but 15% VAT
+//     }
+//     if (type == 'CreditNoteTaxByTax' && percent?.toStringAsFixed(2) != '15.00') {
+//       return ''; // ❌ skip all but 15% VAT
+//     }
+    
+//     final buf = StringBuffer(type.toUpperCase());
+//     buf.write(currency.toUpperCase());
+    
+//     if (type == 'BalanceByMoneyType') {
+//       buf.write(moneyType!.toUpperCase());
+//     } else if (taxID != 1 && percent != null) {
+//       // Only add percent if taxID is not 1 (not tax code A)
+//       buf.write(percent!.toStringAsFixed(2));
+//     }
+    
+//     buf.write((value.abs() * 100).round()); // always positive in string
+//     return buf.toString();
+//   }
+// }
+
+// Future<(
+//   List<FiscalDayCounter> invoices,
+//   List<FiscalDayCounter> creditNotes,
+//   List<FiscalDayCounter> balances,
+//   String concatenatedString
+// )> buildFiscalDayCountersAndConcat(
+//     int fiscalDayNo,
+// ) async {
+//   final invMap  = <String, FiscalDayCounter>{};
+//   final crdMap  = <String, FiscalDayCounter>{};
+//   final balMap  = <String, FiscalDayCounter>{};
+
+//   DatabaseHelper dbHelper = DatabaseHelper();
+//   final db = await dbHelper.initDB();
+
+//   final rows = await db.query(
+//     'submittedReceipts',
+//     columns: ['receiptType','receiptJsonbody'],
+//     where: 'FiscalDayNo = ?',
+//     whereArgs: [fiscalDayNo],
+//   );
+
+//   for (final row in rows) {
+//     final receiptType = row['receiptType'] as String;
+//     final body        = json.decode(row['receiptJsonbody'] as String);
+//     final r           = body['receipt'] as Map<String, dynamic>;
+//     final curr        = r['receiptCurrency'] as String;
+//     final isCredit    = receiptType != 'FISCALINVOICE';
+
+//     for (final t in r['receiptTaxes'] as List<dynamic>) {
+//       final rawTaxAmt = t['taxAmount'];
+//       final rawSales  = t['salesAmountWithTax'];
+//       final taxAmt    = rawTaxAmt is num ? rawTaxAmt.toDouble() : double.tryParse(rawTaxAmt.toString()) ?? 0;
+//       final salesAmt  = rawSales is num ? rawSales.toDouble() : double.tryParse(rawSales.toString()) ?? 0;
+//       final taxCode = t['taxCode'];
+//       final perc;
+//       if (taxCode == "A"){
+//         perc  = 0.0;
+//       }else{
+//         final percT = double.parse(t['taxPercent'] as String);
+//         perc = percT;
+//       }
+      
+//       final taxId     = int.parse(t['taxID'].toString());
+
+//       if (!isCredit) {
+//         if(taxCode == "A"){
+//           //continue; // skip tax code A
+//           final sbtKey = 'SaleByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
+//           invMap.putIfAbsent(sbtKey, () => FiscalDayCounter(
+//           type: 'SaleByTax', currency: curr, taxID: taxId))
+//           .accumulate(salesAmt);
+
+//           final sttKey = 'SaleTaxByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
+//           invMap.putIfAbsent(sttKey, () => FiscalDayCounter(
+//           type: 'SaleTaxByTax', currency: curr, taxID: taxId))
+//           .accumulate(taxAmt);
+//         }else{
+//           final sbtKey = 'SaleByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
+//           invMap.putIfAbsent(sbtKey, () => FiscalDayCounter(
+//           type: 'SaleByTax', currency: curr, percent: perc, taxID: taxId))
+//           .accumulate(salesAmt);
+
+//           final sttKey = 'SaleTaxByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
+//           invMap.putIfAbsent(sttKey, () => FiscalDayCounter(
+//           type: 'SaleTaxByTax', currency: curr, percent: perc, taxID: taxId))
+//           .accumulate(taxAmt);
+//         }
+
+//       } else {
+//         if(taxCode =="A"){
+//           final cbtKey = 'CreditNoteByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
+//           crdMap.putIfAbsent(cbtKey, () => FiscalDayCounter(
+//           type: 'CreditNoteByTax', currency: curr, taxID: taxId))
+//           .accumulate(salesAmt); // accumulate positive value
+
+//           final cttKey = 'CreditNoteTaxByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
+//           crdMap.putIfAbsent(cttKey, () => FiscalDayCounter(
+//           type: 'CreditNoteTaxByTax', currency: curr, taxID: taxId))
+//           .accumulate(taxAmt); // accumulate positive value
+//         }else{
+//           final cbtKey = 'CreditNoteByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
+//           crdMap.putIfAbsent(cbtKey, () => FiscalDayCounter(
+//           type: 'CreditNoteByTax', currency: curr, percent: perc, taxID: taxId))
+//           .accumulate(salesAmt); // accumulate positive value
+
+//           final cttKey = 'CreditNoteTaxByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
+//           crdMap.putIfAbsent(cttKey, () => FiscalDayCounter(
+//           type: 'CreditNoteTaxByTax', currency: curr, percent: perc, taxID: taxId))
+//           .accumulate(taxAmt); // accumulate positive value
+//         }
+        
+//       }
+//     }
+
+//     for (final p in r['receiptPayments'] as List<dynamic>) {
+//       final mType   = p['moneyTypeCode'] as String;
+//       final rawAmt  = p['paymentAmount'];
+//       final amt     = rawAmt is num ? rawAmt.toDouble() : double.tryParse(rawAmt.toString()) ?? 0;
+
+//       final bKey = 'BalanceByMoneyType|$curr|$mType';
+//       balMap.putIfAbsent(bKey, () => FiscalDayCounter(
+//         type: 'BalanceByMoneyType', currency: curr, moneyType: mType))
+//         .accumulate(amt);
+//     }
+//   }
+
+//   final allCounters = [
+//     ...invMap.values,
+//     ...crdMap.values,
+//     ...balMap.values,
+//   ];
+
+//   // Custom sorting to ensure proper order
+//   allCounters.sort((a, b) {
+//     // First sort by type
+//     const counterOrder = [
+//       'SaleByTax',
+//       'SaleTaxByTax',
+//       'CreditNoteByTax',
+//       'CreditNoteTaxByTax',
+//       'BalanceByMoneyType',
+//     ];
+    
+//     final typeComparison = counterOrder.indexOf(a.type).compareTo(counterOrder.indexOf(b.type));
+//     if (typeComparison != 0) return typeComparison;
+    
+//     // For same type, sort by taxID (1, 2, 3, ...)
+//     if (a.taxID != null && b.taxID != null) {
+//       return a.taxID!.compareTo(b.taxID!);
+//     }
+    
+//     return 0;
+//   });
+
+//   final concat = StringBuffer();
+//   for (final c in allCounters) {
+//     final concatStr = c.toConcatString();
+//     if (concatStr.isNotEmpty) {
+//       concat.write(concatStr);
+//     }
+//   }
+
+//   final invoices = allCounters
+//       .where((c) => c.type.startsWith('Sale') && double.parse(c.value.toStringAsFixed(2)) != 0.0)
+//       .toList();
+//   final creditNotes = allCounters
+//       .where((c) => c.type.startsWith('CreditNote') && double.parse(c.value.toStringAsFixed(2)) != 0.0)
+//       .toList();
+//   final balances = allCounters
+//       .where((c) => c.type == 'BalanceByMoneyType' && double.parse(c.value.toStringAsFixed(2)) != 0.0)
+//       .toList();
+
+//   return (invoices, creditNotes, balances, concat.toString());
+// }
+
+/////////////////////////////////////////////////////////////////////////////////////
+//still not working lol keep working
+
+// class FiscalDayCounter {
+//   final String type;
+//   final String currency;
+//   final double? percent;
+//   final int? taxID;
+//   final String? moneyType;
+//   double value;
+
+//   FiscalDayCounter({
+//     required this.type,
+//     required this.currency,
+//     this.percent,
+//     this.taxID,
+//     this.moneyType,
+//     this.value = 0,
+//   });
+
+//   String get key {
+//     if (type == 'BalanceByMoneyType') {
+//       return '$type|$currency|$moneyType';
+//     }
+//     return '$type|$currency|${percent!.toStringAsFixed(2)}|$taxID';
+//   }
+
+//   void accumulate(double addMe) => value += addMe;
+
+//   Map<String, dynamic> toJson() {
+//     final double roundedValue = double.parse(value.toStringAsFixed(2));
+//     if (roundedValue == 0.0) return {}; // skip if zero
+
+//     final m = {
+//       'fiscalCounterType': type,
+//       'fiscalCounterCurrency': currency,
+//       'fiscalCounterValue': roundedValue, // use the actual value (already negative for credit notes)
+//     };
+//     if (percent != null) m['fiscalCounterTaxPercent'] = percent!.toStringAsFixed(2);
+//     if (taxID != null) m['fiscalCounterTaxID'] = taxID.toString();
+//     if (moneyType != null) m['fiscalCounterMoneyType'] = moneyType.toString();
+//     return m;
+//   }
+
+//   String toConcatString() {
+//     if (type == 'SaleTaxByTax' && percent?.toStringAsFixed(2) != '15.00') {
+//       return ''; // ❌ skip all but 15% VAT
+//     }
+//     if (type == 'CreditNoteTaxByTax' && percent?.toStringAsFixed(2) != '15.00') {
+//       return ''; // ❌ skip all but 15% VAT
+//     }
+    
+//     final buf = StringBuffer(type.toUpperCase());
+//     buf.write(currency.toUpperCase());
+    
+//     if (type == 'BalanceByMoneyType') {
+//       buf.write(moneyType!.toUpperCase());
+//     } else if (taxID != 1 && percent != null) {
+//       // Only add percent if taxID is not 1 (not tax code A)
+//       buf.write(percent!.toStringAsFixed(2));
+//     }
+    
+//     buf.write((value.abs() * 100).round()); // always positive in string
+//     return buf.toString();
+//   }
+// }
+
+// Future<(
+//   List<FiscalDayCounter> invoices,
+//   List<FiscalDayCounter> creditNotes,
+//   List<FiscalDayCounter> balances,
+//   String concatenatedString
+// )> buildFiscalDayCountersAndConcat(
+//     int fiscalDayNo,
+// ) async {
+//   final invMap  = <String, FiscalDayCounter>{};
+//   final crdMap  = <String, FiscalDayCounter>{};
+//   final balMap  = <String, FiscalDayCounter>{};
+
+//   DatabaseHelper dbHelper = DatabaseHelper();
+//   final db = await dbHelper.initDB();
+
+//   final rows = await db.query(
+//     'submittedReceipts',
+//     columns: ['receiptType','receiptJsonbody'],
+//     where: 'FiscalDayNo = ?',
+//     whereArgs: [fiscalDayNo],
+//   );
+
+//   for (final row in rows) {
+//     final receiptType = row['receiptType'] as String;
+//     final body        = json.decode(row['receiptJsonbody'] as String);
+//     final r           = body['receipt'] as Map<String, dynamic>;
+//     final curr        = r['receiptCurrency'] as String;
+//     final isCredit    = receiptType != 'FISCALINVOICE';
+
+//     for (final t in r['receiptTaxes'] as List<dynamic>) {
+//       final rawTaxAmt = t['taxAmount'];
+//       final rawSales  = t['salesAmountWithTax'];
+//       final taxAmt    = rawTaxAmt is num ? rawTaxAmt.toDouble() : double.tryParse(rawTaxAmt.toString()) ?? 0;
+//       final salesAmt  = rawSales is num ? rawSales.toDouble() : double.tryParse(rawSales.toString()) ?? 0;
+//       final taxCode = t['taxCode'];
+//       final perc;
+//       if (taxCode == "A"){
+//         perc  = 0.0;
+//       }else{
+//         final percT = double.parse(t['taxPercent'] as String);
+//         perc = percT;
+//       }
+      
+//       final taxId     = int.parse(t['taxID'].toString());
+
+//       if (!isCredit) {
+//         if(taxCode == "A"){
+//           //continue; // skip tax code A
+//           final sbtKey = 'SaleByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
+//           invMap.putIfAbsent(sbtKey, () => FiscalDayCounter(
+//           type: 'SaleByTax', currency: curr, taxID: taxId))
+//           .accumulate(salesAmt);
+
+//           final sttKey = 'SaleTaxByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
+//           invMap.putIfAbsent(sttKey, () => FiscalDayCounter(
+//           type: 'SaleTaxByTax', currency: curr, taxID: taxId))
+//           .accumulate(taxAmt);
+//         }else{
+//           final sbtKey = 'SaleByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
+//           invMap.putIfAbsent(sbtKey, () => FiscalDayCounter(
+//           type: 'SaleByTax', currency: curr, percent: perc, taxID: taxId))
+//           .accumulate(salesAmt);
+
+//           final sttKey = 'SaleTaxByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
+//           invMap.putIfAbsent(sttKey, () => FiscalDayCounter(
+//           type: 'SaleTaxByTax', currency: curr, percent: perc, taxID: taxId))
+//           .accumulate(taxAmt);
+//         }
+
+//       } else {
+//         if(taxCode =="A"){
+//           final cbtKey = 'CreditNoteByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
+//           crdMap.putIfAbsent(cbtKey, () => FiscalDayCounter(
+//           type: 'CreditNoteByTax', currency: curr, taxID: taxId))
+//           .accumulate(-salesAmt); // accumulate negative value
+
+//           final cttKey = 'CreditNoteTaxByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
+//           crdMap.putIfAbsent(cttKey, () => FiscalDayCounter(
+//           type: 'CreditNoteTaxByTax', currency: curr, taxID: taxId))
+//           .accumulate(-taxAmt); // accumulate negative value
+//         }else{
+//           final cbtKey = 'CreditNoteByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
+//           crdMap.putIfAbsent(cbtKey, () => FiscalDayCounter(
+//           type: 'CreditNoteByTax', currency: curr, percent: perc, taxID: taxId))
+//           .accumulate(-salesAmt); // accumulate negative value
+
+//           final cttKey = 'CreditNoteTaxByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
+//           crdMap.putIfAbsent(cttKey, () => FiscalDayCounter(
+//           type: 'CreditNoteTaxByTax', currency: curr, percent: perc, taxID: taxId))
+//           .accumulate(-taxAmt); // accumulate negative value
+//         }
+        
+//       }
+//     }
+
+//     for (final p in r['receiptPayments'] as List<dynamic>) {
+//       final mType   = p['moneyTypeCode'] as String;
+//       final rawAmt  = p['paymentAmount'];
+//       final amt     = rawAmt is num ? rawAmt.toDouble() : double.tryParse(rawAmt.toString()) ?? 0;
+
+//       final bKey = 'BalanceByMoneyType|$curr|$mType';
+//       balMap.putIfAbsent(bKey, () => FiscalDayCounter(
+//         type: 'BalanceByMoneyType', currency: curr, moneyType: mType))
+//         .accumulate(amt);
+//     }
+//   }
+
+//   final allCounters = [
+//     ...invMap.values,
+//     ...crdMap.values,
+//     ...balMap.values,
+//   ];
+
+//   // Custom sorting to ensure proper order
+//   allCounters.sort((a, b) {
+//     // First sort by type
+//     const counterOrder = [
+//       'SaleByTax',
+//       'SaleTaxByTax',
+//       'CreditNoteByTax',
+//       'CreditNoteTaxByTax',
+//       'BalanceByMoneyType',
+//     ];
+    
+//     final typeComparison = counterOrder.indexOf(a.type).compareTo(counterOrder.indexOf(b.type));
+//     if (typeComparison != 0) return typeComparison;
+    
+//     // For same type, sort by taxID (1, 2, 3, ...)
+//     if (a.taxID != null && b.taxID != null) {
+//       return a.taxID!.compareTo(b.taxID!);
+//     }
+    
+//     return 0;
+//   });
+
+//   final concat = StringBuffer();
+//   for (final c in allCounters) {
+//     final concatStr = c.toConcatString();
+//     if (concatStr.isNotEmpty) {
+//       concat.write(concatStr);
+//     }
+//   }
+
+//   final invoices = allCounters
+//       .where((c) => c.type.startsWith('Sale') && double.parse(c.value.toStringAsFixed(2)) != 0.0)
+//       .toList();
+//   final creditNotes = allCounters
+//       .where((c) => c.type.startsWith('CreditNote') && double.parse(c.value.toStringAsFixed(2)) != 0.0)
+//       .toList();
+//   final balances = allCounters
+//       .where((c) => c.type == 'BalanceByMoneyType' && double.parse(c.value.toStringAsFixed(2)) != 0.0)
+//       .toList();
+
+//   return (invoices, creditNotes, balances, concat.toString());
+// }
+
+//////////////////////////////////////////////////////////
+////weekend session
+
+// class FiscalDayCounter {
+//   final String type;
+//   final String currency;
+//   final double? percent;
+//   final int? taxID;
+//   final String? moneyType;
+//   double value;
+
+//   FiscalDayCounter({
+//     required this.type,
+//     required this.currency,
+//     this.percent,
+//     this.taxID,
+//     this.moneyType,
+//     this.value = 0,
+//   });
+
+//   String get key {
+//     if (type == 'BalanceByMoneyType') {
+//       return '$type|$currency|$moneyType';
+//     }
+//     return '$type|$currency|${percent!.toStringAsFixed(2)}|$taxID';
+//   }
+
+//   void accumulate(double addMe) => value += addMe;
+
+//   Map<String, dynamic> toJson() {
+//     final double roundedValue = double.parse(value.toStringAsFixed(2));
+//     if (roundedValue == 0.0) return {}; // skip if zero
+
+//     final m = {
+//       'fiscalCounterType': type,
+//       'fiscalCounterCurrency': currency,
+//       'fiscalCounterValue': type.startsWith('CreditNote') ? roundedValue : roundedValue.abs(),
+//     };
+//     if (percent != null) m['fiscalCounterTaxPercent'] = percent!.toStringAsFixed(2);
+//     if (taxID != null) m['fiscalCounterTaxID'] = taxID.toString();
+//     if (moneyType != null) m['fiscalCounterMoneyType'] = moneyType.toString();
+//     return m;
+//   }
+
+//   String toConcatString() {
+//     if (type == 'SaleTaxByTax' && percent?.toStringAsFixed(2) != '15.00') {
+//       return ''; // ❌ skip all but 15% VAT
+//     }
+//     if (type == 'CreditNoteTaxByTax' && percent?.toStringAsFixed(2) != '15.00') {
+//       return ''; // ❌ skip all but 15% VAT
+//     }
+    
+//     final buf = StringBuffer(type.toUpperCase());
+//     buf.write(currency.toUpperCase());
+    
+//     if (type == 'BalanceByMoneyType') {
+//       buf.write(moneyType!.toUpperCase());
+//     } else if (taxID != 1 && percent != null) {
+//       // Only add percent if taxID is not 1 (not tax code A)
+//       buf.write(percent!.toStringAsFixed(2));
+//     }
+    
+//     // For credit notes, keep the negative value; for others, use absolute value
+//     if (type.startsWith('CreditNote')) {
+//       buf.write((value * 100).round()); // keep negative for credit notes
+//     } else {
+//       buf.write((value.abs() * 100).round()); // positive for sales and balances
+//     }
+    
+//     return buf.toString();
+//   }
+// }
+
+// Future<(
+//   List<FiscalDayCounter> invoices,
+//   List<FiscalDayCounter> creditNotes,
+//   List<FiscalDayCounter> balances,
+//   String concatenatedString
+// )> buildFiscalDayCountersAndConcat(
+//     int fiscalDayNo,
+// ) async {
+//   final invMap  = <String, FiscalDayCounter>{};
+//   final crdMap  = <String, FiscalDayCounter>{};
+//   final balMap  = <String, FiscalDayCounter>{};
+
+//   DatabaseHelper dbHelper = DatabaseHelper();
+//   final db = await dbHelper.initDB();
+
+//   final rows = await db.query(
+//     'submittedReceipts',
+//     columns: ['receiptType','receiptJsonbody'],
+//     where: 'FiscalDayNo = ?',
+//     whereArgs: [fiscalDayNo],
+//   );
+
+//   for (final row in rows) {
+//     final receiptType = row['receiptType'] as String;
+//     final body        = json.decode(row['receiptJsonbody'] as String);
+//     final r           = body['receipt'] as Map<String, dynamic>;
+//     final curr        = r['receiptCurrency'] as String;
+//     final isCredit    = receiptType != 'FISCALINVOICE';
+
+//     for (final t in r['receiptTaxes'] as List<dynamic>) {
+//       final rawTaxAmt = t['taxAmount'];
+//       final rawSales  = t['salesAmountWithTax'];
+//       final taxAmt    = rawTaxAmt is num ? rawTaxAmt.toDouble() : double.tryParse(rawTaxAmt.toString()) ?? 0;
+//       final salesAmt  = rawSales is num ? rawSales.toDouble() : double.tryParse(rawSales.toString()) ?? 0;
+//       final taxCode = t['taxCode'];
+//       final perc;
+//       if (taxCode == "A"){
+//         perc  = 0.0;
+//       }else{
+//         final percT = double.parse(t['taxPercent'] as String);
+//         perc = percT;
+//       }
+      
+//       final taxId     = int.parse(t['taxID'].toString());
+
+//       if (!isCredit) {
+//         if(taxCode == "A"){
+//           //continue; // skip tax code A
+//           final sbtKey = 'SaleByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
+//           invMap.putIfAbsent(sbtKey, () => FiscalDayCounter(
+//           type: 'SaleByTax', currency: curr, taxID: taxId))
+//           .accumulate(salesAmt);
+
+//           final sttKey = 'SaleTaxByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
+//           invMap.putIfAbsent(sttKey, () => FiscalDayCounter(
+//           type: 'SaleTaxByTax', currency: curr, taxID: taxId))
+//           .accumulate(taxAmt);
+//         }else{
+//           final sbtKey = 'SaleByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
+//           invMap.putIfAbsent(sbtKey, () => FiscalDayCounter(
+//           type: 'SaleByTax', currency: curr, percent: perc, taxID: taxId))
+//           .accumulate(salesAmt);
+
+//           final sttKey = 'SaleTaxByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
+//           invMap.putIfAbsent(sttKey, () => FiscalDayCounter(
+//           type: 'SaleTaxByTax', currency: curr, percent: perc, taxID: taxId))
+//           .accumulate(taxAmt);
+//         }
+
+//       } else {
+//         if(taxCode =="A"){
+//           final cbtKey = 'CreditNoteByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
+//           crdMap.putIfAbsent(cbtKey, () => FiscalDayCounter(
+//           type: 'CreditNoteByTax', currency: curr, taxID: taxId))
+//           .accumulate(salesAmt); // accumulate negative value
+
+//           final cttKey = 'CreditNoteTaxByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
+//           crdMap.putIfAbsent(cttKey, () => FiscalDayCounter(
+//           type: 'CreditNoteTaxByTax', currency: curr, taxID: taxId))
+//           .accumulate(taxAmt); // accumulate negative value
+//         }else{
+//           final cbtKey = 'CreditNoteByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
+//           crdMap.putIfAbsent(cbtKey, () => FiscalDayCounter(
+//           type: 'CreditNoteByTax', currency: curr, percent: perc, taxID: taxId))
+//           .accumulate(salesAmt); // accumulate negative value
+
+//           final cttKey = 'CreditNoteTaxByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
+//           crdMap.putIfAbsent(cttKey, () => FiscalDayCounter(
+//           type: 'CreditNoteTaxByTax', currency: curr, percent: perc, taxID: taxId))
+//           .accumulate(taxAmt); // accumulate negative value
+//         }
+        
+//       }
+//     }
+
+//     for (final p in r['receiptPayments'] as List<dynamic>) {
+//       final mType   = p['moneyTypeCode'] as String;
+//       final rawAmt  = p['paymentAmount'];
+//       final amt     = rawAmt is num ? rawAmt.toDouble() : double.tryParse(rawAmt.toString()) ?? 0;
+
+//       final bKey = 'BalanceByMoneyType|$curr|$mType';
+//       balMap.putIfAbsent(bKey, () => FiscalDayCounter(
+//         type: 'BalanceByMoneyType', currency: curr, moneyType: mType))
+//         .accumulate(amt);
+//     }
+//   }
+
+//   final allCounters = [
+//     ...invMap.values,
+//     ...crdMap.values,
+//     ...balMap.values,
+//   ];
+
+//   // Custom sorting to ensure proper order
+//   allCounters.sort((a, b) {
+//     // First sort by type
+//     const counterOrder = [
+//       'SaleByTax',
+//       'SaleTaxByTax',
+//       'CreditNoteByTax',
+//       'CreditNoteTaxByTax',
+//       'BalanceByMoneyType',
+//     ];
+    
+//     final typeComparison = counterOrder.indexOf(a.type).compareTo(counterOrder.indexOf(b.type));
+//     if (typeComparison != 0) return typeComparison;
+    
+//     // For same type, sort by taxID (1, 2, 3, ...)
+//     if (a.taxID != null && b.taxID != null) {
+//       return a.taxID!.compareTo(b.taxID!);
+//     }
+    
+//     return 0;
+//   });
+
+//   final concat = StringBuffer();
+//   for (final c in allCounters) {
+//     final concatStr = c.toConcatString();
+//     if (concatStr.isNotEmpty) {
+//       concat.write(concatStr);
+//     }
+//   }
+
+//   final invoices = allCounters
+//       .where((c) => c.type.startsWith('Sale') && double.parse(c.value.toStringAsFixed(2)) != 0.0)
+//       .toList();
+//   final creditNotes = allCounters
+//       .where((c) => c.type.startsWith('CreditNote') && double.parse(c.value.toStringAsFixed(2)) != 0.0)
+//       .toList();
+//   final balances = allCounters
+//       .where((c) => c.type == 'BalanceByMoneyType' && double.parse(c.value.toStringAsFixed(2)) != 0.0)
+//       .toList();
+
+//   return (invoices, creditNotes, balances, concat.toString());
+// }
+
+//code actually works but not with credit notes, need to fix that
+// class FiscalDayCounter {
+//   final String type;
+//   final String currency;
+//   final double? percent;
+//   final int? taxID;
+//   final String? moneyType;
+//   double value;
+
+//   FiscalDayCounter({
+//     required this.type,
+//     required this.currency,
+//     this.percent,
+//     this.taxID,
+//     this.moneyType,
+//     this.value = 0,
+//   });
+
+//   String get key {
+//     if (type == 'BalanceByMoneyType') {
+//       return '$type|$currency|$moneyType';
+//     }
+//     return '$type|$currency|${percent!.toStringAsFixed(2)}|$taxID';
+//   }
+
+//   void accumulate(double addMe) => value += addMe;
+
+//   Map<String, dynamic> toJson() {
+//     final double roundedValue = double.parse(value.toStringAsFixed(2));
+//     if (roundedValue == 0.0) return {}; // skip if zero
+
+//     final m = {
+//       'fiscalCounterType': type,
+//       'fiscalCounterCurrency': currency,
+//       'fiscalCounterValue': type.startsWith('CreditNote') ? roundedValue : roundedValue.abs(),
+//     };
+//     if (percent != null) m['fiscalCounterTaxPercent'] = percent!.toStringAsFixed(2);
+//     if (taxID != null) m['fiscalCounterTaxID'] = taxID.toString();
+//     if (moneyType != null) m['fiscalCounterMoneyType'] = moneyType.toString();
+//     return m;
+//   }
+
+//   String toConcatString() {
+//     if (type == 'SaleTaxByTax' && percent?.toStringAsFixed(2) != '15.00') return '';
+//     if (type == 'CreditNoteTaxByTax' && percent?.toStringAsFixed(2) != '15.00') return '';
+
+//     final buf = StringBuffer(type.toUpperCase());
+//     buf.write(currency.toUpperCase());
+
+//     if (type == 'BalanceByMoneyType') {
+//       buf.write(moneyType!.toUpperCase());
+//     } else if (taxID != 1 && percent != null) {
+//       buf.write(percent!.toStringAsFixed(2));
+//     }
+
+//     if (type.startsWith('CreditNote')) {
+//       buf.write((value * 100).round());
+//     } else {
+//       buf.write((value.abs() * 100).round());
+//     }
+
+//     return buf.toString();
+//   }
+// }
+
+// Future<(
+//   List<FiscalDayCounter> invoices,
+//   List<FiscalDayCounter> creditNotes,
+//   List<FiscalDayCounter> balances,
+//   String concatenatedString
+// )> buildFiscalDayCountersAndConcat(int fiscalDayNo) async {
+//   final invMap = <String, FiscalDayCounter>{};
+//   final crdMap = <String, FiscalDayCounter>{};
+//   final balMap = <String, FiscalDayCounter>{};
+
+//   DatabaseHelper dbHelper = DatabaseHelper();
+//   final db = await dbHelper.initDB();
+
+//   final rows = await db.query(
+//     'submittedReceipts',
+//     columns: ['receiptType', 'receiptJsonbody'],
+//     where: 'FiscalDayNo = ?',
+//     whereArgs: [fiscalDayNo],
+//   );
+
+//   for (final row in rows) {
+//     final receiptType = row['receiptType'] as String;
+//     final body = json.decode(row['receiptJsonbody'] as String);
+//     final r = body['receipt'] as Map<String, dynamic>;
+//     final curr = r['receiptCurrency'] as String;
+//     final isCredit = receiptType != 'FISCALINVOICE';
+
+//     for (final t in r['receiptTaxes'] as List<dynamic>) {
+//       final rawTaxAmt = t['taxAmount'];
+//       final rawSales = t['salesAmountWithTax'];
+//       final taxAmt = rawTaxAmt is num ? rawTaxAmt.toDouble() : double.tryParse(rawTaxAmt.toString()) ?? 0;
+//       final salesAmt = rawSales is num ? rawSales.toDouble() : double.tryParse(rawSales.toString()) ?? 0;
+//       final taxCode = t['taxCode'];
+//       final perc = (taxCode == "A") ? 0.0 : double.parse(t['taxPercent'] as String);
+//       final taxId = int.parse(t['taxID'].toString());
+
+//       if (!isCredit) {
+//         if (taxCode == "A") {
+//           final sbtKey = 'SaleByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
+//           invMap.putIfAbsent(sbtKey, () => FiscalDayCounter(
+//             type: 'SaleByTax', currency: curr, taxID: taxId))
+//             .accumulate(salesAmt);
+
+//           final sttKey = 'SaleTaxByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
+//           invMap.putIfAbsent(sttKey, () => FiscalDayCounter(
+//             type: 'SaleTaxByTax', currency: curr, taxID: taxId))
+//             .accumulate(taxAmt);
+//         } else {
+//           final sbtKey = 'SaleByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
+//           invMap.putIfAbsent(sbtKey, () => FiscalDayCounter(
+//             type: 'SaleByTax', currency: curr, percent: perc, taxID: taxId))
+//             .accumulate(salesAmt);
+
+//           final sttKey = 'SaleTaxByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
+//           invMap.putIfAbsent(sttKey, () => FiscalDayCounter(
+//             type: 'SaleTaxByTax', currency: curr, percent: perc, taxID: taxId))
+//             .accumulate(taxAmt);
+//         }
+//       } else {
+//         if (taxCode == "A") {
+//           final cbtKey = 'CreditNoteByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
+//           crdMap.putIfAbsent(cbtKey, () => FiscalDayCounter(
+//             type: 'CreditNoteByTax', currency: curr, taxID: taxId))
+//             .accumulate(salesAmt);
+
+//           final cttKey = 'CreditNoteTaxByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
+//           crdMap.putIfAbsent(cttKey, () => FiscalDayCounter(
+//             type: 'CreditNoteTaxByTax', currency: curr, taxID: taxId))
+//             .accumulate(taxAmt);
+//         } else {
+//           final cbtKey = 'CreditNoteByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
+//           crdMap.putIfAbsent(cbtKey, () => FiscalDayCounter(
+//             type: 'CreditNoteByTax', currency: curr, percent: perc, taxID: taxId))
+//             .accumulate(salesAmt);
+
+//           final cttKey = 'CreditNoteTaxByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
+//           crdMap.putIfAbsent(cttKey, () => FiscalDayCounter(
+//             type: 'CreditNoteTaxByTax', currency: curr, percent: perc, taxID: taxId))
+//             .accumulate(taxAmt);
+//         }
+//       }
+//     }
+
+//     for (final p in r['receiptPayments'] as List<dynamic>) {
+//       final mType = p['moneyTypeCode'] as String;
+//       final rawAmt = p['paymentAmount'];
+//       final amt = rawAmt is num ? rawAmt.toDouble() : double.tryParse(rawAmt.toString()) ?? 0;
+
+//       final bKey = 'BalanceByMoneyType|$curr|$mType';
+//       balMap.putIfAbsent(bKey, () => FiscalDayCounter(
+//         type: 'BalanceByMoneyType', currency: curr, moneyType: mType))
+//         .accumulate(amt);
+//     }
+//   }
+
+//   final allCounters = [
+//     ...invMap.values,
+//     ...crdMap.values,
+//     ...balMap.values,
+//   ];
+
+//   // ✅ Fixed: Canonical sort by type → currency → taxID or moneyType
+//   allCounters.sort((a, b) {
+//     const counterOrder = [
+//       'SaleByTax',
+//       'SaleTaxByTax',
+//       'CreditNoteByTax',
+//       'CreditNoteTaxByTax',
+//       'BalanceByMoneyType',
+//     ];
+
+//     final typeComparison = counterOrder.indexOf(a.type).compareTo(counterOrder.indexOf(b.type));
+//     if (typeComparison != 0) return typeComparison;
+
+//     final currencyComparison = a.currency.compareTo(b.currency);
+//     if (currencyComparison != 0) return currencyComparison;
+
+//     if (a.type == 'BalanceByMoneyType') {
+//       final mA = a.moneyType ?? '';
+//       final mB = b.moneyType ?? '';
+//       return mA.compareTo(mB);
+//     }
+
+//     if (a.taxID != null && b.taxID != null) {
+//       return a.taxID!.compareTo(b.taxID!);
+//     }
+
+//     return 0;
+//   });
+
+//   final concat = StringBuffer();
+//   for (final c in allCounters) {
+//     final concatStr = c.toConcatString();
+//     if (concatStr.isNotEmpty) {
+//       concat.write(concatStr);
+//     }
+//   }
+
+//   final invoices = allCounters
+//       .where((c) => c.type.startsWith('Sale') && double.parse(c.value.toStringAsFixed(2)) != 0.0)
+//       .toList();
+//   final creditNotes = allCounters
+//       .where((c) => c.type.startsWith('CreditNote') && double.parse(c.value.toStringAsFixed(2)) != 0.0)
+//       .toList();
+//   final balances = allCounters
+//       .where((c) => c.type == 'BalanceByMoneyType' && double.parse(c.value.toStringAsFixed(2)) != 0.0)
+//       .toList();
+
+//   debugPrint("Canonical Signature String: ${concat.toString()}");
+
+//   return (invoices, creditNotes, balances, concat.toString());
+// }
 
 class FiscalDayCounter {
   final String type;
@@ -1092,12 +2188,13 @@ class FiscalDayCounter {
 
   Map<String, dynamic> toJson() {
     final double roundedValue = double.parse(value.toStringAsFixed(2));
-    if (roundedValue == 0.0) return {}; // skip if zero
+    if (roundedValue == 0.0) return {};
 
     final m = {
       'fiscalCounterType': type,
       'fiscalCounterCurrency': currency,
-      'fiscalCounterValue': (type.startsWith('CreditNote') ? -roundedValue.abs() : roundedValue.abs()),
+      'fiscalCounterValue':
+          type.startsWith('CreditNote') ? roundedValue : roundedValue.abs(),
     };
     if (percent != null) m['fiscalCounterTaxPercent'] = percent!.toStringAsFixed(2);
     if (taxID != null) m['fiscalCounterTaxID'] = taxID.toString();
@@ -1106,20 +2203,24 @@ class FiscalDayCounter {
   }
 
   String toConcatString() {
-    if (type == 'SaleTaxByTax' && percent?.toStringAsFixed(2) != '15.00') {
-      return ''; // ❌ skip all but 15% VAT
-    }
-     if (type == 'CreditNoteTaxByTax' && percent?.toStringAsFixed(2) != '15.00') {
-      return ''; // ❌ skip all but 15% VAT
-    }
+    if (type == 'SaleTaxByTax' && percent?.toStringAsFixed(2) != '15.00') return '';
+    if (type == 'CreditNoteTaxByTax' && percent?.toStringAsFixed(2) != '15.00') return '';
+
     final buf = StringBuffer(type.toUpperCase());
     buf.write(currency.toUpperCase());
+
     if (type == 'BalanceByMoneyType') {
       buf.write(moneyType!.toUpperCase());
-    } else {
+    } else if (taxID != 1 && percent != null) {
       buf.write(percent!.toStringAsFixed(2));
     }
-    buf.write((value.abs() * 100).round()); // always positive in string
+
+    if (type.startsWith('CreditNote')) {
+      buf.write((value * 100).round());
+    } else {
+      buf.write((value.abs() * 100).round());
+    }
+
     return buf.toString();
   }
 }
@@ -1129,38 +2230,36 @@ Future<(
   List<FiscalDayCounter> creditNotes,
   List<FiscalDayCounter> balances,
   String concatenatedString
-)> buildFiscalDayCountersAndConcat(
-    int fiscalDayNo,
-) async {
-  final invMap  = <String, FiscalDayCounter>{};
-  final crdMap  = <String, FiscalDayCounter>{};
-  final balMap  = <String, FiscalDayCounter>{};
+)> buildFiscalDayCountersAndConcat(int fiscalDayNo) async {
+  final invMap = <String, FiscalDayCounter>{};
+  final crdMap = <String, FiscalDayCounter>{};
+  final balMap = <String, FiscalDayCounter>{};
 
   DatabaseHelper dbHelper = DatabaseHelper();
   final db = await dbHelper.initDB();
 
   final rows = await db.query(
     'submittedReceipts',
-    columns: ['receiptType','receiptJsonbody'],
+    columns: ['receiptType', 'receiptJsonbody'],
     where: 'FiscalDayNo = ?',
     whereArgs: [fiscalDayNo],
   );
 
   for (final row in rows) {
     final receiptType = row['receiptType'] as String;
-    final body        = json.decode(row['receiptJsonbody'] as String);
-    final r           = body['receipt'] as Map<String, dynamic>;
-    final curr        = r['receiptCurrency'] as String;
-    final isCredit    = receiptType != 'FISCALINVOICE';
+    final body = json.decode(row['receiptJsonbody'] as String);
+    final r = body['receipt'] as Map<String, dynamic>;
+    final curr = r['receiptCurrency'] as String;
+    final isCredit = receiptType != 'FISCALINVOICE';
 
     for (final t in r['receiptTaxes'] as List<dynamic>) {
       final rawTaxAmt = t['taxAmount'];
-      final rawSales  = t['salesAmountWithTax'];
-      final taxAmt    = rawTaxAmt is num ? rawTaxAmt.toDouble() : double.tryParse(rawTaxAmt.toString()) ?? 0;
-      final salesAmt  = rawSales is num ? rawSales.toDouble() : double.tryParse(rawSales.toString()) ?? 0;
-
-      final perc      = double.parse(t['taxPercent'] as String);
-      final taxId     = int.parse(t['taxID'].toString());
+      final rawSales = t['salesAmountWithTax'];
+      final taxAmt = rawTaxAmt is num ? rawTaxAmt.toDouble() : double.tryParse(rawTaxAmt.toString()) ?? 0;
+      final salesAmt = rawSales is num ? rawSales.toDouble() : double.tryParse(rawSales.toString()) ?? 0;
+      final taxCode = t['taxCode'];
+      final perc = (taxCode == "A") ? 0.0 : double.parse(t['taxPercent'] as String);
+      final taxId = int.parse(t['taxID'].toString());
 
       if (!isCredit) {
         final sbtKey = 'SaleByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
@@ -1176,19 +2275,19 @@ Future<(
         final cbtKey = 'CreditNoteByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
         crdMap.putIfAbsent(cbtKey, () => FiscalDayCounter(
           type: 'CreditNoteByTax', currency: curr, percent: perc, taxID: taxId))
-          .accumulate(salesAmt); // accumulate positive value
+          .accumulate(salesAmt);
 
         final cttKey = 'CreditNoteTaxByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
         crdMap.putIfAbsent(cttKey, () => FiscalDayCounter(
           type: 'CreditNoteTaxByTax', currency: curr, percent: perc, taxID: taxId))
-          .accumulate(taxAmt); // accumulate positive value
+          .accumulate(taxAmt);
       }
     }
 
     for (final p in r['receiptPayments'] as List<dynamic>) {
-      final mType   = p['moneyTypeCode'] as String;
-      final rawAmt  = p['paymentAmount'];
-      final amt     = rawAmt is num ? rawAmt.toDouble() : double.tryParse(rawAmt.toString()) ?? 0;
+      final mType = p['moneyTypeCode'] as String;
+      final rawAmt = p['paymentAmount'];
+      final amt = rawAmt is num ? rawAmt.toDouble() : double.tryParse(rawAmt.toString()) ?? 0;
 
       final bKey = 'BalanceByMoneyType|$curr|$mType';
       balMap.putIfAbsent(bKey, () => FiscalDayCounter(
@@ -1203,20 +2302,41 @@ Future<(
     ...balMap.values,
   ];
 
-  const counterOrder = [
-    'SaleByTax',
-    'SaleTaxByTax',
-    'CreditNoteByTax',
-    'CreditNoteTaxByTax',
-    'BalanceByMoneyType',
-  ];
+  // Sort based on Python implementation
+  allCounters.sort((a, b) {
+    int typePriority(String type) {
+      switch (type) {
+        case 'SaleByTax': return 1;
+        case 'SaleTaxByTax': return 2;
+        case 'CreditNoteByTax': return 3;
+        case 'CreditNoteTaxByTax': return 4;
+        case 'DebitNoteByTax': return 5;
+        case 'DebitNoteTaxByTax': return 6;
+        case 'BalanceByMoneyType': return 7;
+        default: return 99;
+      }
+    }
 
-  allCounters.sort((a, b) =>
-    counterOrder.indexOf(a.type).compareTo(counterOrder.indexOf(b.type)));
+    final priorityA = typePriority(a.type);
+    final priorityB = typePriority(b.type);
+    if (priorityA != priorityB) return priorityA.compareTo(priorityB);
+
+    final currencyComparison = a.currency.compareTo(b.currency);
+    if (currencyComparison != 0) return currencyComparison;
+
+    if (a.type == 'BalanceByMoneyType') {
+      return (a.moneyType ?? '').compareTo(b.moneyType ?? '');
+    }
+
+    return (a.taxID ?? 0).compareTo(b.taxID ?? 0);
+  });
 
   final concat = StringBuffer();
   for (final c in allCounters) {
-    concat.write(c.toConcatString());
+    final concatStr = c.toConcatString();
+    if (concatStr.isNotEmpty) {
+      concat.write(concatStr);
+    }
   }
 
   final invoices = allCounters
@@ -1229,6 +2349,7 @@ Future<(
       .where((c) => c.type == 'BalanceByMoneyType' && double.parse(c.value.toStringAsFixed(2)) != 0.0)
       .toList();
 
+  debugPrint("Canonical Signature String: ${concat.toString()}");
+
   return (invoices, creditNotes, balances, concat.toString());
 }
-

@@ -45,7 +45,7 @@ class DatabaseHelper {
     "create table paymentMethods (payMethodId INTEGER PRIMARY KEY AUTOINCREMENT, description TEXT , rate REAL , fiscalGroup INTEGER , currency TEXT , vatNumber TEXT , tinNumber TEXT , defaultMethod INTEGER DEFAULT 0 )";
 
   String receiptAnomallies = "create table receiptAnomallies (anomallyId INTEGER PRIMARY KEY AUTOINCREMENT , receiptGlobalNo INTEGER ,isAnomaly INTEGER , score REAL , receiptTotal REAL , taxAmount REAL , salesAmountWithTax REAL , taxPercent TEXT)";
-
+   
   //====DATABASE FUNCTIONS =======/////////
 
 
@@ -78,7 +78,7 @@ class DatabaseHelper {
 
   return openDatabase(
     path,
-    version: 4, // ✅ bumped version
+    version: 5, // ✅ bumped version
     onCreate: (db, version) async {
       // ✅ Tables created for new installs
       await db.execute(users);
@@ -118,6 +118,23 @@ class DatabaseHelper {
       }
       if (oldVersion<4){
         await db.execute(receiptAnomallies);
+      }
+      if(oldVersion < 5){
+        await db.execute(
+          'ALTER TABLE invoices ADD COLUMN cancelled INTEGER NOT NULL DEFAULT 0'
+        );
+        await db.execute(receiptAnomallies);
+        await db.execute(
+          '''CREATE TABLE IF NOT EXISTS credit_notes (
+              id INTEGER PRIMARY KEY AUTOINCREMENT,
+              receiptGlobalNo TEXT,
+              receiptID TEXT,
+              receiptDate TEXT,
+              receiptTotal REAL,
+              receiptNotes TEXT,
+              creditNoteNumber TEXT
+            )'''
+        );
       }
     },
   );
@@ -211,6 +228,17 @@ class DatabaseHelper {
       where: 'productName LIKE ?',
       whereArgs: ['%$query%'],
     );
+  }
+
+  //Get product sales
+  Future<List<Map<String, dynamic>>> getProductSales(int productId) async {
+    final db = await initDB();
+    return await db.rawQuery('''
+      SELECT sales.*, invoices.date
+      FROM sales
+      INNER JOIN invoices ON sales.invoiceId = invoices.invoiceId
+      WHERE sales.productId = ?
+    ''', [productId]);
   }
 
   //invoice numbers
@@ -372,6 +400,16 @@ class DatabaseHelper {
         FROM paymentMethods
         WHERE paymentMethods.payMethodId = ?
       ''' , [defaultTag]);
+    }
+
+    //get selected currency
+    Future<List<Map<String, dynamic>>> getSelectedCurrency(String method) async {
+      final db = await initDB();
+      return await db.rawQuery('''
+        SELECT currency , rate
+        FROM paymentMethods
+        WHERE currency = ?
+      ''', [method]);
     }
 
     Future<String?> getDefaultCurrency() async {
@@ -738,23 +776,41 @@ class DatabaseHelper {
 
   //get creditnote numbers
 
-  Future<String> getNextCreditNoteNumber() async{
-    final db = await initDB();
-    final result = await db.rawQuery('SELECT MAX(creditNoteNumber) as maxCr FROM credit_notes');
-    final maxCr = result.first['maxCr'] as String?;
-    int nextNumber = 1;
+  // Future<String> getNextCreditNoteNumber() async{
+  //   final db = await initDB();
+  //   final result = await db.rawQuery('SELECT MAX(creditNoteNumber) as maxCr FROM credit_notes');
+  //   final maxCr = result.first['maxCr'] as String?;
+  //   int nextNumber = 1;
 
-    if (maxCr != null) {
-      // Extract the numeric part by removing the 'cr' prefix
-      final numberPart = int.tryParse(maxCr.replaceFirst('cr', ''));
-      if (numberPart != null) {
-        nextNumber = numberPart + 1;
-      }
-    }
+  //   if (maxCr != null) {
+  //     // Extract the numeric part by removing the 'cr' prefix
+  //     final numberPart = int.tryParse(maxCr.replaceFirst('cr', ''));
+  //     if (numberPart != null) {
+  //       nextNumber = numberPart + 1;
+  //     }
+  //   }
 
-    // Format the new credit note number
-    return 'cr$nextNumber';
-  }
+  //   // Format the new credit note number
+  //   return 'cr$nextNumber';
+  // }
+
+  Future<String> getNextCreditNoteNumber() async {
+  final db = await initDB();
+
+  // Correct query: extract the numeric part after 'cr' and get the max as an INTEGER
+  final result = await db.rawQuery(
+    '''
+    SELECT MAX(CAST(SUBSTR(creditNoteNumber, 3) AS INTEGER)) AS maxCr
+    FROM credit_notes
+    '''
+  );
+
+  final maxCr = result.first['maxCr'] as int?;
+  final nextNumber = (maxCr ?? 0) + 1;
+
+  return 'cr$nextNumber';
+}
+
 
   //get call cancelled Receipts
   Future<List<Map<String,dynamic>>> getAllCancelledInvoices() async{

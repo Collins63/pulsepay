@@ -103,6 +103,9 @@ import java.security.KeyStore
 import java.security.PrivateKey
 import java.security.Signature
 import java.security.spec.PKCS8EncodedKeySpec
+import java.security.cert.X509Certificate
+import java.security.interfaces.RSAPublicKey
+import javax.crypto.Cipher
 
 class MainActivity : FlutterActivity() {
     private val CHANNEL = "flutter/kotlin"
@@ -150,6 +153,20 @@ class MainActivity : FlutterActivity() {
                         result.error("INVALID_ARGS", "File path, password, data, or signature is null", null)
                     }
                 }
+
+                "decryptSignatureToHash" ->{
+                    val filePath = call.argument<String>("filePath")!!
+                    val password = call.argument<String>("password")!!
+                    val base64Signature = call.argument<String>("signature")!!
+
+                    try {
+                        val decryptedHash = decryptSignatureToHash(filePath, password, base64Signature)
+                        result.success(decryptedHash)
+                    }
+                    catch(e: Exception) {
+                        e.printStackTrace()
+                    }
+                }
                 else -> result.notImplemented()
             }
         }
@@ -177,6 +194,25 @@ class MainActivity : FlutterActivity() {
             false
         }
     }
+
+    private fun decryptSignatureToHash(filePath: String, password: String, base64Signature: String): String {
+    val fis = FileInputStream(filePath)
+    val keystore = KeyStore.getInstance("PKCS12")
+    keystore.load(fis, password.toCharArray())
+
+    val alias = keystore.aliases().nextElement()
+    val cert = keystore.getCertificate(alias) as X509Certificate
+    val publicKey = cert.publicKey as RSAPublicKey
+
+    val signatureBytes = Base64.decode(base64Signature, Base64.NO_WRAP)
+
+    val cipher = Cipher.getInstance("RSA/ECB/PKCS1Padding")
+    cipher.init(Cipher.DECRYPT_MODE, publicKey)
+    val decryptedHashBytes = cipher.doFinal(signatureBytes)
+
+    return decryptedHashBytes.joinToString("") { "%02x".format(it) }
+}
+
 
     private fun getFirst16CharsOfSignature(signature: String): String {
         if (signature.isBlank()) {

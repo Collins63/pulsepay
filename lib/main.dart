@@ -71,6 +71,44 @@ Future<void> verifySignatureAndShowResult(
   }
 }
 
+Future<void> verifySignatureAndShowResult2(
+  BuildContext context,
+  String filePath,
+  String password,
+  String localHash,
+  String base64Signature,
+)async{
+  const platform = MethodChannel('flutter/kotlin');
+
+  try {
+    final String? decryptedHash = await platform.invokeMethod('decryptSignatureToHash', {
+      'filePath': filePath,
+      'password': password,
+      //'data': data,
+      'signature': base64Signature,
+    });
+
+    final isValid = decryptedHash?.toLowerCase() == localHash.toLowerCase();
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          isValid ? '✅ Signature is valid' : '❌ Signature is invalid',
+        ),
+        backgroundColor: isValid ? Colors.green : Colors.red,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('⚠️ Error verifying signature'),
+        backgroundColor: Colors.orange,
+        duration: Duration(seconds: 3),
+      ),
+    );
+  }
+}
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});

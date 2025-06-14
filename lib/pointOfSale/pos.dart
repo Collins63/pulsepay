@@ -87,6 +87,7 @@ class _PosState extends State<Pos>{
   String? defaultCurrency;
   double? defaultRate;
   int currentFiscal = 0;
+  String transactionCurrency = "USD"; 
   List<Map<String, dynamic>> receiptItems = [];
   double totalAmount = 0.0; 
   double taxAmount = 0.0;
@@ -99,6 +100,7 @@ class _PosState extends State<Pos>{
   String? encodedHash;
   String? signature64 ;
    String? signatureMD5 ;
+   DateTime? currentDateTime;
   // ignore: non_constant_identifier_names
   String? receiptDeviceSignature_signature_hex ;
   String? first16Chars;
@@ -141,37 +143,6 @@ Future<void> print58mmAdvanced(Map<String, dynamic> receiptJson, String qrUrl) a
     // Try multiple initialization attempts
     bool printerReady = false;
     int attempts = 0;
-    
-    // while (!printerReady && attempts < 3) {
-    //   try {
-    //     await SunmiPrinter.initPrinter();
-    //     await Future.delayed(Duration(milliseconds: 500)); // Wait a bit
-        
-    //     bool? isConnected = await SunmiPrinter.bindingPrinter();
-    //     print("Printer binding result: $isConnected");
-        
-    //     if (isConnected == true) {
-    //       printerReady = true;
-    //       print("Sunmi printer ready!");
-    //     } else {
-    //       attempts++;
-    //       print("Printer binding failed, attempt $attempts");
-    //       if (attempts < 3) {
-    //         await Future.delayed(Duration(seconds: 1));
-    //       }
-    //     }
-    //   } catch (e) {
-    //     attempts++;
-    //     print("Initialization attempt $attempts failed: $e");
-    //     if (attempts < 3) {
-    //       await Future.delayed(Duration(seconds: 1));
-    //     }
-    //   }
-    // }
-    
-    // if (!printerReady) {
-    //   throw Exception("Sunmi printer not available after 3 attempts");
-    // }
 
     final receipt = receiptJson['receipt'];
 
@@ -215,6 +186,7 @@ Future<void> _printCustomerInfo(Map<String, dynamic> receipt) async {
   await SunmiPrinter.printText("Name: ${receipt['buyerData']?['buyerTradeName'] ?? 'Walk-in Customer'}");
   await SunmiPrinter.printText("TIN: ${receipt['buyerData']?['buyerTIN'] ?? 'N/A'}");
   await SunmiPrinter.printText("VAT: ${receipt['buyerData']?['VATNumber'] ?? 'N/A'}");
+  await SunmiPrinter.printText("--------------------------------");
   await SunmiPrinter.lineWrap(1);
 }
 
@@ -269,11 +241,11 @@ Future<void> _printSignature(Map<String, dynamic>? signature) async {
 Future<void> _printVerification(dynamic receiptGlobalNo) async {
   await SunmiPrinter.printText("VERIFICATION");
   await SunmiPrinter.printText("--------------------------------");
-  await SunmiPrinter.printText("Verify at:");
-  await SunmiPrinter.printText("https://fdmstest.zimra.co.zw");
+  await SunmiPrinter.printText("Verify at:", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+  await SunmiPrinter.printText("https://fdmstest.zimra.co.zw", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
   await SunmiPrinter.lineWrap(1);
-  await SunmiPrinter.printText("Device ID: 25395");
-  await SunmiPrinter.printText("Receipt No: ${receiptGlobalNo.toString().padLeft(10, '0')}");
+  await SunmiPrinter.printText("Device ID: 25395", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+  await SunmiPrinter.printText("Receipt No: ${receiptGlobalNo.toString().padLeft(10, '0')}", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
 }
 
 Future<void> _printQRCode(String qrUrl) async {
@@ -420,10 +392,16 @@ Future<void> _finishPrint() async {
 }
 
   addItem() async{
+    String saleCurrency = selectedPayMethod.isEmpty ? defaultCurrency.toString() : returnCurrency();
+    final fetchedCurrency = await dbHelper.getSelectedCurrency(saleCurrency);
+    double rate = fetchedCurrency[0]['rate'] ?? 1.0;
+
+    print("sales currency is: $fetchedCurrency and rate is: $rate");
+
   for (var item in cartItems) {
     double itemTotal = (item['sellingPrice'] is String) 
-        ? double.parse(item['sellingPrice']) 
-        : item['sellingPrice'].toDouble();
+        ? double.parse(item['sellingPrice']) * rate 
+        : (item['sellingPrice'].toDouble()) * rate;
     
     int quantity = (item['sellqty'] is String) 
         ? int.parse(item['sellqty']) 
@@ -490,6 +468,64 @@ Future<void> _finishPrint() async {
     }
   }
 
+  String buildZimraCanonicalString({
+  required Map<String, dynamic> receipt,
+  required String deviceID,
+  required String previousReceiptHash,
+}) {
+  final buffer = StringBuffer();
+
+  // 1. Device ID
+  buffer.write(deviceID);
+
+  // 2. Receipt Type
+  buffer.write(receipt['receiptType']);
+
+  // 3. Currency
+  buffer.write(receipt['receiptCurrency']);
+
+  // 4. Receipt Global No
+  buffer.write(receipt['receiptGlobalNo']);
+
+  // 5. Receipt Date
+  buffer.write(receipt['receiptDate']);
+
+  // 6. Total amount in cents
+  final double totalAmount = double.parse(receipt['receiptTotal'].toString());
+  buffer.write((totalAmount * 100).round().toString());
+
+  // 7. Tax blocks
+  final List<dynamic> receiptTaxes = receipt['receiptTaxes'] ?? [];
+
+  for (var tax in receiptTaxes) {
+    final String taxCode = tax['taxCode'];
+    final double taxPercent = double.parse(tax['taxPercent'].toString());
+    final double taxAmount = double.parse(tax['taxAmount'].toString());
+    final double salesAmountWithTax = double.parse(tax['salesAmountWithTax'].toString());
+
+    buffer.write(taxCode);
+
+    // ✅ Apply the rule for taxCode 'A'
+    if (taxCode == 'A') {
+      buffer.write('0');
+    } else {
+      buffer.write(taxPercent.toStringAsFixed(2));
+    }
+
+    buffer.write((taxAmount * 100).round().toString());
+    buffer.write((salesAmountWithTax * 100).round().toString());
+  }
+
+  // 8. Receipt Counter
+  buffer.write(receipt['receiptCounter'].toString());
+
+  // 9. Previous Receipt Hash
+  buffer.write(previousReceiptHash);
+
+  return buffer.toString();
+}
+
+
   Future<String> generateFiscalJSON() async {
     String encodedreceiptDeviceSignature_signature;
   try {
@@ -499,9 +535,10 @@ Future<void> _finishPrint() async {
     String password = "steamTest123";
 
     // Ensure signing does not fail
-
+    DateTime now = DateTime.now();
+    String formattedDate = DateFormat("yyyy-MM-ddTHH:mm:ss").format(now);
     try {
-      String data = await useRawString();
+      String data = await useRawString(formattedDate);
       //List<String>? signature = await getSignatureSignature(data);
       //receiptDeviceSignature_signature_hex = signature?[0];
       //receiptDeviceSignature_signature  = signature?[1];
@@ -525,8 +562,7 @@ Future<void> _finishPrint() async {
 
     int fiscalDayNo = await dbHelper.getlatestFiscalDay();
     int nextReceiptCounter = await dbHelper.getNextReceiptCounter(fiscalDayNo);
-    String hash = await generateHash();
-    print("Hash generated successfully");
+   
 
     int nextInvoice = await dbHelper.getNextInvoiceId();
     int getNextReceiptGlobalNo = await dbHelper.getLatestReceiptGlobalNo();
@@ -541,9 +577,10 @@ Future<void> _finishPrint() async {
       return "{}";
     }
 
-    DateTime now = DateTime.now();
-    String formattedDate = DateFormat("yyyy-MM-ddTHH:mm:ss").format(now);
 
+
+    String hash = await generateHash(formattedDate);
+    print("Hash generated successfully");
 
     Map<String, dynamic> jsonData = {
       "receipt": {
@@ -585,7 +622,7 @@ Future<void> _finishPrint() async {
         "receiptGlobalNo": getNextReceiptGlobalNo + 1,
         "receiptCurrency": saleCurrency,
         "receiptPrintForm": "InvoiceA4",
-        "receiptDate": formattedDate ,
+        "receiptDate": formattedDate,
         "receiptPayments": [
           {"moneyTypeCode": "Cash", "paymentAmount": totalAmount.toStringAsFixed(2)}
         ],
@@ -615,6 +652,14 @@ Future<void> _finishPrint() async {
       Get.snackbar("JSON Encoding Error", "$e", snackPosition: SnackPosition.TOP);
       return "{}";
     }
+    // String getLatestReceiptHash = await dbHelper.getLatestReceiptHash();
+
+    // String verifyString =  buildZimraCanonicalString(receipt: jsonData, deviceID: "25395", previousReceiptHash: getLatestReceiptHash);
+    // verifyString.trim();
+    // var bytes = utf8.encode(verifyString);
+    // var digest = sha256.convert(bytes);
+    // final hashVerify = base64.encode(digest.bytes);
+    // verifySignatureAndShowResult2(context, filePath, password, hashVerify, receiptDeviceSignature_signature.toString());
     File file = File("/storage/emulated/0/Pulse/Configurations/jsonFile.txt");
     await file.writeAsString(jsonString);
     print("Generated JSON: $jsonString");
@@ -770,25 +815,26 @@ String generateReceiptString({
   required String receiptType,
   required String receiptCurrency,
   required int receiptGlobalNo,
-  required DateTime receiptDate,
+  required String receiptDate,
   required double receiptTotal,
   required List<dynamic> receiptItems,
   required String getPreviousReceiptHash,
 }) {
-  String formattedDate = receiptDate.toIso8601String().split('.').first;
-  print("Formatted Date: $formattedDate");
+  //String formattedDate = receiptDate.toIso8601String().split('.').first;
+  //print("Formatted Date: $formattedDate");
   String formattedTotal = receiptTotal.toStringAsFixed(2);
   double receiptTotal_numeric = receiptTotal;
   int receiptTotal_ampl = (receiptTotal_numeric * 100).round();
   String receiptTotal_adj = receiptTotal_ampl.toString();
   String receiptTaxes = generateTaxSummary(receiptItems);
 
-  return "$deviceID$receiptType$receiptCurrency$receiptGlobalNo$formattedDate$receiptTotal_adj$receiptTaxes$getPreviousReceiptHash";
+  return "$deviceID$receiptType$receiptCurrency$receiptGlobalNo$receiptDate$receiptTotal_adj$receiptTaxes$getPreviousReceiptHash";
 }
 
   /// Generate SHA-256 Hash
   /// 
-  useRawString() async {
+  useRawString(String date) async {
+    String saleCurrency = selectedPayMethod.isEmpty ? defaultCurrency.toString() : returnCurrency();
     int latestFiscDay = await dbHelper.getlatestFiscalDay();
     setState(() {
       currentFiscal = latestFiscDay;
@@ -804,9 +850,9 @@ String generateReceiptString({
       String receiptString = generateReceiptString(
         deviceID: 25395,
         receiptType: "FISCALINVOICE",
-        receiptCurrency: "USD",
+        receiptCurrency: saleCurrency,
         receiptGlobalNo: currentGlobalNo,
-        receiptDate: DateTime.now(),
+        receiptDate: date,
         receiptTotal: totalAmount,
         receiptItems: receiptItems,
         getPreviousReceiptHash:"",
@@ -817,9 +863,9 @@ String generateReceiptString({
       String receiptString = generateReceiptString(
         deviceID: 25395,
         receiptType: "FISCALINVOICE",
-        receiptCurrency: "USD",
+        receiptCurrency: saleCurrency,
         receiptGlobalNo: currentGlobalNo,
-        receiptDate: DateTime.now(),
+        receiptDate: date,
         receiptTotal: totalAmount,
         receiptItems: receiptItems,
         getPreviousReceiptHash: getLatestReceiptHash,
@@ -831,7 +877,8 @@ String generateReceiptString({
   
   }
 
-  generateHash() async {
+  generateHash(String date) async {
+    String saleCurrency = selectedPayMethod.isEmpty ? defaultCurrency.toString() : returnCurrency();
     int latestFiscDay = await dbHelper.getlatestFiscalDay();
     String receiptString;
     setState(() {
@@ -848,9 +895,9 @@ String generateReceiptString({
       receiptString = generateReceiptString(
         deviceID: 25395,
         receiptType: "FISCALINVOICE",
-        receiptCurrency: "USD",
+        receiptCurrency: saleCurrency,
         receiptGlobalNo: currentGlobalNo,
-        receiptDate: DateTime.now(),
+        receiptDate: date,
         receiptTotal: totalAmount,
         receiptItems: receiptItems,
         getPreviousReceiptHash:"",
@@ -862,9 +909,9 @@ String generateReceiptString({
       receiptString = generateReceiptString(
         deviceID: 25395,
         receiptType: "FISCALINVOICE",
-        receiptCurrency: "USD",
+        receiptCurrency: saleCurrency,
         receiptGlobalNo: currentGlobalNo,
-        receiptDate: DateTime.now(),
+        receiptDate: date,
         receiptTotal: totalAmount,
         receiptItems: receiptItems,
         getPreviousReceiptHash: getLatestReceiptHash,
@@ -1023,7 +1070,7 @@ String generateReceiptString({
         );
          //print("Data inserted successfully!");
         generateInvoiceFromJson(jsonData, qrurl);
-        print58mmAdvanced(jsonData, qrurl);
+        //print58mmAdvanced(jsonData, qrurl);
       } catch (e) {
         Get.snackbar(" Db Error",
           "$e",
@@ -1069,7 +1116,7 @@ String generateReceiptString({
         );
          print("Data inserted successfully!");
          generateInvoiceFromJson(jsonData, qrurl);
-          print58mmAdvanced(jsonData, qrurl);
+         //print58mmAdvanced(jsonData, qrurl);
       } catch (e) {
         Get.snackbar("Db Error",
           "$e",
@@ -1116,7 +1163,7 @@ String generateReceiptString({
         );
          print("Data inserted successfully!");
          generateInvoiceFromJson(jsonData, qrurl);
-          print58mmAdvanced(jsonData, qrurl);
+         //print58mmAdvanced(jsonData, qrurl);
       } catch (e) {
         Get.snackbar("DB error Error",
           "$e",
@@ -2420,6 +2467,9 @@ String generateReceiptString({
                                               return; // Exit the function
                                             }
                                             // Complete the sale if all validations pass
+                                            DateTime transactionTime = DateTime.now();
+                                            String formattedDate = DateFormat("yyyy-MM-ddTHH:mm:ss").format(transactionTime);
+                                            currentDateTime = DateTime.parse(formattedDate);
                                             await addItem();
                                             await generateFiscalJSON();
                                             //generateHash();

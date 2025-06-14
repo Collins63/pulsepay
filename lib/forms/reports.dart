@@ -8,8 +8,10 @@ import 'package:pulsepay/common/app_bar.dart';
 import 'package:pulsepay/common/constants.dart';
 import 'package:pulsepay/common/custom_button.dart';
 import 'package:pulsepay/common/reusable_text.dart';
+import 'package:pulsepay/reports/companySales.dart';
 import 'package:pulsepay/reports/customerslist.dart';
 import 'package:pulsepay/reports/end_of_daySlip.dart';
+import 'package:pulsepay/reports/salesForProduct.dart';
 import 'package:pulsepay/reports/sales_report.dart';
 
 class Reports extends StatelessWidget {
@@ -69,7 +71,7 @@ class Reports extends StatelessWidget {
                   color: Colors.blue,
                   color2: Colors.blue,
                   onTap: (){
-                    Get.to(()=> SalesReportPage());
+                    Get.to(()=>const  SalesReportPage());
                   },
                 ),
                 const SizedBox(height: 10,),
@@ -79,7 +81,7 @@ class Reports extends StatelessWidget {
                   color: Colors.blue ,
                   color2: Colors.blue,
                   onTap: (){
-
+                    Get.to(()=> const Salesforproduct());
                   },
                 ),
                 const SizedBox(height: 10,),
@@ -89,7 +91,7 @@ class Reports extends StatelessWidget {
                   color: Colors.blue ,
                   color2: Colors.blue,
                   onTap: (){
-
+                    Get.to(()=> const Companysales());
                   },
                 ),
                 
