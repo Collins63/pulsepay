@@ -18,6 +18,7 @@ import 'package:pulsepay/JsonModels/json_models.dart';
 //import 'package:flutter_screenutil/flutter_screenutil.dart';
 //import 'package:get/get_connect/sockets/src/socket_notifier.dart';
 import 'package:pulsepay/SQLite/database_helper.dart';
+import 'package:pulsepay/authentication/login.dart';
 import 'package:pulsepay/common/constants.dart';
 import 'package:pulsepay/common/custom_field.dart';
 import 'package:get/get.dart';
@@ -46,9 +47,11 @@ class Pos  extends StatefulWidget{
 class _PosState extends State<Pos>{
   static const platform = MethodChannel('com.example.pulsepay/signature');
   bool isBarcodeEnabled = false;
+  bool _isSubmitting = false;
   @override
   void initState() {
     super.initState();
+    getActiveUser();
     fetchPayMethods();
     fetchDefaultPayMethod();
     fetchDefaultCurrency();
@@ -108,6 +111,7 @@ class _PosState extends State<Pos>{
   String? receiptDeviceSignature_signature;
   String genericzimraqrurl = "https://fdmstest.zimra.co.zw/";
   int deviceID = 25395;
+  int? nextCustomerID;
   final BlueThermalPrinter bluetooth = BlueThermalPrinter.instance;
     bool _isConnected = false;
   bool _isPrinting = false;
@@ -633,10 +637,10 @@ Future<void> _finishPrint() async {
           "hash": hash,
         },
         "buyerData": {
-          "VATNumber": "123456789",
-          "buyerTradeName": "Cash Sale",
-          "buyerTIN": "0000000000",
-          "buyerRegisterName": "Cash Sale"
+          "VATNumber": selectedCustomer.isNotEmpty? selectedCustomer[0]['vatNumber'].toString() : "123456789",
+          "buyerTradeName": selectedCustomer.isNotEmpty? selectedCustomer[0]['tradeName'] : "Cash Sale",
+          "buyerTIN": selectedCustomer.isNotEmpty? selectedCustomer[0]['tinNumber'].toString() : "0000000000",
+          "buyerRegisterName": selectedCustomer.isNotEmpty? selectedCustomer[0]['tradeName'] : "Cash Sale"   
         },
         "receiptTotal": totalAmount.toStringAsFixed(2),
         "receiptLinesTaxInclusive": true,
@@ -1437,6 +1441,13 @@ String generateReceiptString({
     });
   }
 
+void getNextCustomerID() async {
+    int nextCustomerID1 = await dbHelper.getNextCustomerID();
+    setState(() {
+      nextCustomerID = nextCustomerID1;
+    });
+  }
+
   ///=====CUSTOMER DETAILS=====//////////
   //////////////////////////////////////
   addCustomerDetails(){
@@ -1541,12 +1552,13 @@ String generateReceiptString({
                       ),
                     ),
                     SizedBox(height: 10,),
+
                     TextFormField(
                       controller: customerNameController,
                       decoration: InputDecoration(
                           labelText: 'Trade Name',
                           labelStyle: TextStyle(color:Colors.grey.shade600 ),
-                          enabled: isActve,
+                          enabled: true,
                           filled: true,
                           fillColor: Colors.grey.shade300,
                           border: OutlineInputBorder(
@@ -1561,7 +1573,7 @@ String generateReceiptString({
                       decoration: InputDecoration(
                           labelText: 'TIN Number',
                           labelStyle: TextStyle(color:Colors.grey.shade600 ),
-                          enabled: isActve,
+                          enabled: true,
                           filled: true,
                           fillColor: Colors.grey.shade300,
                           border: OutlineInputBorder(
@@ -1580,7 +1592,7 @@ String generateReceiptString({
                       controller: vatController,
                       decoration: InputDecoration(
                           labelText: 'VAT Number',
-                          enabled: isActve,
+                          enabled: true,
                           labelStyle: TextStyle(color:Colors.grey.shade600 ),
                           filled: true,
                           fillColor: Colors.grey.shade300,
@@ -1601,7 +1613,7 @@ String generateReceiptString({
                       decoration: InputDecoration(
                           labelText: 'Address',
                           labelStyle: TextStyle(color:Colors.grey.shade600 ),
-                          enabled: isActve,
+                          enabled: true,
                           filled: true,
                           fillColor: Colors.grey.shade300,
                           border: OutlineInputBorder(
@@ -1616,7 +1628,7 @@ String generateReceiptString({
                       decoration: InputDecoration(
                           labelText: 'Email',
                           labelStyle: TextStyle(color:Colors.grey.shade600 ),
-                          enabled: isActve,
+                          enabled: true,
                           filled: true,
                           fillColor: Colors.grey.shade300,
                           border: OutlineInputBorder(
@@ -1642,6 +1654,7 @@ String generateReceiptString({
                             ));
                             setState(() {
                               selectedCustomer.add({
+                                'customerID': nextCustomerID,
                                 'tradeName': customerNameController.text,
                                 'tinNumber': tinController.text,
                                 'vatNumber': vatController.text,
@@ -1852,12 +1865,30 @@ String generateReceiptString({
 
   //sale done modal
 
-  
+  //set user details
+  String activeUser = '';
+  int? isCashier ;
+
+  void getActiveUser() async{
+    final users = await dbHelper.getActiveUser();
+    setState(() {
+      activeUser = users[0]['userName'] ?? '';
+      int isCashier1 = users[0]['isCashier'] ?? 0;
+      if (isCashier1 == 1){
+        isCashier = 1;
+      }
+    });
+  }
+
+  void resetUser() async{
+    await dbHelper.resetActiveUser();
+  }
   
 
   //=================END OF FUNCTIONS============================//a
   //======================================================//
   
+  //=================Interface Code ============================//
 
   @override  Widget build(BuildContext context) {
     return Scaffold(
@@ -1877,7 +1908,26 @@ String generateReceiptString({
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+              isCashier ==1 ? 
               GestureDetector(
+                onTap: (){
+                  //Navigator.pop(context);
+                  resetUser();
+                  Navigator.pushAndRemoveUntil(
+                                context,
+                                MaterialPageRoute(builder: (context) => const Login()),
+                                (Route<dynamic> route) => false,
+                              );
+                },
+                child: const Padding(
+                  padding: EdgeInsets.all(8.0),
+                    child: Icon(
+                      Icons.logout,
+                      size: 30,
+                      color: Colors.white,
+                    ),
+                  ),
+              ) : GestureDetector(
                 onTap: (){
                   Navigator.pop(context);
                 },
@@ -1889,7 +1939,7 @@ String generateReceiptString({
                       color: Colors.white,
                     ),
                   ),
-              ),
+              ) ,
               CustomField(
                 controller: controller,
                 onChanged: searchProducts,
@@ -1994,6 +2044,7 @@ String generateReceiptString({
                         ] 
                       ),
                       child: TextButton(onPressed: (){
+                        getNextCustomerID();
                         addCustomerDetails();
                       },
                       child: const Center(
@@ -2253,7 +2304,21 @@ String generateReceiptString({
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
+            isCashier == 1 ?
             IconButton(
+                onPressed: (){
+
+                },
+                icon: const Column(
+                  children: [
+                    Icon(Icons.home, color: Colors.white,),
+                    Text(
+                        "Enquiry",
+                        style: TextStyle(fontSize: 10,color: Colors.white),
+                    )
+                  ],
+                ),
+            ) : IconButton(
                 onPressed: (){
 
                 },
@@ -2266,7 +2331,7 @@ String generateReceiptString({
                     )
                   ],
                 ),
-            ),
+            ) ,
             IconButton(
               onPressed: (){
                 //Navigator.pushReplacement(
@@ -2426,8 +2491,14 @@ String generateReceiptString({
                                     const SizedBox(height: 40,),
                                     SizedBox(
                                       width: double.infinity,
-                                      child: ElevatedButton(
+                                      child: _isSubmitting ? 
+                                        const Text(
+                                          'Processing...',
+                                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.green),
+                                        ):
+                                       ElevatedButton(
                                         onPressed: () async {
+                                          
                                           try {
                                             // Check if the text input is empty
                                             if (paidController.text.isEmpty) {
@@ -2438,6 +2509,7 @@ String generateReceiptString({
                                                 colorText: Colors.black,
                                                 backgroundColor: Colors.amber,
                                               );
+                                              //setState(() => _isSubmitting = false);
                                               return; // Exit the function
                                             }
 
@@ -2453,6 +2525,7 @@ String generateReceiptString({
                                                 colorText: Colors.white,
                                                 backgroundColor: Colors.red,
                                               );
+                                              //setState(() => _isSubmitting = false);
                                               return; // Exit the function
                                             }
 
@@ -2464,8 +2537,12 @@ String generateReceiptString({
                                                 colorText: Colors.white,
                                                 backgroundColor: Colors.red,
                                               );
+                                              //setState(() => _isSubmitting = false);
                                               return; // Exit the function
                                             }
+                                            setState(() {
+                                               _isSubmitting = true;
+                                            });
                                             // Complete the sale if all validations pass
                                             DateTime transactionTime = DateTime.now();
                                             String formattedDate = DateFormat("yyyy-MM-ddTHH:mm:ss").format(transactionTime);
@@ -2475,7 +2552,20 @@ String generateReceiptString({
                                             //generateHash();
                                             await submitReceipt();
                                             await completeSale();
+                                            setState(() {
+                                              cartItems.clear();
+                                              selectedPayMethod.clear();
+                                              selectedCustomer.clear();
+                                              paidController.clear();
+                                            });
                                             Navigator.pop(context);
+                                            Navigator.pushReplacement(
+                                              context,
+                                              PageRouteBuilder(
+                                              pageBuilder: (_, __, ___) => const Pos(),
+                                              transitionDuration: Duration.zero,
+                                              ),
+                                            );
 
                                             } catch (e) {
                                               Get.snackbar(
@@ -2486,6 +2576,12 @@ String generateReceiptString({
                                                 backgroundColor: Colors.red,
                                                 snackPosition: SnackPosition.TOP,
                                               );
+                                              setState(() => _isSubmitting = false);
+                                            }
+                                            finally {
+                                              setState(() {
+                                                _isSubmitting = false;
+                                              });
                                             }
                                         },
                                         style: ElevatedButton.styleFrom(
@@ -2495,7 +2591,16 @@ String generateReceiptString({
                                             borderRadius: BorderRadius.circular(12.0),
                                           ),
                                         ),
-                                        child: const Text(
+                                        child: _isSubmitting ? 
+                                          const SizedBox(
+                                            width: 20,
+                                            height: 20,
+                                            child: CircularProgressIndicator(
+                                              color: Colors.white,
+                                              strokeWidth: 2,
+                                            ),
+                                          )
+                                          : const Text(
                                           'Save Sale',
                                           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
                                         ),
@@ -2555,6 +2660,13 @@ String generateReceiptString({
                                       cartItems.clear();
                                     });
                                     Navigator.of(context).pop(true);
+                                    Navigator.pushReplacement(
+                                              context,
+                                              PageRouteBuilder(
+                                              pageBuilder: (_, __, ___) => const Pos(),
+                                              transitionDuration: Duration.zero,
+                                              ),
+                                            );
                                   },
                                   child: const Text('Yes'),
                                 ),

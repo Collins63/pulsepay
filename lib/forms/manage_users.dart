@@ -20,6 +20,10 @@ class _ManageUsersState extends State<ManageUsers> {
     fetchUsers();
   }
 
+  Future<void>  getUserById() async{
+    
+  }
+
   Future<void> fetchUsers() async {
     List<Map<String, dynamic>> data = await dbHelper.getAllUsers();
     setState(() {
@@ -45,7 +49,7 @@ class _ManageUsersState extends State<ManageUsers> {
         preferredSize: Size.fromHeight(50)
         ,child: AppBar(
           centerTitle: true,
-          title: const Text("Submitted Receipts" , style: TextStyle(fontSize: 20, color: Colors.white, fontWeight:  FontWeight.bold),),
+          title: const Text("Manager Users" , style: TextStyle(fontSize: 20, color: Colors.white, fontWeight:  FontWeight.bold),),
           iconTheme: const IconThemeData(color: Colors.white),
           backgroundColor: Colors.blue,
           shape: const RoundedRectangleBorder(
@@ -78,6 +82,8 @@ class _ManageUsersState extends State<ManageUsers> {
                         DataColumn(label: Text('Username')),
                         DataColumn(label: Text('DateCreated')),
                         DataColumn(label: Text('IsActive')),
+                        DataColumn(label: Text('IsAdmin')),
+                        DataColumn(label: Text('IsCashier')),
                       ],
                       rows: users
                           .map(
@@ -95,6 +101,8 @@ class _ManageUsersState extends State<ManageUsers> {
                                 DataCell(Text(user['userName'].toString())),
                                 DataCell(Text(user['dateCreated'].toString())),
                                 DataCell(Text(user['isActive'].toString())),
+                                DataCell(Text(user['isAdmin'].toString())),
+                                DataCell(Text(user['isCashier'].toString()))
                               ],
                             );
                           })
@@ -110,9 +118,9 @@ class _ManageUsersState extends State<ManageUsers> {
                   CustomOutlineBtn(
                     width: 90,
                     height: 50,
-                    text: "View",
-                    color:const Color.fromARGB(255, 14, 19, 29),
-                    color2: const Color.fromARGB(255, 14, 19, 29),
+                    text: "Update",
+                    color: Colors.blue,
+                    color2: Colors.blue,
                     onTap: (){
                       //final i = selectedUsers.first;
                       //fetchSalesForInvoice(invoiceId);
@@ -121,9 +129,9 @@ class _ManageUsersState extends State<ManageUsers> {
                   CustomOutlineBtn(
                     width: 90,
                     height: 50,
-                    text: "Cancel",
-                    color:const Color.fromARGB(255, 14, 19, 29),
-                    color2: const Color.fromARGB(255, 14, 19, 29) ,
+                    text: "Delete",
+                    color:Colors.blue,
+                    color2: Colors.blue ,
                     onTap: (){
                       //showPasswordPrompt();
                     },
@@ -131,9 +139,9 @@ class _ManageUsersState extends State<ManageUsers> {
                   CustomOutlineBtn(
                     width: 90,
                     height: 50,
-                    text: "Edit",
-                    color:const Color.fromARGB(255, 14, 19, 29),
-                    color2: const Color.fromARGB(255, 14, 19, 29),
+                    text: "View",
+                    color:Colors.blue,
+                    color2: Colors.blue,
                     onTap: (){
                     },
                   ),

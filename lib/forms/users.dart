@@ -33,53 +33,38 @@ class UsersPage extends StatelessWidget{
       ),
       body:  SafeArea(
         bottom: false,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Lottie.asset('assets/users2.json'),
-              const SizedBox(height: 20,),
-              CustomOutlineBtn(
-                text:"Manage Permissions",
-                color: Colors.blue,
-                color2:Colors.blue ,
-                onTap: (){
-          
-                },
-                height: 50,
-              ),
-              const SizedBox(height: 20,),
-              CustomOutlineBtn(
-                text:"Manage Users",
-                color: Colors.blue,
-                color2:Colors.blue ,
-                onTap: (){
-                  Get.to(()=> const ManageUsers());
-                },
-                height: 50,
-              ),
-              const SizedBox(height: 20,),
-              CustomOutlineBtn(
-                text:"Add User",
-                color: Colors.blue,
-                color2:Colors.blue ,
-                onTap: (){
-                  Get.to(()=> const AddUser());
-                },
-                height: 50,
-              ),
-              const SizedBox(height: 20,),
-              CustomOutlineBtn(
-                text:"Assign Roles",
-                color: Colors.blue,
-                color2:Colors.blue,
-                onTap: (){
-          
-                },
-                height: 50,
-              )
-            ],
+        child: SingleChildScrollView(
+          scrollDirection: Axis.vertical,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Lottie.asset('assets/users2.json'),
+                const SizedBox(height: 20,),
+                const SizedBox(height: 20,),
+                CustomOutlineBtn(
+                  text:"Manage Users",
+                  color: Colors.blue,
+                  color2:Colors.blue ,
+                  onTap: (){
+                    Get.to(()=> const ManageUsers());
+                  },
+                  height: 50,
+                ),
+                const SizedBox(height: 20,),
+                CustomOutlineBtn(
+                  text:"Add User",
+                  color: Colors.blue,
+                  color2:Colors.blue ,
+                  onTap: (){
+                    Get.to(()=> const AddUser());
+                  },
+                  height: 50,
+                ),
+                const SizedBox(height: 20,),
+              ],
+            ),
           ),
         )),
         bottomNavigationBar: BottomAppBar(

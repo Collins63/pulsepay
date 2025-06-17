@@ -641,7 +641,7 @@ Future<void> generateCreditFiscalJSON() async{
             'TotalWT': 0.0,
             },conflictAlgorithm: ConflictAlgorithm.replace);
             print("Data inserted successfully!");
-            print58mmAdvanced(jsonData, qrurl,invoiceId);
+            //print58mmAdvanced(jsonData, qrurl,invoiceId);
           } catch (e) {
             Get.snackbar(" Db Error",
             "$e",
@@ -682,7 +682,7 @@ Future<void> generateCreditFiscalJSON() async{
             'TotalWT': 0.0,
             },conflictAlgorithm: ConflictAlgorithm.replace);
             print("Data inserted successfully!");
-            print58mmAdvanced(jsonData, qrurl, invoiceId);
+            //print58mmAdvanced(jsonData, qrurl, invoiceId);
           } catch (e) {
             Get.snackbar(" Db Error",
             "$e",
@@ -725,7 +725,7 @@ Future<void> generateCreditFiscalJSON() async{
             'TotalWT': 0.0,
             },conflictAlgorithm: ConflictAlgorithm.replace);
             print("Data inserted successfully!");
-            print58mmAdvanced(jsonData, qrurl, invoiceId);
+            //print58mmAdvanced(jsonData, qrurl, invoiceId);
           } catch (e) {
             Get.snackbar(" Db Error",
             "$e",

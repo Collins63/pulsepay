@@ -37,6 +37,7 @@ class _HomePageState extends State<HomePage>{
   @override
   void initState() {
     super.initState();
+    getActiveUser();
     // Run immediately on open
     // syncReceiptAnomalies();
     // // Schedule every 2 hours thereafter
@@ -49,6 +50,19 @@ class _HomePageState extends State<HomePage>{
   void dispose() {
     _timer?.cancel();
     super.dispose();
+  }
+
+  String activeUser = '';
+
+  void getActiveUser() async{
+    final users = await dbHelper.getActiveUser();
+    setState(() {
+      activeUser = users[0]['userName'] ?? '';
+    });
+  }
+
+  void resetUser() async{
+    await dbHelper.resetActiveUser();
   }
 
   Future<void> syncReceiptAnomalies() async{
@@ -165,21 +179,26 @@ class _HomePageState extends State<HomePage>{
                         padding: const EdgeInsets.all(16.0),
                         child: Row(
                           children: [
-                             const Column(
+                            Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text("Welcome Back!",
+                                const Text("Welcome Back!",
                                   style: TextStyle(color: Colors.white),
                                 ),
-                                Text("User",
-                                  style: TextStyle(color: Colors.white, fontSize: 24 , fontWeight: FontWeight.bold),
+                                Text(activeUser,
+                                  style: const TextStyle(color: Colors.white, fontSize: 24 , fontWeight: FontWeight.bold),
                                 ),
                               ],
                             ),
                             const Spacer(),
                             IconButton.outlined(onPressed: (){
-                              Navigator.push(context,
-                              MaterialPageRoute(builder: (context)=> const Login()));
+                              resetUser();
+                              Navigator.pushAndRemoveUntil(
+                                context,
+                                MaterialPageRoute(builder: (context) => const Login()),
+                                (Route<dynamic> route) => false,
+                              );
+
                             }, icon: const Icon(Icons.logout_sharp, color: Colors.white, ), color: Colors.white, highlightColor: Colors.white,)
                           ],
                         ),

@@ -248,6 +248,13 @@ class DatabaseHelper {
     int lastId = result.first['lastId'] as int? ?? 0; // Start at 0 if no invoices
     return lastId + 1;
   }
+
+  Future<int> getNextCustomerID() async{
+    final db = await initDB();
+    final result = await db.rawQuery('SELECT MAX(customerID) as lastId FROM customer');
+    int lastId = result.first['lastId'] as int? ?? 0; // Start at 0 if no customers
+    return lastId + 1;
+  }
   
   Future<int> getNextReceiptGlobalNo() async {
     final db = await initDB();
@@ -344,6 +351,16 @@ class DatabaseHelper {
       return await db.rawQuery(query, ['%$invoiceNumber%']);
     }
     
+    Future<void> setActiveUser(String username) async{
+      final db = await initDB();
+      await db.update(
+        'users',
+        {'isActive': 1},
+        where: 'userName = ?',
+        whereArgs: [username],
+      );
+    }
+
     ///Cancel Invoice
     Future<void> cancelInvoice(int invoiceId) async {
       final db = await initDB();
@@ -380,6 +397,36 @@ class DatabaseHelper {
           INNER JOIN products ON sales.productId = products.productId
           WHERE sales.invoiceId = ?
         ''', [invoiceId]);
+    }
+
+    //getActive user
+    Future<List<Map<String , dynamic>>> getActiveUser() async{
+      final db = await initDB();
+      return await db.rawQuery('''
+        SELECT users.*
+        FROM users
+        WHERE isActive = 1 
+      ''');
+    }
+
+    //reset active user
+    Future<void> resetActiveUser() async{
+      final db = await initDB();
+      await db.update('users',
+      {'isActive' : 0},
+        where: 'isActive = ?',
+        whereArgs: [1]
+      );
+    }
+
+    //get logged in user
+    Future<List<Map<String, dynamic>>> getLoggedInUser(String username) async {
+      final db = await initDB();
+      return await db.rawQuery('''
+        SELECT users.*
+        FROM users
+        WHERE userName = ?
+      ''', [username]);
     }
 
     ///Get Product By ID
@@ -856,24 +903,24 @@ class DatabaseHelper {
     );
   }
 
-  Future<List<Map<String, dynamic>>> getAllFiscalInvoice() async{
+  Future<List<Map<String, dynamic>>> getAllFiscalInvoice(String? currency) async{
     final db = await initDB();
     return await db.rawQuery(
       '''
         SELECT submittedReceipts.*
         FROM submittedReceipts
-        WHERE receiptType = 'FISCALINVOICE'
-      '''
+        WHERE receiptType = 'FISCALINVOICE' AND receiptCurrency = ?
+      ''' , [currency]
     );
   }
 
 
-  Future<List<Map<String , dynamic>>> getTotalTaxAmount() async{
+  Future<List<Map<String , dynamic>>> getTotalTaxAmount(String? currency) async{
     final db = await initDB();
     return await db.rawQuery('''
       SELECT SUM(taxAmount) as totalTaxAmount
-      FROM submittedReceipts
-    ''');
+      FROM submittedReceipts WHERE receiptCurrency = ?
+    ''' , [currency] );
   }
 
   Future<List<Map<String, dynamic>>> getTopProductsByQuantity() async {
@@ -941,6 +988,60 @@ class DatabaseHelper {
     };
     
     return taxDetails;
+  }
+
+ Future<Map<String, dynamic>> getCurrentMonthTaxDetailsUSD() async {
+    final Database database = await initDB();
+    final DateTime now = DateTime.now();
+    final int currentYear = now.year;
+    final int currentMonth = now.month;
+    final String monthName = DateFormat('MMMM').format(now);
+    
+    // Format for SQL substring comparison
+    final String yearMonthPattern = '${currentYear}-${currentMonth < 10 ? '0$currentMonth' : currentMonth}';
+    
+    // First and last day formatting for display purposes
+    final DateTime firstDay = DateTime(currentYear, currentMonth, 1);
+    final DateTime lastDay = DateTime(currentYear, currentMonth + 1, 0);
+    final String startDateFormatted = DateFormat('yyyy-MM-dd').format(firstDay);
+    final String endDateFormatted = DateFormat('yyyy-MM-dd').format(lastDay);
+    
+    // Query using substring to extract year-month part from ISO timestamp
+    final List<Map<String, dynamic>> result = await database.rawQuery('''
+      SELECT 
+        SUM(taxAmount) as totalTaxAmount,
+        COUNT(*) as receiptCount,
+        AVG(taxAmount) as averageTaxAmount,
+        SUM(SalesAmountwithTax) as totalSalesWithTax,
+        SUM(TotalExempt) as totalExempt,
+        SUM(TotalWT) as totalWithholdingTax
+      FROM submittedReceipts
+      WHERE substr(receiptDate, 1, 7) = ? AND receiptCurrency = 'USD'
+    ''', [yearMonthPattern]);
+    
+    final Map<String, dynamic> taxDetails = {
+      'totalTaxAmount': result.first['totalTaxAmount'] as double? ?? 0.0,
+      'receiptCount': result.first['receiptCount'] as int? ?? 0,
+      'averageTaxAmount': result.first['averageTaxAmount'] as double? ?? 0.0,
+      'totalSalesWithTax': result.first['totalSalesWithTax'] as double? ?? 0.0,
+      'totalExempt': result.first['totalExempt'] as double? ?? 0.0,
+      'totalWithholdingTax': result.first['totalWithholdingTax'] as double? ?? 0.0,
+      'month': monthName,
+      'year': currentYear.toString(),
+      'startDate': startDateFormatted,
+      'endDate': endDateFormatted,
+    };
+    
+    return taxDetails;
+  } 
+
+  //get all currencies
+  Future<List<Map<String, dynamic>>> getAllCurrencies() async {
+    final db = await initDB();
+    return await db.rawQuery('''
+      SELECT paymentMethods.*
+      FROM paymentMethods
+    ''');
   }
 
 }

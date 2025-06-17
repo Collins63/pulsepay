@@ -31,8 +31,8 @@ class _AddUserState extends State<AddUser>{
     final passwordEntered = password.text.trim();
     final realnameEntered = realname.text;
     final String date = DateTime.now().toIso8601String();
-
-    if (usernameEntered.isEmpty || passwordEntered.isEmpty || (!isAdmin && !isCashier)){
+    try {
+      if (usernameEntered.isEmpty || passwordEntered.isEmpty || (!isAdmin && !isCashier)){
       Get.snackbar(
         'Failed',
         'Please fill all the fiels and select a role.',
@@ -72,6 +72,9 @@ class _AddUserState extends State<AddUser>{
       isAdmin =false;
       isCashier =false;
     });
+    } catch (e) {
+      Get.snackbar("Saving Error", "$e" , snackPosition: SnackPosition.TOP, backgroundColor: Colors.red, colorText: Colors.white, icon: const Icon(Icons.error));
+    }
 
   }
 

@@ -26,6 +26,7 @@ class _MyTaxesState extends State<MyTaxes> {
   List<Map<String, dynamic>> topProducts = [];
   Map<String, dynamic> monthlyTaxDetails = {};
   List<Map<String, dynamic>> receiptsPending = [];
+  List<String> currencies = [];
   double taxTotal1 = 0.0;
   double taxTotal2 = 0.0;
   double taxTotal3 = 0.0;
@@ -34,9 +35,12 @@ class _MyTaxesState extends State<MyTaxes> {
   double tax3Percent = 0.0;
   double monthTotalTaxAmount = 0.0;
 
+  String? selectedCurrency;
+
 
   @override
   void initState() {
+    loadCurrencies();
     super.initState();
     getTotalTax();
     loadTaxTotals();
@@ -60,6 +64,20 @@ class _MyTaxesState extends State<MyTaxes> {
       });
     });
   }
+
+  Future<List<String>> fetchCurrencies() async{
+    final List<Map<String, dynamic>> currencies = await dbHepler.getAllCurrencies();
+    print(currencies);
+    return currencies.map((row) => row['currency'] as String).toList();
+  }
+
+  Future<void> loadCurrencies()async{
+    final results = await fetchCurrencies();
+    setState(() {
+      currencies = results;
+    });
+  }
+
 
   void loadTaxTotals() async{
     Map<String, double> totals = await getTaxTotalsByID();
@@ -90,7 +108,7 @@ class _MyTaxesState extends State<MyTaxes> {
   }
   
   getTotalTax() async{
-    final List<Map<String, dynamic>> result = await dbHepler.getTotalTaxAmount();
+    final List<Map<String, dynamic>> result = await dbHepler.getTotalTaxAmount(selectedCurrency);
     if(result.isNotEmpty && result.first['totalTaxAmount'] != null){
       setState(() {
         double rtotalTaxAmount = result.first['totalTaxAmount'];
@@ -99,9 +117,10 @@ class _MyTaxesState extends State<MyTaxes> {
       });
     }
   }
+  //756.52
 
   Future<Map<String, double>>  getTaxTotalsByID() async{
-    final receipts = await dbHepler.getAllFiscalInvoice();
+    final receipts = await dbHepler.getAllFiscalInvoice(selectedCurrency);
     Map<String, double> totals = {
       "1": 0.0,
       "2": 0.0,
@@ -314,7 +333,46 @@ class _MyTaxesState extends State<MyTaxes> {
                   child: Text("Pending Receipts" , style: TextStyle(fontSize: 18, color: Colors.white,fontWeight:  FontWeight.w500),),
                 ),
               ),
-
+              const SizedBox(height: 30,),
+              const Text("Currency Selector" , style: TextStyle(fontSize: 16, color:  const Color.fromARGB(255, 14, 19, 29),fontWeight:  FontWeight.bold),),
+              Container(
+                height: 70,
+                width: 390,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.3), // shadow color
+                      spreadRadius: 4, // how much the shadow spreads
+                      blurRadius: 10,  // how soft the shadow is
+                      offset: Offset(0, 6), // horizontal and vertical offset
+                    ),
+                  ],
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                  child: DropdownButton<String>(
+                    menuWidth: 200,
+                    hint: Text("Select Currency"),
+                    value: selectedCurrency,
+                    onChanged: (value){
+                      setState(() {
+                        selectedCurrency = value;
+                      });
+                      loadTaxTotals();
+                      getTotalTax();
+                    },
+                    items: currencies.map((currency) {
+                      return DropdownMenuItem<String>(
+                        value: currency,
+                        child: Text(currency),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ),
+             
               const SizedBox(height: 20,),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,

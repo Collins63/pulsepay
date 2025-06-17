@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:http/http.dart';
 import 'package:pulsepay/JsonModels/json_models.dart';
 import 'package:pulsepay/SQLite/database_helper.dart';
 import 'package:pulsepay/authentication/signup.dart';
 import 'package:pulsepay/home/home_page.dart';
+import 'package:pulsepay/pointOfSale/pos.dart';
 
 class Login extends StatefulWidget{
   const Login ({super.key});
@@ -24,9 +26,21 @@ class _LoginState extends State<Login>{
   login() async{
     var response = await db.login(Users(userName: username.text, userPassword: password.text));
     if(response == true){
-      if(!mounted) return;
-      Navigator.pushReplacement(context,
-      MaterialPageRoute(builder: (context)=>const HomePage()));
+      final user = await db.getLoggedInUser(username.text);
+      int isAdmin   = user[0]['isAdmin'];
+      int isCashier = user[0]['isCashier'];
+      if ( isAdmin == 1 && isCashier == 0){
+        if(!mounted) return;
+        db.setActiveUser(username.text);
+        Navigator.pushReplacement(context,
+        MaterialPageRoute(builder: (context)=>const HomePage()));
+      }
+      else if (isAdmin == 0 && isCashier ==1){
+        if(!mounted) return;
+        db.setActiveUser(username.text);
+        Navigator.pushReplacement(context,
+        MaterialPageRoute(builder: (context)=>const Pos()));
+      }
     }else{
       Get.snackbar(
         'Login Failed!',

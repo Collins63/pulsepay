@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:pulsepay/SQLite/database_helper.dart';
 import 'package:pulsepay/authentication/login.dart';
 //import 'package:flutter_screenutil/flutter_screenutil.dart';
 
@@ -12,6 +13,11 @@ void main() {
     debugShowCheckedModeBanner: false,
   ));
 }
+
+// @override
+// void dispose(){
+
+// }
 
 const MethodChannel _channel = MethodChannel('flutter/kotlin');
 
@@ -110,8 +116,37 @@ Future<void> verifySignatureAndShowResult2(
   }
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget{
   const MyApp({super.key});
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
+  DatabaseHelper dbHelper = DatabaseHelper();
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.inactive || state == AppLifecycleState.detached) {
+      resetUserActiveFlag();
+    }
+  }
+
+  void resetUserActiveFlag() async {
+    await dbHelper.resetActiveUser(); // Your logic to set isActive = 0
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
