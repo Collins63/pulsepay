@@ -179,7 +179,7 @@ class _SalesforproductState extends State<Salesforproduct> {
                           selectedItem.isEmpty ?
                           const Padding(
                             padding: EdgeInsets.only(top: 40),
-                            child:  Center(child: Text("Empty Cart" , style: TextStyle(color: Colors.white , fontWeight: FontWeight.bold , fontSize: 16))),
+                            child:  Center(child: Text("No product selected" , style: TextStyle(color: Colors.white , fontWeight: FontWeight.bold , fontSize: 16))),
               
                           ) :
                           Column(

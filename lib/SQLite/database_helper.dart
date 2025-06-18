@@ -1,3 +1,6 @@
+import 'dart:ffi';
+
+import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
@@ -264,7 +267,7 @@ class DatabaseHelper {
   }
 
   //save sale
-  Future<void> saveSale(List<Map<String, dynamic>> cartItems, double totalAmount, double totalTax , double indiTax , int customerID) async {
+  Future<void> saveSale(List<Map<String, dynamic>> cartItems, double totalAmount, double totalTax , double indiTax , int customerID, String saleCurrency) async {
   final db = await initDB();
   final int invoiceId = await getNextInvoiceId();
   final String date = DateTime.now().toIso8601String();
@@ -277,6 +280,7 @@ class DatabaseHelper {
       'date': date,
       'totalAmount': totalAmount,
       'totalTax': totalTax,
+      'currency': saleCurrency
     });
 
     // Insert into sales table
@@ -287,6 +291,7 @@ class DatabaseHelper {
         'productId': item['productid'],
         'quantity': item['sellqty'],
         'sellingPrice': item['sellingPrice'],
+        'currency' : saleCurrency,
         'tax': indiTax, // Calculate per-item tax if necessary
       });
     }
@@ -945,6 +950,58 @@ class DatabaseHelper {
     ''');
   }
 
+  Future<List<Map<String , dynamic>>> getTopSellingProducts() async{
+    final database = await initDB();
+    return await database.rawQuery('''
+        SELECT
+          products.productId,
+          products.productName,
+          SUM(sales.quantity) as totalQuantity,
+          SUM(sales.quantity * sales.sellingPrice) as totalSales
+        FROM
+          sales
+        INNER JOIN
+          products ON sales.productId = products.productId
+        GROUP BY
+          sales.productId
+        ORDER BY
+          totalQuantity DESC
+    ''');
+  }
+
+  Future<List<Map<String, dynamic>>> getzwg()async{
+    final db  = await initDB();
+    return await db.rawQuery('''
+      SELECT * FROM sales WHERE currency = 'ZWG'
+    ''');
+  }
+
+  Future<List<Map<String, dynamic>>> getZWGTotalSales()async{
+    final database = await initDB();
+    return await database.rawQuery('''
+        SELECT
+          currency,
+          SUM(sales.quantity * sales.sellingPrice) as totalSales
+        FROM
+          sales
+        WHERE
+          currency = ?
+    ''', ['ZWG']);
+  }
+
+  Future<List<Map<String, dynamic>>> getUSDTotalSales()async{
+    final database = await initDB();
+    return await database.rawQuery('''
+        SELECT
+          currency,
+          SUM(sales.quantity * sales.sellingPrice) as totalSales
+        FROM
+          sales
+        WHERE
+          currency = ?
+    ''' , ['USD']);
+  }
+
     Future<Map<String, dynamic>> getCurrentMonthTaxDetails() async {
     final Database database = await initDB();
     final DateTime now = DateTime.now();
@@ -1043,5 +1100,35 @@ class DatabaseHelper {
       FROM paymentMethods
     ''');
   }
+
+  //get zwg 
+  Future<List<Map<String, dynamic>>> getzwgcurrency() async{
+    final db = await initDB();
+    return await db.rawQuery('''
+      SELECT paymentMethods.*
+      FROM paymentMethods
+      WHERE currency = 'ZWG'
+    ''');
+  }
+
+  Future<double> getTotalSalesWithinDateRange({
+  required String currency,
+  required String startDate,
+  required String endDate,
+}) async {
+  final db = await initDB();
+
+final result = await db.rawQuery('''
+    SELECT 
+      IFNULL(SUM(invoices.totalAmount), 0) AS totalSales
+    FROM 
+      invoices
+    WHERE 
+      invoices.currency = ? 
+      AND invoices.date BETWEEN ? AND ?
+  ''', [currency, startDate, endDate]);
+
+  return result.isNotEmpty ? (result[0]['totalSales'] as double) : 0.0;
+}
 
 }

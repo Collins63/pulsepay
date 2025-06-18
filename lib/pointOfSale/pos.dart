@@ -1185,11 +1185,12 @@ String generateReceiptString({
     final double totalTax = calculateTotalTax();
     final double indiTax = calculateIndividualtax();
     final int customerID;
+    String saleCurrency = selectedPayMethod.isEmpty ? defaultCurrency.toString() : returnCurrency();
     
     if(selectedCustomer.isEmpty){
       customerID = 999999;
       //= selectedCustomer[0]['customerID']
-      await dbHelper.saveSale(cartItems, totalAmount, totalTax , indiTax, customerID );
+      await dbHelper.saveSale(cartItems, totalAmount, totalTax , indiTax, customerID , saleCurrency);
       for (var item in cartItems){
       int sellQty = item['sellqty'];
       int productid = item['productid'];
@@ -1204,7 +1205,7 @@ String generateReceiptString({
     }
     else{
       customerID = selectedCustomer[0]['customerID'];
-      await dbHelper.saveSale(cartItems, totalAmount, totalTax , indiTax, customerID );
+      await dbHelper.saveSale(cartItems, totalAmount, totalTax , indiTax, customerID, saleCurrency );
       for (var item in cartItems){
       int sellQty = item['sellqty'];
       int productid = item['productid'];
