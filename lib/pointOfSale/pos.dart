@@ -1074,7 +1074,7 @@ String generateReceiptString({
         );
          //print("Data inserted successfully!");
         generateInvoiceFromJson(jsonData, qrurl);
-        //print58mmAdvanced(jsonData, qrurl);
+        print58mmAdvanced(jsonData, qrurl);
       } catch (e) {
         Get.snackbar(" Db Error",
           "$e",
@@ -1120,7 +1120,7 @@ String generateReceiptString({
         );
          print("Data inserted successfully!");
          generateInvoiceFromJson(jsonData, qrurl);
-         //print58mmAdvanced(jsonData, qrurl);
+         print58mmAdvanced(jsonData, qrurl);
       } catch (e) {
         Get.snackbar("Db Error",
           "$e",
@@ -1167,7 +1167,7 @@ String generateReceiptString({
         );
          print("Data inserted successfully!");
          generateInvoiceFromJson(jsonData, qrurl);
-         //print58mmAdvanced(jsonData, qrurl);
+         print58mmAdvanced(jsonData, qrurl);
       } catch (e) {
         Get.snackbar("DB error Error",
           "$e",
