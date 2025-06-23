@@ -1696,9 +1696,6 @@ void getNextCustomerID() async {
       }
     );
   }
-  
- 
-
   ///=====PAYMENT METHODS=====//////////
   //////////////////////////////////////
   addpaymethod(){
