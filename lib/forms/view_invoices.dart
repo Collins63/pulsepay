@@ -14,6 +14,7 @@ import 'package:pulsepay/common/find_invoiceField.dart';
 import 'package:pulsepay/fiscalization/ping.dart';
 import 'package:pulsepay/fiscalization/sslContextualization.dart';
 import 'package:pulsepay/fiscalization/submitReceipts.dart';
+import 'package:pulsepay/home/home_page.dart';
 import 'package:pulsepay/main.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:sunmi_printer_plus/core/enums/enums.dart';
@@ -854,141 +855,148 @@ void cancelSelectedInvoice() async {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        backgroundColor: Colors.blue,
-        automaticallyImplyLeading: false,
-        elevation: 0,
-        toolbarHeight: 80,
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.only(
-            bottomLeft: Radius.circular(25),
-            bottomRight: Radius.circular(25),
+    return WillPopScope(
+      onWillPop: () {
+        // Handle back button press
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const HomePage()));
+        return Future.value(false); // Prevent default back navigation
+      },
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        appBar: AppBar(
+          backgroundColor: Colors.blue,
+          automaticallyImplyLeading: false,
+          elevation: 0,
+          toolbarHeight: 80,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(25),
+              bottomRight: Radius.circular(25),
+            ),
           ),
-        ),
-        title:  ClipRRect(
-          borderRadius: BorderRadius.circular(25.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              GestureDetector(
-                onTap: (){
-                  Navigator.pop(context);
-                },
-                child: const Padding(
-                  padding: EdgeInsets.all(8.0),
-                    child: Icon(
-                      CupertinoIcons.arrow_left_circle,
-                      size: 30,
-                      color: Colors.white,
-                    ),
-                  ),
-              ),
-              FindInvoicefield(
-                controller: searchController,
-              ),
-              GestureDetector(
-                onTap: (){
-                  searchInvoices();
-                },
-                child: const Icon(
-                  CupertinoIcons.search_circle,
-                  size: 30,
-                  color: Colors.white,
-                ),
-              )
-            ],
-          ),
-        ),
-      ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const SizedBox(height: 20),
-            if (isLoading)
-              const Center(child: CircularProgressIndicator())
-            else if (searchResults.isEmpty)
-              const Center(child: Text('No invoices found.'))
-            else
-              Expanded(
-                child: SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: SingleChildScrollView(
-                    child: DataTable(
-                      headingTextStyle: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+          title:  ClipRRect(
+            borderRadius: BorderRadius.circular(25.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                GestureDetector(
+                  onTap: (){
+                    Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const HomePage()));
+                  },
+                  child: const Padding(
+                    padding: EdgeInsets.all(8.0),
+                      child: Icon(
+                        CupertinoIcons.arrow_left_circle,
+                        size: 30,
                         color: Colors.white,
                       ),
-                      headingRowColor: MaterialStateProperty.all(Colors.blue),
-                      columns: const [
-                        DataColumn(label: Text('Select')),
-                        DataColumn(label: Text('Invoice ID')),
-                        DataColumn(label: Text('Date')),
-                        DataColumn(label: Text('Total Items')),
-                        DataColumn(label: Text('Total Price')),
-                      ],
-                      rows: searchResults.map((invoice) {
-                        final invoiceId = invoice['invoiceId'];
-                        return DataRow(
-                          cells: [
-                            DataCell(
-                              Checkbox(
-                                value: selectedInvoices.contains(invoiceId),
-                                onChanged: (_) => toggleSelection(invoiceId),
+                    ),
+                ),
+                FindInvoicefield(
+                  controller: searchController,
+                ),
+                GestureDetector(
+                  onTap: (){
+                    searchInvoices();
+                  },
+                  child: const Icon(
+                    CupertinoIcons.search_circle,
+                    size: 30,
+                    color: Colors.white,
+                  ),
+                )
+              ],
+            ),
+          ),
+        ),
+        body: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const SizedBox(height: 20),
+              if (isLoading)
+                const Center(child: CircularProgressIndicator())
+              else if (searchResults.isEmpty)
+                const Center(child: Text('No invoices found.'))
+              else
+                Expanded(
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: SingleChildScrollView(
+                      child: DataTable(
+                        headingTextStyle: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                        headingRowColor: MaterialStateProperty.all(Colors.blue),
+                        columns: const [
+                          DataColumn(label: Text('Select')),
+                          DataColumn(label: Text('Invoice ID')),
+                          DataColumn(label: Text('Date')),
+                          DataColumn(label: Text('Total Items')),
+                          DataColumn(label: Text('Total Price')),
+                        ],
+                        rows: searchResults.map((invoice) {
+                          final invoiceId = invoice['invoiceId'];
+                          return DataRow(
+                            cells: [
+                              DataCell(
+                                Checkbox(
+                                  value: selectedInvoices.contains(invoiceId),
+                                  onChanged: (_) => toggleSelection(invoiceId),
+                                ),
                               ),
-                            ),
-                            DataCell(Text(invoice['invoiceId'].toString())),
-                            DataCell(Text(invoice['date'].toString())),
-                            DataCell(Text(invoice['totalItems'].toString())),
-                            DataCell(Text(invoice['totalPrice'].toString())),
-                          ],
-                        );
-                      }).toList(),
+                              DataCell(Text(invoice['invoiceId'].toString())),
+                              DataCell(Text(invoice['date'].toString())),
+                              DataCell(Text(invoice['totalItems'].toString())),
+                              DataCell(Text(invoice['totalPrice'].toString())),
+                            ],
+                          );
+                        }).toList(),
+                      ),
                     ),
                   ),
                 ),
-              ),
-            if (selectedInvoices.isNotEmpty)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  CustomOutlineBtn(
-                    width: 90,
-                    height: 50,
-                    text: "View",
-                    color:Colors.blue,
-                    color2: Colors.blue,
-                    onTap: (){
-                      final invoiceId = selectedInvoices.first;
-                      fetchSalesForInvoice(invoiceId);
-                    },
-                  ),
-                  CustomOutlineBtn(
-                    width: 90,
-                    height: 50,
-                    text: "Cancel",
-                    color:Colors.blue,
-                    color2: Colors.blue ,
-                    onTap: (){
-                      showPasswordPrompt();
-                    },
-                  ),
-                  CustomOutlineBtn(
-                    width: 90,
-                    height: 50,
-                    text: "Edit",
-                    color:Colors.blue,
-                    color2: Colors.blue,
-                    onTap: (){
-                    },
-                  ),
-                ],
-              ),
-          ],
+              if (selectedInvoices.isNotEmpty)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    CustomOutlineBtn(
+                      width: 90,
+                      height: 50,
+                      text: "View",
+                      color:Colors.blue,
+                      color2: Colors.blue,
+                      onTap: (){
+                        final invoiceId = selectedInvoices.first;
+                        fetchSalesForInvoice(invoiceId);
+                      },
+                    ),
+                    CustomOutlineBtn(
+                      width: 90,
+                      height: 50,
+                      text: "Cancel",
+                      color:Colors.blue,
+                      color2: Colors.blue ,
+                      onTap: (){
+                        showPasswordPrompt();
+                      },
+                    ),
+                    CustomOutlineBtn(
+                      width: 90,
+                      height: 50,
+                      text: "Edit",
+                      color:Colors.blue,
+                      color2: Colors.blue,
+                      onTap: (){
+                      },
+                    ),
+                  ],
+                ),
+            ],
+          ),
         ),
       ),
     );

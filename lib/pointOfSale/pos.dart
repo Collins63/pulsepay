@@ -26,6 +26,7 @@ import 'package:pulsepay/fiscalization/ping.dart';
 import 'package:pulsepay/fiscalization/receiptResponse.dart';
 import 'package:pulsepay/fiscalization/sslContextualization.dart';
 import 'package:pulsepay/fiscalization/submitReceipts.dart';
+import 'package:pulsepay/home/home_page.dart';
 import 'package:pulsepay/main.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:pdf/pdf.dart';
@@ -116,8 +117,10 @@ class _PosState extends State<Pos>{
     bool _isConnected = false;
   bool _isPrinting = false;
   String _printerStatus = 'Checking...';
+  String activeUser = '';
+  int? isCashier ;
 
-    Future<void> _initializePrinter() async {
+ Future<void> _initializePrinter() async {
     try {
       // Initialize the printer first
       await SunmiPrinter.initPrinter();
@@ -156,7 +159,7 @@ Future<void> print58mmAdvanced(Map<String, dynamic> receiptJson, String qrUrl) a
     await _printInvoiceDetails(receipt);
     await _printItems(receipt['receiptLines']);
     await _printTotal(receipt['receiptTotal']);
-    await _printSignature(receipt['receiptDeviceSignature']);
+    //await _printSignature(receipt['receiptDeviceSignature']);
     await _printVerification(receipt['receiptGlobalNo']);
     await _printQRCode(qrUrl);
     await _finishPrint();
@@ -185,7 +188,7 @@ Future<void> _printHeader() async {
 
 Future<void> _printCustomerInfo(Map<String, dynamic> receipt) async {
   await SunmiPrinter.setAlignment(SunmiPrintAlign.LEFT);
-  await SunmiPrinter.printText("CUSTOMER INFORMATION");
+  await SunmiPrinter.printText("CUSTOMER INFORMATION", style: SunmiTextStyle(bold: true, align: SunmiPrintAlign.CENTER));
   await SunmiPrinter.printText("--------------------------------");
   await SunmiPrinter.printText("Name: ${receipt['buyerData']?['buyerTradeName'] ?? 'Walk-in Customer'}");
   await SunmiPrinter.printText("TIN: ${receipt['buyerData']?['buyerTIN'] ?? 'N/A'}");
@@ -195,16 +198,17 @@ Future<void> _printCustomerInfo(Map<String, dynamic> receipt) async {
 }
 
 Future<void> _printInvoiceDetails(Map<String, dynamic> receipt) async {
-  await SunmiPrinter.printText("INVOICE DETAILS");
+  await SunmiPrinter.printText("INVOICE DETAILS", style: SunmiTextStyle(bold: true, align: SunmiPrintAlign.CENTER));
   await SunmiPrinter.printText("--------------------------------");
   await SunmiPrinter.printText("Invoice No: ${receipt['invoiceNo']}");
   await SunmiPrinter.printText("Date: ${receipt['receiptDate']}");
+  await SunmiPrinter.printText("Cashier: $activeUser");
   await SunmiPrinter.printText("--------------------------------");
   await SunmiPrinter.lineWrap(1);
 }
 
 Future<void> _printItems(List receiptLines) async {
-  await SunmiPrinter.printText("ITEMS");
+  await SunmiPrinter.printText("ITEMS", style: SunmiTextStyle(bold: true, align: SunmiPrintAlign.CENTER));
   await SunmiPrinter.printText("--------------------------------");
   
   for (var item in receiptLines) {
@@ -243,7 +247,7 @@ Future<void> _printSignature(Map<String, dynamic>? signature) async {
 }
 
 Future<void> _printVerification(dynamic receiptGlobalNo) async {
-  await SunmiPrinter.printText("VERIFICATION");
+  await SunmiPrinter.printText("VERIFICATION", style: SunmiTextStyle(bold: true, align: SunmiPrintAlign.CENTER));
   await SunmiPrinter.printText("--------------------------------");
   await SunmiPrinter.printText("Verify at:", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
   await SunmiPrinter.printText("https://fdmstest.zimra.co.zw", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
@@ -255,7 +259,7 @@ Future<void> _printVerification(dynamic receiptGlobalNo) async {
 Future<void> _printQRCode(String qrUrl) async {
   await SunmiPrinter.lineWrap(2);
   await SunmiPrinter.setAlignment(SunmiPrintAlign.CENTER);
-  await SunmiPrinter.printText("Scan to Verify");
+  await SunmiPrinter.printText("Scan to Verify", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
   await SunmiPrinter.lineWrap(1);
   await SunmiPrinter.printQRCode(qrUrl, style: SunmiQrcodeStyle(align: SunmiPrintAlign.CENTER, qrcodeSize: 6));
 }
@@ -279,7 +283,7 @@ Future<void> _finishPrint() async {
       'vat': receipt['buyerData']?['VATNumber'] ?? '00000000',
     };
     String receiptGlobalNo = receipt['receiptGlobalNo'].toString().padLeft(10, '0');
-    String deviceID = "25395";
+    //String deviceID = "25395";
     final receiptLines = List<Map<String, dynamic>>.from(receipt['receiptLines']);
     final receiptTaxes = List<Map<String, dynamic>>.from(receipt['receiptTaxes']);
     final receiptTotal = double.tryParse(receipt['receiptTotal'].toString()) ?? 0.0;
@@ -929,6 +933,7 @@ String generateReceiptString({
     print(hash);
     return hash;
   }
+  
   Future<String> ping() async {
   String apiEndpointPing =
       "https://fdmsapitest.zimra.co.zw/Device/v1/25395/Ping";
@@ -1073,7 +1078,7 @@ String generateReceiptString({
           conflictAlgorithm: ConflictAlgorithm.replace,
         );
          //print("Data inserted successfully!");
-        generateInvoiceFromJson(jsonData, qrurl);
+        //generateInvoiceFromJson(jsonData, qrurl);
         print58mmAdvanced(jsonData, qrurl);
       } catch (e) {
         Get.snackbar(" Db Error",
@@ -1119,7 +1124,7 @@ String generateReceiptString({
           conflictAlgorithm: ConflictAlgorithm.replace,
         );
          print("Data inserted successfully!");
-         generateInvoiceFromJson(jsonData, qrurl);
+         //generateInvoiceFromJson(jsonData, qrurl);
          print58mmAdvanced(jsonData, qrurl);
       } catch (e) {
         Get.snackbar("Db Error",
@@ -1166,7 +1171,7 @@ String generateReceiptString({
           conflictAlgorithm: ConflictAlgorithm.replace,
         );
          print("Data inserted successfully!");
-         generateInvoiceFromJson(jsonData, qrurl);
+         //generateInvoiceFromJson(jsonData, qrurl);
          print58mmAdvanced(jsonData, qrurl);
       } catch (e) {
         Get.snackbar("DB error Error",
@@ -1179,6 +1184,7 @@ String generateReceiptString({
     }
     }
   }
+
   completeSale() async {
     try {
       final double totalAmount = calculateTotalPrice();
@@ -1190,7 +1196,7 @@ String generateReceiptString({
     if(selectedCustomer.isEmpty){
       customerID = 999999;
       //= selectedCustomer[0]['customerID']
-      await dbHelper.saveSale(cartItems, totalAmount, totalTax , indiTax, customerID , saleCurrency);
+      await dbHelper.saveSale(cartItems, totalAmount, totalTax , indiTax, customerID , saleCurrency, activeUser);
       for (var item in cartItems){
       int sellQty = item['sellqty'];
       int productid = item['productid'];
@@ -1205,7 +1211,7 @@ String generateReceiptString({
     }
     else{
       customerID = selectedCustomer[0]['customerID'];
-      await dbHelper.saveSale(cartItems, totalAmount, totalTax , indiTax, customerID, saleCurrency );
+      await dbHelper.saveSale(cartItems, totalAmount, totalTax , indiTax, customerID, saleCurrency, activeUser );
       for (var item in cartItems){
       int sellQty = item['sellqty'];
       int productid = item['productid'];
@@ -1442,7 +1448,7 @@ String generateReceiptString({
     });
   }
 
-void getNextCustomerID() async {
+  void getNextCustomerID() async {
     int nextCustomerID1 = await dbHelper.getNextCustomerID();
     setState(() {
       nextCustomerID = nextCustomerID1;
@@ -1864,8 +1870,7 @@ void getNextCustomerID() async {
   //sale done modal
 
   //set user details
-  String activeUser = '';
-  int? isCashier ;
+
 
   void getActiveUser() async{
     final users = await dbHelper.getActiveUser();
@@ -1882,6 +1887,30 @@ void getNextCustomerID() async {
     await dbHelper.resetActiveUser();
   }
   
+  saveQoutation() async{
+    if(cartItems.isEmpty){
+      Get.snackbar(
+        "Save Error",
+        "Cannot sace qoutation , cart is empty",
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.amber,
+        icon:const Icon(Icons.warning)
+      );
+    }else{
+      try {
+        
+      } catch (e) {
+        Get.snackbar(
+          "Save Quotation Error",
+          "$e",
+          snackPosition: SnackPosition.TOP,
+          backgroundColor: Colors.red,
+          icon:const Icon(Icons.error),
+          colorText: Colors.white
+        );
+      }
+    }
+  }
 
   //=================END OF FUNCTIONS============================//a
   //======================================================//
@@ -1927,7 +1956,7 @@ void getNextCustomerID() async {
                   ),
               ) : GestureDetector(
                 onTap: (){
-                  Navigator.pop(context);
+                  Navigator.pushReplacement(context,MaterialPageRoute(builder: (context) => const HomePage()));
                 },
                 child: const Padding(
                   padding: EdgeInsets.all(8.0),
@@ -2095,10 +2124,10 @@ void getNextCustomerID() async {
                         ] 
                       ),
                       child: TextButton(onPressed: (){
-                        
+                        saveQoutation();
                       },
                       child: const Center(
-                        child: Icon(Icons.discount , size: 25, color: Color.fromARGB(255, 14, 19, 29),),
+                        child: Icon(Icons.pending , size: 25, color: Color.fromARGB(255, 14, 19, 29),),
                       )),
                     ),
                     //////////Button
@@ -2489,14 +2518,26 @@ void getNextCustomerID() async {
                                     const SizedBox(height: 40,),
                                     SizedBox(
                                       width: double.infinity,
-                                      child: _isSubmitting ? 
-                                        const Text(
-                                          'Processing...',
-                                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.green),
-                                        ):
+                                      child: 
+                                      _isSubmitting ?
+                                       Container(
+                                        height: 50,
+                                        decoration: BoxDecoration(
+                                          color: Colors.green,
+                                          borderRadius: BorderRadius.circular(10.0)
+                                        ),
+                                        child: Center(
+                                          child: CircularProgressIndicator(
+                                            color: Colors.white,
+                                            trackGap: 2,
+                                          ),
+                                        ),
+                                       ):
                                        ElevatedButton(
-                                        onPressed: () async {
-                                          
+                                        onPressed: () async {  
+                                          setState(() {
+                                               _isSubmitting = true;
+                                            });
                                           try {
                                             // Check if the text input is empty
                                             if (paidController.text.isEmpty) {
@@ -2538,9 +2579,7 @@ void getNextCustomerID() async {
                                               //setState(() => _isSubmitting = false);
                                               return; // Exit the function
                                             }
-                                            setState(() {
-                                               _isSubmitting = true;
-                                            });
+                                            
                                             // Complete the sale if all validations pass
                                             DateTime transactionTime = DateTime.now();
                                             String formattedDate = DateFormat("yyyy-MM-ddTHH:mm:ss").format(transactionTime);
@@ -2589,16 +2628,7 @@ void getNextCustomerID() async {
                                             borderRadius: BorderRadius.circular(12.0),
                                           ),
                                         ),
-                                        child: _isSubmitting ? 
-                                          const SizedBox(
-                                            width: 20,
-                                            height: 20,
-                                            child: CircularProgressIndicator(
-                                              color: Colors.white,
-                                              strokeWidth: 2,
-                                            ),
-                                          )
-                                          : const Text(
+                                        child: const Text(
                                           'Save Sale',
                                           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
                                         ),

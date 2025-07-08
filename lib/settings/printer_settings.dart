@@ -539,6 +539,7 @@
 // }
 
 import 'package:flutter/material.dart';
+import 'package:pulsepay/home/settings.dart';
 import 'package:sunmi_printer_plus/core/enums/enums.dart';
 import 'package:sunmi_printer_plus/core/sunmi/sunmi_printer.dart';
 import 'package:sunmi_printer_plus/sunmi_printer_plus.dart';
@@ -662,6 +663,10 @@ class _SunmiPrinterPageState extends State<SunmiPrinterPage> {
         ,child: AppBar(
           centerTitle: true,
           title: const Text("Inner Printer Setup" , style: TextStyle(fontSize: 16, color: Colors.white, fontWeight:  FontWeight.bold),),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () => Navigator.pushReplacement(context,MaterialPageRoute(builder: (context) => const Settings()),
+          ),),
           iconTheme: const IconThemeData(color: Colors.white),
           backgroundColor: Colors.blue,
           shape: const RoundedRectangleBorder(

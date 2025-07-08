@@ -424,315 +424,323 @@ Future<int> getlatestFiscalDay() async {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        backgroundColor: Colors.blue,
-        leading: IconButton(
-          onPressed: (){Get.back();},
-          icon: const Icon(Icons.arrow_circle_left_outlined , color: Colors.white ,size: 30,),
-        ),
-        centerTitle: true,
-        title: const Text("Fiscal Configuration" , style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 16 , color: Colors.white),),
-        shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.only(
-            bottomLeft: Radius.circular(20),
-            bottomRight: Radius.circular(20),
+    return WillPopScope(
+      onWillPop: () {
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const HomePage()));
+        return Future.value(false);
+      },
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        appBar: AppBar(
+          automaticallyImplyLeading: false,
+          backgroundColor: Colors.blue,
+          leading: IconButton(
+            onPressed: (){
+              Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const HomePage()));
+            },
+            icon: const Icon(Icons.arrow_circle_left_outlined , color: Colors.white ,size: 30,),
           ),
-        ),
-      ),
-      body: SafeArea(
-        bottom: false,
-        child: SingleChildScrollView(
-          scrollDirection: Axis.vertical,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 30,),
-                Center(
-                  child: Image.asset(
-                    'assets/zimra.PNG',
-                    height: 100,
-                  ),
-                ),
-                const SizedBox(height: 15,),
-                Container(
-                  height:350,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(10),
-                    color: Colors.blue,
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 10.0 ,top: 10.0),
-                    child: ListView(
-                      children: [
-                        Text("TAXPAYER NAME: $taxPayerName" , style:const TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16),),
-                        const SizedBox(height: 6,),
-                        Text("TAXPAYER TIN: $tinNumber" , style:const TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16)),
-                        const SizedBox(height: 6,),
-                        Text("VAT NUMBER: $vatNumber" , style:const TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16)),
-                        const SizedBox(height: 6,),
-                        Text("DEVICE ID: $deviceID" , style:const TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16)),
-                        const SizedBox(height: 6,),
-                        Text("SERIAL NO: $serialNumber" , style:const TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16)),
-                        const SizedBox(height: 6,),
-                        Text("MODEL NAME: $modelName" , style:const TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16)),
-                        const SizedBox(height: 6,),
-                        Text("FSCAL DAY: $currentFiscal" , style: const TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16)),
-                        const SizedBox(height: 6,),
-                        Text("TIME TO CLOSEDAY:" , style: TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16)),
-                        const SizedBox(height: 6,),
-                        Text("RECEIPT COUNTER: ${dayReceiptCounter.length}" , style: TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16)),
-                        const SizedBox(height: 6,),
-                        Text("RECEIPTS SUBMITTED: ${receiptsSubmitted.length}" , style: TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16)),
-                        const SizedBox(height: 6,),
-                        Text("RECEIPTS PENDING: ${receiptsPending.length}" , style: TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16)),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 15,),
-                const Center(child: ReusableText(text: "Functions", style: TextStyle(fontWeight: FontWeight.bold , fontSize: 20),)),
-                const SizedBox(height: 10),
-                CustomOutlineBtn(
-                  text: "Manual Open Day",
-                  color: Colors.blue,
-                  color2: Colors.blue,
-                  onTap: (){
-                    openDayManual();
-                  },
-                  height: 50,
-                ),
-                const SizedBox(height: 10,),
-                CustomOutlineBtn(
-                  text: "Device Configuration",
-                  color: Colors.blue,
-                  color2: Colors.blue,
-                  onTap: () {
-                    getConfig();
-                  },
-                  height: 50,
-                ),
-                const SizedBox(height: 10,),
-                CustomOutlineBtn(
-                  text: "Device Status",
-                  color: Colors.blue,
-                  color2: Colors.blue,
-                  onTap: (){
-                    getStatus();
-                  },
-                  height: 50,
-                ),
-                const SizedBox(height: 10,),
-                CustomOutlineBtn(
-                  text: "Ping Tests",
-                  color: Colors.blue,
-                  color2: Colors.blue,
-                  onTap: (){
-                    ping();
-                  },
-                  height: 50,
-                ),
-                const SizedBox(height: 10,),
-                CustomOutlineBtn(
-                  text: "Manual Close Day",
-                  color: Colors.blue,
-                  color2: Colors.blue,
-                  onTap: (){
-          
-                  },
-                  height: 50,
-                ),
-                const SizedBox(height: 10,),
-                CustomOutlineBtn(
-                  text: "Submit Missing Receipts",
-                  color: Colors.blue,
-                  color2: Colors.blue,
-                  onTap: (){
-                    submitUnsubmittedReceipts(dbHelper);
-                  },
-                  height: 50,
-                ),
-                const SizedBox(height: 10,),
-                CustomOutlineBtn(
-                  text: "Close Day",
-                  color: Colors.blue,
-                  color2: Colors.blue,
-                  onTap: () async{
-                    String filePath = "/storage/emulated/0/Pulse/Configurations/steamTest_T_certificate.p12";
-                    String password = "steamTest123";
-                    int fiscalDay = currentFiscal;
-                    List<Map<String , dynamic>> openDayData = await dbHelper.getDayOpenedDate(fiscalDay);
-                    String openDayDate = openDayData[0]["FiscalDayOpened"];
-                    DateTime parseDate = DateTime.parse(openDayDate);
-                    String formattedDate = DateFormat('yyyy-MM-dd').format(parseDate);
-                    //APIService.sendReceipt();
-                    final (invoices, creditNotes, balances, concatStr) =
-                      await buildFiscalDayCountersAndConcat(fiscalDay);
-                    String finalStringConcat = "$deviceID$fiscalDay$formattedDate$concatStr";
-
-                    // Hash generation
-                    finalStringConcat.trim();
-
-                    var bytes = utf8.encode(finalStringConcat);
-                    var digest = sha256.convert(bytes);
-                    final hash = base64.encode(digest.bytes);
-                    print("Close day Hash :$hash");
-
-                    //signature generation
-                    try {
-                      final Map<String, String> signedDataMap = await signData(filePath, password, finalStringConcat);
-                      receiptDeviceSignature_signature_hex = signedDataMap["receiptDeviceSignature_signature_hex"] ?? "";
-                      receiptDeviceSignature_signature = signedDataMap["receiptDeviceSignature_signature"] ?? "";
-                      first16Chars = signedDataMap["receiptDeviceSignature_signature_md5_first16"] ?? "";
-                    } catch (e) {
-                      Get.snackbar("Signing Error", "$e", snackPosition: SnackPosition.TOP);
-                    }
-
-                    String apiEndpointCloseDay =
-                      "https://fdmsapitest.zimra.co.zw/Device/v1/25395/CloseDay";
-                    const String deviceModelName = "Server";
-                    const String deviceModelVersion = "v1";  
-
-                    SSLContextProvider sslContextProvider = SSLContextProvider();
-                    SecurityContext securityContext = await sslContextProvider.createSSLContext();
-
-
-
-                    // JSON payload:
-                    final payload = { 
-                    'deviceID': deviceID,
-                    'fiscalDayNo': fiscalDay,
-                    'fiscalDayCounters': [
-                      ...invoices.map((c) => c.toJson()),
-                      ...creditNotes.map((c) => c.toJson()),
-                      ...balances.map((c) => c.toJson()),
-                    ],
-                    'fiscalDayDeviceSignature': {
-                      'hash' : hash,
-                      'signature': receiptDeviceSignature_signature,
-                    },
-                    'receiptCounter': dayReceiptCounter.length,
-                    };
-
-                    Map<String , dynamic> response = await CloseDay.submitCloseDay(
-                      apiEndpoint: apiEndpointCloseDay,
-                      deviceModelName: deviceModelName,
-                      deviceModelVersion: deviceModelVersion,
-                      securityContext: securityContext,
-                      payload: payload,
-                    );
-                    Get.snackbar(
-                      "Zimra Response", "$response",
-                      snackPosition: SnackPosition.TOP,
-                      colorText: Colors.white,
-                      backgroundColor: Colors.green,
-                      icon: const Icon(Icons.message, color: Colors.white),
-                    );
-                    print("Response: $response");
-                     // And your concatenated string is:
-                    print(finalStringConcat);
-                    print(payload); 
-                    File file = File("/storage/emulated/0/Pulse/Configurations/jsonFile.txt");
-                    await file.writeAsString(jsonEncode(payload));
-                  },
-                  height: 50,
-                )
-              ],
+          centerTitle: true,
+          title: const Text("Fiscal Configuration" , style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 16 , color: Colors.white),),
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(20),
+              bottomRight: Radius.circular(20),
             ),
           ),
         ),
-      ),
-      bottomNavigationBar: BottomAppBar(
-        color: Colors.white,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: [
-            IconButton(
+        body: SafeArea(
+          bottom: false,
+          child: SingleChildScrollView(
+            scrollDirection: Axis.vertical,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 30,),
+                  Center(
+                    child: Image.asset(
+                      'assets/zimra.PNG',
+                      height: 100,
+                    ),
+                  ),
+                  const SizedBox(height: 15,),
+                  Container(
+                    height:350,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      color: Colors.blue,
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 10.0 ,top: 10.0),
+                      child: ListView(
+                        children: [
+                          Text("TAXPAYER NAME: $taxPayerName" , style:const TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16),),
+                          const SizedBox(height: 6,),
+                          Text("TAXPAYER TIN: $tinNumber" , style:const TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16)),
+                          const SizedBox(height: 6,),
+                          Text("VAT NUMBER: $vatNumber" , style:const TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16)),
+                          const SizedBox(height: 6,),
+                          Text("DEVICE ID: $deviceID" , style:const TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16)),
+                          const SizedBox(height: 6,),
+                          Text("SERIAL NO: $serialNumber" , style:const TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16)),
+                          const SizedBox(height: 6,),
+                          Text("MODEL NAME: $modelName" , style:const TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16)),
+                          const SizedBox(height: 6,),
+                          Text("FSCAL DAY: $currentFiscal" , style: const TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16)),
+                          const SizedBox(height: 6,),
+                          Text("TIME TO CLOSEDAY:" , style: TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16)),
+                          const SizedBox(height: 6,),
+                          Text("RECEIPT COUNTER: ${dayReceiptCounter.length}" , style: TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16)),
+                          const SizedBox(height: 6,),
+                          Text("RECEIPTS SUBMITTED: ${receiptsSubmitted.length}" , style: TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16)),
+                          const SizedBox(height: 6,),
+                          Text("RECEIPTS PENDING: ${receiptsPending.length}" , style: TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16)),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 15,),
+                  const Center(child: ReusableText(text: "Functions", style: TextStyle(fontWeight: FontWeight.bold , fontSize: 20),)),
+                  const SizedBox(height: 10),
+                  CustomOutlineBtn(
+                    text: "Manual Open Day",
+                    color: Colors.blue,
+                    color2: Colors.blue,
+                    onTap: (){
+                      openDayManual();
+                    },
+                    height: 50,
+                  ),
+                  const SizedBox(height: 10,),
+                  CustomOutlineBtn(
+                    text: "Device Configuration",
+                    color: Colors.blue,
+                    color2: Colors.blue,
+                    onTap: () {
+                      getConfig();
+                    },
+                    height: 50,
+                  ),
+                  const SizedBox(height: 10,),
+                  CustomOutlineBtn(
+                    text: "Device Status",
+                    color: Colors.blue,
+                    color2: Colors.blue,
+                    onTap: (){
+                      getStatus();
+                    },
+                    height: 50,
+                  ),
+                  const SizedBox(height: 10,),
+                  CustomOutlineBtn(
+                    text: "Ping Tests",
+                    color: Colors.blue,
+                    color2: Colors.blue,
+                    onTap: (){
+                      ping();
+                    },
+                    height: 50,
+                  ),
+                  const SizedBox(height: 10,),
+                  CustomOutlineBtn(
+                    text: "Manual Close Day",
+                    color: Colors.blue,
+                    color2: Colors.blue,
+                    onTap: (){
+            
+                    },
+                    height: 50,
+                  ),
+                  const SizedBox(height: 10,),
+                  CustomOutlineBtn(
+                    text: "Submit Missing Receipts",
+                    color: Colors.blue,
+                    color2: Colors.blue,
+                    onTap: (){
+                      submitUnsubmittedReceipts(dbHelper);
+                    },
+                    height: 50,
+                  ),
+                  const SizedBox(height: 10,),
+                  CustomOutlineBtn(
+                    text: "Close Day",
+                    color: Colors.blue,
+                    color2: Colors.blue,
+                    onTap: () async{
+                      String filePath = "/storage/emulated/0/Pulse/Configurations/steamTest_T_certificate.p12";
+                      String password = "steamTest123";
+                      int fiscalDay = currentFiscal;
+                      List<Map<String , dynamic>> openDayData = await dbHelper.getDayOpenedDate(fiscalDay);
+                      String openDayDate = openDayData[0]["FiscalDayOpened"];
+                      DateTime parseDate = DateTime.parse(openDayDate);
+                      String formattedDate = DateFormat('yyyy-MM-dd').format(parseDate);
+                      //APIService.sendReceipt();
+                      final (invoices, creditNotes, balances, concatStr) =
+                        await buildFiscalDayCountersAndConcat(fiscalDay);
+                      String finalStringConcat = "$deviceID$fiscalDay$formattedDate$concatStr";
+      
+                      // Hash generation
+                      finalStringConcat.trim();
+      
+                      var bytes = utf8.encode(finalStringConcat);
+                      var digest = sha256.convert(bytes);
+                      final hash = base64.encode(digest.bytes);
+                      print("Close day Hash :$hash");
+      
+                      //signature generation
+                      try {
+                        final Map<String, String> signedDataMap = await signData(filePath, password, finalStringConcat);
+                        receiptDeviceSignature_signature_hex = signedDataMap["receiptDeviceSignature_signature_hex"] ?? "";
+                        receiptDeviceSignature_signature = signedDataMap["receiptDeviceSignature_signature"] ?? "";
+                        first16Chars = signedDataMap["receiptDeviceSignature_signature_md5_first16"] ?? "";
+                      } catch (e) {
+                        Get.snackbar("Signing Error", "$e", snackPosition: SnackPosition.TOP);
+                      }
+      
+                      String apiEndpointCloseDay =
+                        "https://fdmsapitest.zimra.co.zw/Device/v1/25395/CloseDay";
+                      const String deviceModelName = "Server";
+                      const String deviceModelVersion = "v1";  
+      
+                      SSLContextProvider sslContextProvider = SSLContextProvider();
+                      SecurityContext securityContext = await sslContextProvider.createSSLContext();
+      
+      
+      
+                      // JSON payload:
+                      final payload = { 
+                      'deviceID': deviceID,
+                      'fiscalDayNo': fiscalDay,
+                      'fiscalDayCounters': [
+                        ...invoices.map((c) => c.toJson()),
+                        ...creditNotes.map((c) => c.toJson()),
+                        ...balances.map((c) => c.toJson()),
+                      ],
+                      'fiscalDayDeviceSignature': {
+                        'hash' : hash,
+                        'signature': receiptDeviceSignature_signature,
+                      },
+                      'receiptCounter': dayReceiptCounter.length,
+                      };
+      
+                      Map<String , dynamic> response = await CloseDay.submitCloseDay(
+                        apiEndpoint: apiEndpointCloseDay,
+                        deviceModelName: deviceModelName,
+                        deviceModelVersion: deviceModelVersion,
+                        securityContext: securityContext,
+                        payload: payload,
+                      );
+                      Get.snackbar(
+                        "Zimra Response", "$response",
+                        snackPosition: SnackPosition.TOP,
+                        colorText: Colors.white,
+                        backgroundColor: Colors.green,
+                        icon: const Icon(Icons.message, color: Colors.white),
+                      );
+                      print("Response: $response");
+                       // And your concatenated string is:
+                      print(finalStringConcat);
+                      print(payload); 
+                      File file = File("/storage/emulated/0/Pulse/Configurations/jsonFile.txt");
+                      await file.writeAsString(jsonEncode(payload));
+                    },
+                    height: 50,
+                  )
+                ],
+              ),
+            ),
+          ),
+        ),
+        bottomNavigationBar: BottomAppBar(
+          color: Colors.white,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            children: [
+              IconButton(
+                  onPressed: (){
+                    Get.to(()=> const HomePage());
+                  },
+                  icon: const Column(
+                    children: [
+                      Icon(Icons.home, color: Colors.grey,),
+                      Text(
+                          "Home",
+                          style: TextStyle(fontSize: 10),
+                      )
+                    ],
+                  ),
+              ),
+              IconButton(
                 onPressed: (){
-                  Get.to(()=> const HomePage());
+                  //Navigator.pushReplacement(
+                    //context,
+                    //MaterialPageRoute(builder: (context) => MyAccount()),
+                  //);
+                  Get.to(()=> const FiscalPage());
                 },
                 icon: const Column(
                   children: [
-                    Icon(Icons.home, color: Colors.grey,),
+                    Icon(Icons.list_alt, color: Colors.black),
                     Text(
-                        "Home",
-                        style: TextStyle(fontSize: 10),
+                      "Fiscalization",
+                      style: TextStyle(fontSize: 10),
                     )
                   ],
                 ),
-            ),
-            IconButton(
-              onPressed: (){
-                //Navigator.pushReplacement(
-                  //context,
-                  //MaterialPageRoute(builder: (context) => MyAccount()),
-                //);
-                Get.to(()=> const FiscalPage());
-              },
-              icon: const Column(
-                children: [
-                  Icon(Icons.list_alt, color: Colors.black),
-                  Text(
-                    "Fiscalization",
-                    style: TextStyle(fontSize: 10),
-                  )
-                ],
               ),
-            ),
-            FloatingActionButton(
+              FloatingActionButton(
+                  onPressed: (){
+                      Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const Pos()),
+                    );
+                  },
+                  backgroundColor: Colors.blue,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                  child: const Icon(
+                    Icons.calculate,
+                    color: Colors.white,
+                  ),
+              ),
+              IconButton(
                 onPressed: (){
-                    Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const Pos()),
-                  );
+                 // Navigator.pushReplacement(
+                   // context,
+                   // MaterialPageRoute(builder: (context) => MyLoans()),
+                  //);
                 },
-                backgroundColor: Colors.blue,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                child: const Icon(
-                  Icons.calculate,
-                  color: Colors.white,
+                icon: const Column(
+                  children: [
+                    Icon(Icons.summarize, color: Colors.grey),
+                    Text(
+                      "Reporting",
+                      style: TextStyle(fontSize: 10),
+                    )
+                  ],
                 ),
-            ),
-            IconButton(
-              onPressed: (){
-               // Navigator.pushReplacement(
-                 // context,
-                 // MaterialPageRoute(builder: (context) => MyLoans()),
-                //);
-              },
-              icon: const Column(
-                children: [
-                  Icon(Icons.summarize, color: Colors.grey),
-                  Text(
-                    "Reporting",
-                    style: TextStyle(fontSize: 10),
-                  )
-                ],
               ),
-            ),
-            IconButton(
-              onPressed: (){
-               // Navigator.pushReplacement(
-                 // context,
-                 // MaterialPageRoute(builder: (context) => Profile()),
-               // );
-               Get.to(()=> const Settings());
-              },
-              icon: const Column(
-                children: [
-                  Icon(Icons.settings, color: Colors.grey),
-                  Text(
-                    "Settings",
-                    style: TextStyle(fontSize: 10),
-                  )
-                ],
+              IconButton(
+                onPressed: (){
+                 // Navigator.pushReplacement(
+                   // context,
+                   // MaterialPageRoute(builder: (context) => Profile()),
+                 // );
+                 Get.to(()=> const Settings());
+                },
+                icon: const Column(
+                  children: [
+                    Icon(Icons.settings, color: Colors.grey),
+                    Text(
+                      "Settings",
+                      style: TextStyle(fontSize: 10),
+                    )
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

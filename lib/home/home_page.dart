@@ -23,6 +23,7 @@ import 'package:pulsepay/pointOfSale/pos.dart';
 import 'package:http/http.dart' as http;
 //import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
+import 'package:pulsepay/settings/printer_settings.dart';
 import 'package:sqflite/sqflite.dart';
 
 class HomePage extends StatefulWidget{
@@ -221,7 +222,11 @@ class _HomePageState extends State<HomePage>{
                         borderRadius: BorderRadius.circular(15.0)
                       ),
                       child: TextButton(onPressed: (){
-                        Get.to(() => const InvoicesPage());
+                        //Get.to(() => const InvoicesPage());
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(builder: (context) =>const InvoicesPage()),
+                        );
                       },
                       child: const Padding(
                         padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
@@ -241,7 +246,11 @@ class _HomePageState extends State<HomePage>{
                         borderRadius: BorderRadius.circular(15.0)
                       ),
                       child: TextButton(onPressed: (){
-                        Get.to(()=> const StockManagement());
+                        //Get.to(()=> const StockManagement());
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(builder: (context) =>const StockManagement()),
+                        );
                       },
                       child: const Padding(
                         padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
@@ -261,7 +270,7 @@ class _HomePageState extends State<HomePage>{
                         borderRadius: BorderRadius.circular(15.0)
                       ),
                       child: TextButton(onPressed: (){
-                        Navigator.push(context,
+                        Navigator.pushReplacement(context,
                         MaterialPageRoute(builder: (context) => const AddProduct()  ));
                       },
                       child: const Padding(
@@ -288,7 +297,11 @@ class _HomePageState extends State<HomePage>{
                         borderRadius: BorderRadius.circular(15.0)
                       ),
                       child: TextButton(onPressed: (){
-                        Get.to(()=> const ViewInvoices());
+                        //Get.to(()=> const ViewInvoices());
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(builder: (context) =>const ViewInvoices()),
+                        );
                       },
                       child: const Padding(
                         padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
@@ -308,7 +321,10 @@ class _HomePageState extends State<HomePage>{
                         borderRadius: BorderRadius.circular(15.0)
                       ),
                       child: TextButton(onPressed: (){
-                        Get.to(()=> const Cancelledinvoices());
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(builder: (context) =>const Cancelledinvoices()),
+                        );
                       },
                       child: const Padding(
                         padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
@@ -328,7 +344,10 @@ class _HomePageState extends State<HomePage>{
                         borderRadius: BorderRadius.circular(15.0)
                       ),
                       child: TextButton(onPressed: (){
-                        Get.to(()=> const MyTaxes());
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(builder: (context) =>const MyTaxes()),
+                        );
                       },
                       child: const Padding(
                         padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
@@ -355,7 +374,10 @@ class _HomePageState extends State<HomePage>{
                         borderRadius: BorderRadius.circular(15.0)
                       ),
                       child: TextButton(onPressed: (){
-                        Get.to(()=>const Reports());
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(builder: (context) =>const Reports()),
+                        );
                       },
                       child: const Padding(
                         padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
@@ -375,7 +397,7 @@ class _HomePageState extends State<HomePage>{
                         borderRadius: BorderRadius.circular(15.0)
                       ),
                       child: TextButton(onPressed: (){
-                        Navigator.push(context,
+                        Navigator.pushReplacement(context,
                         MaterialPageRoute(builder: (context)=> const FlaggedReceipts()));
                       },
                       child: const Padding(
@@ -395,7 +417,9 @@ class _HomePageState extends State<HomePage>{
                         color: Colors.orange,
                         borderRadius: BorderRadius.circular(15.0)
                       ),
-                      child: TextButton(onPressed: (){},
+                      child: TextButton(onPressed: (){
+                        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => SunmiPrinterPage()));
+                      },
                       child: const Padding(
                         padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
                         child: Column(
@@ -436,7 +460,9 @@ class _HomePageState extends State<HomePage>{
           children: [
             IconButton(
                 onPressed: (){
-                  Get.to(()=> const HomePage());
+                  //Get.to(()=> const HomePage());
+                  Navigator.pushReplacement
+                  (context, MaterialPageRoute(builder: (context) => const HomePage()));
                 },
                 icon: const Column(
                   children: [
@@ -450,11 +476,10 @@ class _HomePageState extends State<HomePage>{
             ),
             IconButton(
               onPressed: (){
-                //Navigator.pushReplacement(
-                  //context,
-                  //MaterialPageRoute(builder: (context) => MyAccount()),
-                //);
-                Get.to(()=> const FiscalPage());
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) =>const FiscalPage()),
+                );
               },
               icon: const Column(
                 children: [
@@ -468,7 +493,7 @@ class _HomePageState extends State<HomePage>{
             ),
             FloatingActionButton(
                 onPressed: (){
-                    Navigator.push(
+                    Navigator.pushReplacement(
                     context,
                     MaterialPageRoute(builder: (context) => const Pos()),
                   );

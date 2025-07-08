@@ -49,39 +49,22 @@ class DatabaseHelper {
 
   String receiptAnomallies = "create table receiptAnomallies (anomallyId INTEGER PRIMARY KEY AUTOINCREMENT , receiptGlobalNo INTEGER ,isAnomaly INTEGER , score REAL , receiptTotal REAL , taxAmount REAL , salesAmountWithTax REAL , taxPercent TEXT)";
    
+  String quotations = "create table quotations(quotationID INTEGER PRIMARY KEY AUTOINCREMENT , productId INTEGER , productDescription TEXT , quantity REAL , unitCost REAL, sellingPrice REAL , taxAmount REAL , customerID TEXT , date TEXT , paymentMethod TEXT , quotationReference TEXT , qoutationNumber TEXT )";
+
+  String shifts = "create table shifts(shiftId INTEGER PRIMARY KEY AUTOINCREMENT, shiftDescription TEXT , startTime TEXT, endTime TEXT , open INTEGER, userID Text)";
+
+  String discounts = "create table discounts(discountId INTEGER PRIMARY KEY AUTOINCREMENT , productId INTEGER , discountAmount REAL , ogPrice REAL , doneBy TEXT , doneWhen TEXT , quantity REAL , invoiceNumber INTEGER , curreny TEXT, rate REAL)";
+
+
   //====DATABASE FUNCTIONS =======/////////
 
-
-  // Future<Database> initDB() async {
-  //   final databasePath = await getDatabasesPath();
-  //   final path = join(databasePath , databaseName);
-  //   //Sawait deleteDatabase(path);
-
-  //   return openDatabase(path , version: 1 , onCreate: (db, version) async {
-  //     await db.execute(users);
-  //     await db.execute(products);
-  //     await db.execute(invoices);
-  //     await db.execute(sales);
-  //     await db.execute(customers);
-  //     await db.execute(stockPurchases);
-  //     await db.execute(companyDetails);
-  //     await db.execute(paymentMethods);
-  //     await db.execute(openDay);
-  //     await db.execute(submittedReceipts);
-  //     //await db.execute(dailyReports);
-  //   }  , onUpgrade: (db ,oldVersion , newVersion) async {
-  //     if(oldVersion > 2){
-  //       await db.execute(products);
-  //     }
-  //   });
-  // }
   Future<Database> initDB() async {
   final databasePath = await getDatabasesPath();
   final path = join(databasePath, databaseName);
 
   return openDatabase(
     path,
-    version: 5, // ✅ bumped version
+    version: 6, // ✅ bumped version
     onCreate: (db, version) async {
       // ✅ Tables created for new installs
       await db.execute(users);
@@ -137,6 +120,17 @@ class DatabaseHelper {
               receiptNotes TEXT,
               creditNoteNumber TEXT
             )'''
+        );
+      }
+      if(oldVersion < 6){
+        await db.execute(quotations);
+        await db.execute(shifts);
+        await db.execute(discounts);
+        await db.execute(
+          'ALTER TABLE invoices ADD COLUMN doneBY TEXT NOT NULL DEFAULT Cashier'
+        );
+        await db.execute(
+          'ALTER TABLE sales ADD COLUMN doneBY TEXT NOT NULL DEFAULT Cashier'
         );
       }
     },
@@ -252,6 +246,14 @@ class DatabaseHelper {
     return lastId + 1;
   }
 
+//get next quotation number
+  Future<int> getNextQuotationId() async {
+    final db = await initDB();
+    final result = await db.rawQuery('SELECT MAX(invoiceId) as lastId FROM invoices');
+    int lastId = result.first['lastId'] as int? ?? 0; // Start at 0 if no invoices
+    return lastId + 1;
+  }
+
   Future<int> getNextCustomerID() async{
     final db = await initDB();
     final result = await db.rawQuery('SELECT MAX(customerID) as lastId FROM customer');
@@ -267,7 +269,7 @@ class DatabaseHelper {
   }
 
   //save sale
-  Future<void> saveSale(List<Map<String, dynamic>> cartItems, double totalAmount, double totalTax , double indiTax , int customerID, String saleCurrency) async {
+  Future<void> saveSale(List<Map<String, dynamic>> cartItems, double totalAmount, double totalTax , double indiTax , int customerID, String saleCurrency , String doneBY) async {
   final db = await initDB();
   final int invoiceId = await getNextInvoiceId();
   final String date = DateTime.now().toIso8601String();
@@ -280,7 +282,8 @@ class DatabaseHelper {
       'date': date,
       'totalAmount': totalAmount,
       'totalTax': totalTax,
-      'currency': saleCurrency
+      'currency': saleCurrency,
+      'doneBY' : doneBY
     });
 
     // Insert into sales table
@@ -292,11 +295,53 @@ class DatabaseHelper {
         'quantity': item['sellqty'],
         'sellingPrice': item['sellingPrice'],
         'currency' : saleCurrency,
-        'tax': indiTax, // Calculate per-item tax if necessary
+        'tax': indiTax,
+        'doneBY' : doneBY // Calculate per-item tax if necessary
       });
     }
   });
 }
+
+//get next quotation number
+  Future<String> getNextQuoteNumber() async {
+  final db = await initDB();
+
+  // Correct query: extract the numeric part after 'cr' and get the max as an INTEGER
+  final result = await db.rawQuery(
+    '''
+    SELECT MAX(CAST(SUBSTR(qoutationNumber, 3) AS INTEGER)) AS maxQt
+    FROM quotations
+    '''
+  );
+
+  final maxQt = result.first['maxQt'] as int?;
+  final nextNumber = (maxQt ?? 0) + 1;
+
+  return 'Qt$nextNumber';
+}
+
+//save quotation
+Future<void> saveQuotation(List<Map<String, dynamic>> cartItems, double totalAmount, double totalTax , double indiTax , int customerID, String saleCurrency , String doneBY) async {
+  final db = await initDB();
+  final String qoutationNumber = await getNextQuoteNumber();
+  final String date = DateTime.now().toIso8601String();
+
+  await db.transaction((txn) async {
+    for(var item in cartItems){
+      await txn.insert('quotations', {
+        'invoiceId': '',
+        'customerID': customerID,
+        'productId': item['productid'],
+        'quantity': item['sellqty'],
+        'sellingPrice': item['sellingPrice'],
+        'currency' : saleCurrency,
+        'tax': indiTax,
+        'doneBY' : doneBY // Calculate per-item tax if necessary
+      });
+    }
+  });
+}
+
 
 //Get all sales
     Future<List<Map<String, dynamic>>> getAllSales() async {
@@ -464,6 +509,17 @@ class DatabaseHelper {
       ''', [method]);
     }
 
+    //get currency and rate
+    Future<List<Map<String, dynamic>>> getCurrencyAndRate(String method) async {
+      final db = await initDB();
+      return await db.rawQuery('''
+        SELECT currency, rate
+        FROM paymentMethods
+        WHERE description = ?
+      ''', [method]);
+    }
+
+    // Get default currency
     Future<String?> getDefaultCurrency() async {
       final db = await initDB(); // Ensure your `initDB` initializes the database
       final result = await db.rawQuery('''
@@ -512,6 +568,7 @@ class DatabaseHelper {
       }
       return 1;
     }
+
     Future<int> getLatestReceiptGlobalNo() async {
       final db = await initDB();
       List<Map<String, dynamic>> result = await db.rawQuery(
@@ -522,7 +579,8 @@ class DatabaseHelper {
         return result.first["receiptGlobalNo"] as int;
       }
         return 1; // Default value if no records exist
-      }
+    }
+
     Future<int> getNextReceiptCounter(int fiscalDayNo) async {
       final db = await initDB();
       List<Map<String, dynamic>> result = await db.rawQuery(
@@ -541,6 +599,7 @@ class DatabaseHelper {
       // Default value if no records exist
       return nextCounter;
     }
+
     //free
     Future<String> getLatestReceiptHash() async {
       final db = await initDB();
@@ -583,7 +642,7 @@ class DatabaseHelper {
           FROM users
         ''');
     }
-    ///Get All Users From DB
+    ///Get company details
     Future<List<Map<String, dynamic>>> getCompanyDetails() async {
       final db = await initDB(); // Initialize the database
         return await db.rawQuery('''
@@ -641,6 +700,8 @@ class DatabaseHelper {
         whereArgs: [productid]
       );
     }
+
+
     //Set Default Currency
     Future<void> setDefaultCurrency(int methodId , int defaultTag)async{
       final db = await initDB();
@@ -651,6 +712,7 @@ class DatabaseHelper {
         whereArgs: [methodId]
       );
     }
+
     ///// Get all Products
     Future<List<Map<String, dynamic>>> getAllProducts() async{
       final db = await initDB();
@@ -710,12 +772,16 @@ class DatabaseHelper {
           }
         : {"receiptCounter": 0, "FiscalDayNo": 0, "receiptGlobalNo": 0};
   }
+
+
   Future<int> getPreviousFiscalDayNo() async {
     final db = await initDB();
     List<Map<String, dynamic>> result = await db.rawQuery(
         "SELECT FiscalDayNo FROM OpenDay ORDER BY ID DESC LIMIT 1");
     return result.isNotEmpty ? result.first["FiscalDayNo"] : 0;
   }
+
+
   Future<void> insertOpenDay(
       int fiscalDayNo, String status, String fiscalDayOpened) async {
     final db = await initDB();
@@ -729,6 +795,7 @@ class DatabaseHelper {
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
   }
+
 
   Future<void> updateDatabase(Map<String, int> taxIDs) async {
   try {
@@ -771,6 +838,8 @@ class DatabaseHelper {
         WHERE submittedReceipts.StatustoFDMS = 'NOTSubmitted'
       ''');
   }
+
+
     Future<List<Map<String,dynamic>>> getReceiptsSubmitted() async{
       final db = await initDB();
       return await db.rawQuery('''
@@ -780,6 +849,7 @@ class DatabaseHelper {
       ''');
     }
 
+
   Future<List<Map<String,dynamic>>> getAllReceipts() async{
       final db = await initDB();
       return await db.rawQuery('''
@@ -787,6 +857,7 @@ class DatabaseHelper {
         FROM submittedReceipts
       ''');
   }
+
 
   //get unsubmitted receipts
   Future<List<Map<String,dynamic>>> getReceiptsNotSubmitted() async{
@@ -872,6 +943,8 @@ class DatabaseHelper {
         FROM credit_notes
       ''');
   }
+
+
   Future<List<Map<String, dynamic>>> getAnomalyTable() async{
     final db = await initDB();
     return await db.rawQuery('''
@@ -879,6 +952,7 @@ class DatabaseHelper {
       FROM receiptAnomallies
     ''');
   }
+
 
   Future<List<Map<String, dynamic>>> getFlaggedReceipts() async{
     final db = await initDB();
@@ -900,6 +974,7 @@ class DatabaseHelper {
     );
   }
 
+
   Future<List<Map<String , dynamic>>> getReceiptsADetection() async {
     final db = await initDB();
     return await db.query(
@@ -907,6 +982,7 @@ class DatabaseHelper {
       columns: ['receiptGlobalNo' , 'receiptJsonbody']
     );
   }
+
 
   Future<List<Map<String, dynamic>>> getAllFiscalInvoice(String? currency) async{
     final db = await initDB();
@@ -927,6 +1003,7 @@ class DatabaseHelper {
       FROM submittedReceipts WHERE receiptCurrency = ?
     ''' , [currency] );
   }
+
 
   Future<List<Map<String, dynamic>>> getTopProductsByQuantity() async {
     final database = await initDB();
@@ -950,6 +1027,7 @@ class DatabaseHelper {
     ''');
   }
 
+
   Future<List<Map<String , dynamic>>> getTopSellingProducts() async{
     final database = await initDB();
     return await database.rawQuery('''
@@ -969,12 +1047,14 @@ class DatabaseHelper {
     ''');
   }
 
+
   Future<List<Map<String, dynamic>>> getzwg()async{
     final db  = await initDB();
     return await db.rawQuery('''
       SELECT * FROM sales WHERE currency = 'ZWG'
     ''');
   }
+
 
   Future<List<Map<String, dynamic>>> getZWGTotalSales()async{
     final database = await initDB();
@@ -1112,23 +1192,55 @@ class DatabaseHelper {
   }
 
   Future<double> getTotalSalesWithinDateRange({
-  required String currency,
-  required String startDate,
-  required String endDate,
-}) async {
+    required String currency,
+    required String startDate,
+    required String endDate,
+  }) async {
   final db = await initDB();
 
-final result = await db.rawQuery('''
-    SELECT 
-      IFNULL(SUM(invoices.totalAmount), 0) AS totalSales
-    FROM 
-      invoices
-    WHERE 
-      invoices.currency = ? 
-      AND invoices.date BETWEEN ? AND ?
-  ''', [currency, startDate, endDate]);
+  final result = await db.rawQuery('''
+      SELECT 
+        IFNULL(SUM(invoices.totalAmount), 0) AS totalSales
+      FROM 
+        invoices
+      WHERE 
+        invoices.currency = ? 
+        AND invoices.date BETWEEN ? AND ?
+    ''', [currency, startDate, endDate]);
 
-  return result.isNotEmpty ? (result[0]['totalSales'] as double) : 0.0;
-}
+    return result.isNotEmpty ? (result[0]['totalSales'] as double) : 0.0;
+  }
 
+
+  //get daily sales summmary
+
+  Future<Map<String, dynamic>> getSalesSummary() async {
+
+    final db = await initDB();
+    String today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+
+    final usd = await db.rawQuery('''
+      SELECT SUM(totalAmount) as total FROM invoices 
+      WHERE currency = 'USD' AND date LIKE ?
+    ''', ['$today%']);
+
+    final zwg = await db.rawQuery('''
+      SELECT SUM(totalAmount) as total FROM invoices 
+      WHERE currency = 'ZWG' AND date LIKE ?
+    ''', ['$today%']);
+
+    final zar = await db.rawQuery('''
+      SELECT SUM(totalAmount) as total FROM invoices 
+      WHERE currency = 'ZAR' AND date LIKE ?
+    ''', ['$today%']);
+
+    return {
+      'usdTotal': usd.first['total'] ?? 0.0,
+      'zwgTotal': zwg.first['total'] ?? 0.0,
+      'zarTotal': zar.first['total'] ?? 0.0,
+    };
+  }
+
+
+  
 }

@@ -60,7 +60,7 @@ class _CompanysalesState extends State<Companysales> {
     }
   }
 
-  Future<void> selectEndDate(BuildContext context) async {
+Future<void> selectEndDate(BuildContext context) async {
   final DateTime? picked = await showDatePicker(
     context: context,
     initialDate: _startDate ?? DateTime.now(),
@@ -72,7 +72,7 @@ class _CompanysalesState extends State<Companysales> {
       _endDate = picked;
     });
   }
-}  
+} 
 
   void getZWGTotalSales()async{
     final zwgRate = await dbHelper.getzwgcurrency();
