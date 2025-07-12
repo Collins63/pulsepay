@@ -56,6 +56,8 @@ class DatabaseHelper {
   String discounts = "create table discounts(discountId INTEGER PRIMARY KEY AUTOINCREMENT , productId INTEGER , discountAmount REAL , ogPrice REAL , doneBy TEXT , doneWhen TEXT , quantity REAL , invoiceNumber INTEGER , curreny TEXT, rate REAL)";
 
 
+
+
   //====DATABASE FUNCTIONS =======/////////
 
   Future<Database> initDB() async {
@@ -487,6 +489,21 @@ Future<void> saveQuotation(List<Map<String, dynamic>> cartItems, double totalAmo
         FROM products
         WHERE products.productid = ?
       ''' , [productid]);
+    }
+
+    Future<void> insertBulkProducts(List<Map<String, dynamic>> products) async {
+      final db = await initDB();
+
+      // Using a transaction for better performance and atomicity
+      await db.transaction((txn) async {
+        for (var product in products) {
+          await txn.insert(
+            'products',
+            product,
+            conflictAlgorithm: ConflictAlgorithm.ignore, // Or replace
+          );
+        }
+      });
     }
 
     //Get Default Currency

@@ -24,6 +24,7 @@ import 'package:http/http.dart' as http;
 //import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:pulsepay/settings/printer_settings.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
 
 class HomePage extends StatefulWidget{
@@ -56,10 +57,19 @@ class _HomePageState extends State<HomePage>{
   String activeUser = '';
 
   void getActiveUser() async{
-    final users = await dbHelper.getActiveUser();
+    // final users = await dbHelper.getActiveUser();
+    // setState(() {
+    //   activeUser = users[0]['userName'] ?? '';
+    // });
+    String? user = await getUsername();
     setState(() {
-      activeUser = users[0]['userName'] ?? '';
+      activeUser = user.toString();
     });
+  }
+
+  Future<String?> getUsername() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('username'); // Returns null if not set
   }
 
   void resetUser() async{

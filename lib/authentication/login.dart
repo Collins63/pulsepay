@@ -6,6 +6,7 @@ import 'package:pulsepay/SQLite/database_helper.dart';
 import 'package:pulsepay/authentication/signup.dart';
 import 'package:pulsepay/home/home_page.dart';
 import 'package:pulsepay/pointOfSale/pos.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class Login extends StatefulWidget{
   const Login ({super.key});
@@ -23,6 +24,12 @@ class _LoginState extends State<Login>{
 
   final db = DatabaseHelper();
 
+  Future<void> saveUsername(String username , String role) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('username', username);
+    await prefs.setString('role', role); // Overwrites any previous value
+  }
+
   login() async{
     var response = await db.login(Users(userName: username.text, userPassword: password.text));
     if(response == true){
@@ -31,12 +38,16 @@ class _LoginState extends State<Login>{
       int isCashier = user[0]['isCashier'];
       if ( isAdmin == 1 && isCashier == 0){
         if(!mounted) return;
+        String role = 'Admin';
         db.setActiveUser(username.text);
+        await saveUsername(username.text , role);
         Navigator.pushReplacement(context,
         MaterialPageRoute(builder: (context)=>const HomePage()));
       }
       else if (isAdmin == 0 && isCashier ==1){
         if(!mounted) return;
+        String role = "Cashier";
+        await saveUsername(username.text ,  role);
         db.setActiveUser(username.text);
         Navigator.pushReplacement(context,
         MaterialPageRoute(builder: (context)=>const Pos()));

@@ -28,6 +28,7 @@ import 'package:pulsepay/fiscalization/sslContextualization.dart';
 import 'package:pulsepay/fiscalization/submitReceipts.dart';
 import 'package:pulsepay/home/home_page.dart';
 import 'package:pulsepay/main.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -1000,6 +1001,21 @@ String generateReceiptString({
       DateTime formattedDate = DateTime.parse(parseDate);
       String formattedDateStr = DateFormat("ddMMyyyy").format(formattedDate);
       int latestReceiptGlobalNo = await db.getLatestReceiptGlobalNo();
+      final totals = jsonData['receipt']?['receiptTaxes'];
+      double totalVAT15 = 0;
+      double totalNonVAT = 0;
+      double totalExempt = 0 ;
+      for(var items in totals){
+        double sum = items['salesAmountWithTax'];
+        int? taxId = int.tryParse(items['taxID']);
+        if(taxId == 3){
+          totalVAT15 += sum;
+        }else if(taxId == 2){
+          totalNonVAT += sum;
+        }else{
+          totalExempt += sum;
+        }
+      }
       
       int currentGlobalNo = latestReceiptGlobalNo + 1;
       String formatedReceiptGlobalNo = currentGlobalNo.toString().padLeft(10, '0');
@@ -1070,9 +1086,9 @@ String generateReceiptString({
             'qrurl': qrurl,
             'receiptServerSignature': responseBody['receiptServerSignature']?['signature'].toString() ?? "",
             'submitReceiptServerresponseJSON': "$submitReceiptServerresponseJson" ?? "noresponse",
-            'Total15VAT': '0.0',
-            'TotalNonVAT': 0.0,
-            'TotalExempt': 0.0,
+            'Total15VAT': totalVAT15.toString(),
+            'TotalNonVAT': totalNonVAT,
+            'TotalExempt': totalExempt,
             'TotalWT': 0.0,
           },
           conflictAlgorithm: ConflictAlgorithm.replace,
@@ -1116,9 +1132,9 @@ String generateReceiptString({
             'qrurl': qrurl,
             'receiptServerSignature':"",
             'submitReceiptServerresponseJSON':"noresponse",
-            'Total15VAT': '0.0',
-            'TotalNonVAT': 0.0,
-            'TotalExempt': 0.0,
+            'Total15VAT': totalVAT15.toString(),
+            'TotalNonVAT': totalNonVAT,
+            'TotalExempt': totalExempt,
             'TotalWT': 0.0,
           },
           conflictAlgorithm: ConflictAlgorithm.replace,
@@ -1163,9 +1179,9 @@ String generateReceiptString({
             'qrurl': qrurl,
             'receiptServerSignature':"",
             'submitReceiptServerresponseJSON':"noresponse",
-            'Total15VAT': '0.0',
-            'TotalNonVAT': 0.0,
-            'TotalExempt': 0.0,
+            'Total15VAT': totalVAT15.toString(),
+            'TotalNonVAT': totalNonVAT,
+            'TotalExempt': totalExempt,
             'TotalWT': 0.0,
           },
           conflictAlgorithm: ConflictAlgorithm.replace,
@@ -1870,17 +1886,32 @@ String generateReceiptString({
   //sale done modal
 
   //set user details
-
+  Future<String?> getUsername() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('username'); // Returns null if not set
+  }
+  Future<String?> getUSerRole() async{
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString('role');
+  }
 
   void getActiveUser() async{
-    final users = await dbHelper.getActiveUser();
+    // final users = await dbHelper.getActiveUser();
+    // setState(() {
+    //   activeUser = users[0]['userName'] ?? '';
+    //   int isCashier1 = users[0]['isCashier'] ?? 0;
+    //   if (isCashier1 == 1){
+    //     isCashier = 1;
+    //   }
+    // });
+    String? role = await getUSerRole();
+    String? user = await getUsername();
     setState(() {
-      activeUser = users[0]['userName'] ?? '';
-      int isCashier1 = users[0]['isCashier'] ?? 0;
-      if (isCashier1 == 1){
-        isCashier = 1;
-      }
+      activeUser = user.toString();
     });
+    if(role == 'Cashier'){
+      isCashier = 1 ;
+    }
   }
 
   void resetUser() async{
@@ -2400,6 +2431,8 @@ String generateReceiptString({
                       isDismissible: false,
                       context: context,
                       builder: (context){
+                        return StatefulBuilder( 
+                          builder: (context , setState){
                         return Container(
                           height: 600,
                           child: Padding(
@@ -2640,6 +2673,8 @@ String generateReceiptString({
                               ),
                             ),
                           ),
+                        );
+                        }
                         );
                       }
                     );

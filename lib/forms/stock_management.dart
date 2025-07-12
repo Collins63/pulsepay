@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pulsepay/common/constants.dart';
 import 'package:pulsepay/common/custom_button.dart';
+import 'package:pulsepay/forms/bulkStock.dart';
 import 'package:pulsepay/forms/edit_stock_purchases.dart';
 import 'package:pulsepay/forms/new_stock_purchase.dart';
 import 'package:pulsepay/forms/stock_take.dart';
@@ -117,7 +118,19 @@ class StockManagement extends StatelessWidget {
                         ()=> const StockTake()
                       );
                     },
-                  )
+                  ),
+                  const SizedBox(height: 15,),
+                  CustomOutlineBtn(
+                    height: 50,
+                    text: "Bulk Stock Entry",
+                    color: Colors.blue,
+                    color2: Colors.blue,
+                    onTap: (){
+                      Get.to(
+                        ()=> const BulkStockEntry()
+                      );
+                    },
+                  ),
                 ],
               ),
             ),
