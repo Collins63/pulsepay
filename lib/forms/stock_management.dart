@@ -72,22 +72,6 @@ class StockManagement extends StatelessWidget {
                   const SizedBox(height: 15,),
                   CustomOutlineBtn(
                     height: 50,
-                    text: "Add/Change BarCode",
-                    color: Colors.blue,
-                    color2: Colors.blue,
-                    onTap: (){},
-                  ),
-                  const SizedBox(height: 15,),
-                  CustomOutlineBtn(
-                    height: 50,
-                    text: "Add/Change HSCode",
-                    color: Colors.blue,
-                    color2: Colors.blue,
-                    onTap: (){},
-                  ),
-                  const SizedBox(height: 15,),
-                  CustomOutlineBtn(
-                    height: 50,
                     text: "New Stock Purchase",
                     color: Colors.blue,
                     color2: Colors.blue,

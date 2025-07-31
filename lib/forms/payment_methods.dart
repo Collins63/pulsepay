@@ -25,11 +25,21 @@ class _PaymentMethodsState extends State<PaymentMethods> {
   final currencyController = TextEditingController();
   final vatNumberController = TextEditingController();
   final tinController = TextEditingController();
+  List<Map<String, dynamic>> payMethodFromID = [];
 
   @override
   void initState() {
     super.initState();
     fetchPayMethods();
+  }
+
+  void clearFields(){
+    descriptionController.clear();
+    rateController.clear();
+    fiscGroupController.clear();
+    currencyController.clear();
+    vatNumberController.clear();
+    tinController.clear();
   }
 
   Future<void> fetchPayMethods() async {
@@ -50,12 +60,9 @@ class _PaymentMethodsState extends State<PaymentMethods> {
     });
   }
 
-  void deleteByID() async{
-    int payMethodID = 9999;
-    payMethodID = selectedMethod[0];
-    //String methodName = selectedMethod[1].toString();
-    if(payMethodID != 9999){
-      await  dbHelper.deletePayMethod(payMethodID);
+  void deleteByID(int methodId) async{
+    if(methodId != 0){
+      await  dbHelper.deletePayMethod(methodId);
       Get.snackbar("Delete Message", " deleted successfully!!",
         snackPosition: SnackPosition.TOP,
         colorText: Colors.white,
@@ -64,6 +71,16 @@ class _PaymentMethodsState extends State<PaymentMethods> {
       );
     }
   }
+
+   Future<void> fetchMethodById(int id) async{
+    List<Map<String, dynamic>> data = await dbHelper.getPaymentMethodById(id);
+    setState(() {
+      payMethodFromID = data;
+      isLoading = false;
+      showUpdatePrompt();
+    });
+  }
+
 
   ///=====Add Paymethods=====//////////
   //////////////////////////////////////
@@ -103,7 +120,7 @@ class _PaymentMethodsState extends State<PaymentMethods> {
                         IconButton(onPressed: (){
                           Navigator.pop(context);
                         }, icon:const Icon(Icons.arrow_circle_left_sharp, size: 40, color: kDark,)),
-                        const Center(child: const Text("Customer Details" , style: TextStyle(color: Colors.black,fontSize: 18, fontWeight: FontWeight.w500),)),
+                        const Center(child: const Text("Payment Method" , style: TextStyle(color: Colors.black,fontSize: 18, fontWeight: FontWeight.w500),)),
                       ],
                     ),
                     SizedBox(height: 10,),
@@ -215,13 +232,14 @@ class _PaymentMethodsState extends State<PaymentMethods> {
                             if(formKey.currentState!.validate()){
                             final db = DatabaseHelper();
                             await db.addPayMethod(PaymentMethod(
-                              description: descriptionController.text,
+                              description: descriptionController.text.toUpperCase(),
                               rate: double.parse(rateController.text.trim()),
                               fiscalGroup: int.parse(fiscGroupController.text.trim()),
-                              currency: currencyController.text.trim(),
+                              currency: currencyController.text.trim().toUpperCase(),
                               vatNumber: vatNumberController.text.trim(),
                               tinNumber: tinController.text.trim(),
                             ));
+                            clearFields();
                             Navigator.pop(context);
                             Get.snackbar(
                               'Success',
@@ -250,7 +268,7 @@ class _PaymentMethodsState extends State<PaymentMethods> {
                           ),
                         ),
                         child: const Text(
-                          'Save Customer',
+                          'Save Payment Method',
                           style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
                         ),
                       ),
@@ -265,6 +283,136 @@ class _PaymentMethodsState extends State<PaymentMethods> {
     );
   }
 
+  ///Update Payment Method
+  ///
+  //////////////////////////////////////////
+  showUpdatePrompt(){
+
+    descriptionController.text = payMethodFromID.isNotEmpty ? payMethodFromID[0]['description'].toString() : '';
+    rateController.text = payMethodFromID.isNotEmpty ? payMethodFromID[0]['rate'].toString() : '';
+    fiscGroupController.text = payMethodFromID.isNotEmpty ? payMethodFromID[0]['fiscalGroup'].toString() : '';
+    currencyController.text = payMethodFromID.isNotEmpty ? payMethodFromID[0]['currency'].toString() : '';
+    int payMethodId = payMethodFromID.isNotEmpty ? payMethodFromID[0]['payMethodId'] : 0;
+
+    showDialog(
+      context: context,
+      barrierDismissible:  false,
+      builder: (BuildContext context){
+        return AlertDialog(
+          title: const Text("Update Product"),
+          content:Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text("Type In Fields To Update Product"),
+              const SizedBox(height: 10,),
+              TextFormField(
+                      controller: descriptionController,
+                      decoration: InputDecoration(
+                          labelText: 'Description',
+                          labelStyle: TextStyle(color:Colors.grey.shade600 ),
+                          filled: true,
+                          fillColor: Colors.grey.shade300,
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12.0),
+                              borderSide: BorderSide.none
+                          )
+                      ),
+                    ),
+                    const SizedBox(height: 10,),
+                    TextFormField(
+                      controller: rateController,
+                      decoration: InputDecoration(
+                          labelText: 'Rate',
+                          labelStyle: TextStyle(color:Colors.grey.shade600 ),
+                          filled: true,
+                          fillColor: Colors.grey.shade300,
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12.0),
+                              borderSide: BorderSide.none
+                          )
+                      ),
+                      validator: (value){
+                          if(value!.isEmpty){
+                            return "Rate Required";
+                          }return null;
+                        },
+                    ),
+                    const SizedBox(height: 10,),
+                    TextFormField(
+                      controller: fiscGroupController,
+                      decoration: InputDecoration(
+                          labelText: 'Fiscal Group',
+                          labelStyle: TextStyle(color:Colors.grey.shade600 ),
+                          filled: true,
+                          fillColor: Colors.grey.shade300,
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12.0),
+                              borderSide: BorderSide.none
+                          )
+                      ),
+                      validator: (value){
+                          if(value!.isEmpty){
+                            return "Group Required";
+                          }return null;
+                        },
+                    ),
+                    const SizedBox(height: 10,),
+                    TextFormField(
+                      controller: currencyController,
+                      decoration: InputDecoration(
+                          labelText: 'Currency',
+                          labelStyle: TextStyle(color:Colors.grey.shade600 ),
+                          filled: true,
+                          fillColor: Colors.grey.shade300,
+                          border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12.0),
+                              borderSide: BorderSide.none
+                          )
+                      ),
+                      validator: (value){
+                          if(value!.isEmpty){
+                            return "Currency Required";
+                          }return null;
+                        },
+                    ),
+              const SizedBox(height: 10,),
+            ],
+          ) ,
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close the dialog
+              },
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+            onPressed: () {
+              String description = descriptionController.text;
+              double rate = double.tryParse(rateController.text) ?? 0.0;
+              String fiscGroup = fiscGroupController.text;
+              String currency = currencyController.text;
+              dbHelper.updatePaymentMethod(payMethodId, description, rate, fiscGroup, currency).then((_) {
+                Navigator.of(context).pop();
+                fetchPayMethods();
+                Get.snackbar(
+                  'Currency Update', 'Currency Updated Successfully',
+                  snackPosition: SnackPosition.TOP,
+                  colorText: Colors.white,
+                  backgroundColor: Colors.green,
+                  icon: const Icon(Icons.message, color: Colors.white),
+                );
+              });
+            },
+            child: const Text('Update'),
+          ),
+          ],
+        );
+      }
+    );
+
+  }
+
+
   void setDefaultCurrency(int methodId){
     int defaultTag =1;
     try {
@@ -277,6 +425,7 @@ class _PaymentMethodsState extends State<PaymentMethods> {
         snackPosition: SnackPosition.TOP,
         showProgressIndicator: true,
       );
+      fetchPayMethods();
     } catch (e) {
       Get.snackbar(
         "Error", "$e",
@@ -293,12 +442,23 @@ class _PaymentMethodsState extends State<PaymentMethods> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text("Payment Methods" , style: TextStyle(fontWeight: FontWeight.w500, fontSize: 16 ),),
-        centerTitle: true,
-        leading: IconButton(onPressed: (){Get.back();}, icon: const Icon(Icons.arrow_back)),
-        backgroundColor: Colors.white,
-        automaticallyImplyLeading: false,
-      ),
+          automaticallyImplyLeading: false,
+          backgroundColor: Colors.blue,
+          leading: IconButton(
+            onPressed: (){
+              Get.back();
+            },
+            icon: const Icon(Icons.arrow_circle_left_outlined , color: Colors.white ,size: 30,),
+          ),
+          centerTitle: true,
+          title: const Text("Payment Methods" , style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 16 , color: Colors.white),),
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(20),
+              bottomRight: Radius.circular(20),
+            ),
+          ),
+        ),
       body: SingleChildScrollView(
         scrollDirection: Axis.vertical,
         child: SafeArea(
@@ -307,7 +467,8 @@ class _PaymentMethodsState extends State<PaymentMethods> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                CustomOutlineBtn(text: "Add Payment Method", color: Colors.green ,color2: Colors.green, height: 50, onTap: (){addPaymethods();},),
+                const SizedBox(height: 20,),
+                CustomOutlineBtn(text: "Add Payment Method", color: Colors.blue ,color2: Colors.blue, height: 50, onTap: (){addPaymethods();},),
                 const SizedBox(height: 25,),
                 const Center(child: Text("Available Pay Methods" , style: TextStyle(fontWeight: FontWeight.w500),)),
                 const SizedBox(height: 10,),
@@ -320,33 +481,92 @@ class _PaymentMethodsState extends State<PaymentMethods> {
                       child: SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
                         child: DataTable(
+                          headingTextStyle: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                          headingRowColor: MaterialStateProperty.all(Colors.blue),
                           columns: const[
-                            DataColumn(label: Text("Select")),
                             DataColumn(label: Text("Description")),
                             DataColumn(label: Text("Rate")),
                             DataColumn(label: Text("Fiscal Group")),
                             DataColumn(label: Text("Currency")),
                             DataColumn(label: Text("VAT Number")),
                             DataColumn(label: Text("TIN Number")),
-                            DataColumn(label: Text("default"))
+                            DataColumn(label: Text("default")),
+                            DataColumn(label: Text("Actions")),
                           ],
                           rows: payMethods.map((paymentMethod){
                             final methodId = paymentMethod['payMethodId'];
                             return DataRow(
+                              selected: selectedMethod.contains(methodId),
+                                  onSelectChanged: (selected) {
+                                    toggleSelection(methodId);
+                              },
                               cells: [
-                                DataCell(
-                                  Checkbox(
-                                    value: selectedMethod.contains(methodId),
-                                    onChanged: (_)=> toggleSelection(methodId),
-                                  )
-                                ),
                                 DataCell(Text(paymentMethod['description'].toString())),
                                 DataCell(Text(paymentMethod['rate'].toString())),
                                 DataCell(Text(paymentMethod['fiscalGroup'].toString())),
                                 DataCell(Text(paymentMethod['currency'].toString())),
                                 DataCell(Text(paymentMethod['vatNumber'].toString())),
                                 DataCell(Text(paymentMethod['tinNumber'].toString())),
-                                DataCell(Text(paymentMethod['defaultMethod'].toString()))
+                                DataCell(Text(paymentMethod['defaultMethod'].toString())),
+                                DataCell(
+                                    Row(
+                                      children: [
+                                        IconButton(
+                                          icon: const Icon(Icons.edit, color: Colors.blue),
+                                          onPressed: () {
+                                             fetchMethodById(methodId);
+                                          },
+                                        ),
+                                        IconButton(
+                                          onPressed: (){
+                                            setDefaultCurrency(methodId);
+                                          },
+                                          icon:const Icon(Icons.settings_accessibility ,color: Colors.orange,)
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(Icons.delete, color: Colors.red),
+                                          onPressed: () async {
+                                            showDialog(
+                                              context: context,
+                                              barrierDismissible: false,
+                                              builder: (BuildContext context){
+                                                return AlertDialog(
+                                                  title:  const Text("Confirm Deletion"),
+                                                  content:const Column(
+                                                    mainAxisSize: MainAxisSize.min ,
+                                                    children: [
+                                                      Text("Are you sure you want to delete this product?"),
+                                                      SizedBox(height: 10,),
+                                                    ],
+                                                  ),
+                                                  actions: [
+                                                    TextButton(
+                                                    onPressed: () {
+                                                      Navigator.of(context).pop(); // Close the dialog
+                                                    },
+                                                    child: const Text('Cancel'),
+                                                  ),
+                                                  ElevatedButton(
+                                                    onPressed: () async {
+                                                      deleteByID(methodId);
+                                                      Navigator.of(context).pop(); // Close the dialog   
+                                                    },
+                                                    child: const Text('Delete'),
+                                                  ),
+                                                  ],
+                                                );
+                                              }
+                                            );
+                                          },
+                                        ),
+                                        
+                                      ],
+                                    ),
+                                  ),
                               ]
                             );
                           }).toList(),
@@ -354,44 +574,6 @@ class _PaymentMethodsState extends State<PaymentMethods> {
                       ),
                     ),
                     const SizedBox(height: 50,),
-                if (selectedMethod.isNotEmpty)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  CustomOutlineBtn(
-                    width: 100,
-                    height: 45,
-                    text: "Edit",
-                    color:const Color.fromARGB(255, 14, 19, 29),
-                    color2: const Color.fromARGB(255, 14, 19, 29),
-                    onTap: (){
-                      //final i = selectedUsers.first;
-                      //fetchSalesForInvoice(invoiceId);
-                    },
-                  ),
-                  CustomOutlineBtn(
-                    width: 100,
-                    height: 45,
-                    text: "Delete",
-                    color:const Color.fromARGB(255, 14, 19, 29),
-                    color2: const Color.fromARGB(255, 14, 19, 29) ,
-                    onTap: (){
-                      deleteByID();
-                    },
-                  ),
-                  CustomOutlineBtn(
-                    width: 100,
-                    height: 45,
-                    text: "Set Default",
-                    color:const Color.fromARGB(255, 14, 19, 29),
-                    color2: const Color.fromARGB(255, 14, 19, 29),
-                    onTap: (){
-                      final methodId = selectedMethod[0];
-                      setDefaultCurrency(methodId);
-                    },
-                  ),
-                ],
-              ),
                   ],
                 )
               ],

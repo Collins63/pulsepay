@@ -1,9 +1,11 @@
 import 'dart:io';
 
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:path/path.dart';
+import 'package:path/path.dart' as path;
 import 'package:permission_handler/permission_handler.dart';
 import 'package:pulsepay/SQLite/database_helper.dart';
 import 'package:pulsepay/common/custom_button.dart';
@@ -18,7 +20,85 @@ class DatabaseBackup extends StatefulWidget {
 
 class _DatabaseBackupState extends State<DatabaseBackup> {
 
-  
+
+  final databaseName1 = "pulse.db";
+
+  void restoreBackup() async {
+    final databasePath = await databaseFactory.getDatabasesPath();
+    final fullPath = path.join(databasePath, databaseName1);
+    final db = await openDatabase(fullPath);
+
+    await loadBackupSQLFileWithPicker(db);
+  }
+
+  Future<void> loadBackupSQLFileWithPicker(Database db) async {
+  try {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['sql'],
+    );
+
+    if (result == null || result.files.single.path == null) {
+      print("❌ No file selected.");
+      return;
+    }
+
+    final sqlFilePath = result.files.single.path!;
+    final file = File(sqlFilePath);
+
+    if (!await file.exists()) {
+      print("❌ Selected file not found.");
+      return;
+    }
+
+    final sqlContent = await file.readAsString();
+
+    // 🔍 Split and clean the SQL file
+    final rawStatements = sqlContent
+        .split(';')
+        .map((s) => s.trim())
+        .where((s) => s.isNotEmpty)
+        .toList();
+
+    print("📦 Executing ${rawStatements.length} SQL statements...");
+
+    for (final stmt in rawStatements) {
+      final stmtTrimmed = stmt.trimLeft();
+      final stmtLower = stmtTrimmed.toLowerCase();
+
+      // Skip schema/control statements
+      if (stmtTrimmed.startsWith('--') ||
+          stmtLower.startsWith('begin') ||
+          stmtLower.startsWith('commit') ||
+          stmtLower.startsWith('create table') ||
+          stmtLower.startsWith('drop table')) {
+        print("⚠️ Skipping schema/control statement: $stmtTrimmed");
+        continue;
+      }
+
+      try {
+        // Force 'INSERT INTO' to become 'INSERT OR REPLACE INTO'
+        String cleanStmt;
+        if (stmtLower.startsWith('insert into')) {
+          // Slice after "insert into" (length = 11)
+          cleanStmt = 'INSERT OR REPLACE INTO' + stmtTrimmed.substring(11);
+        } else {
+          cleanStmt = stmtTrimmed;
+        }
+
+        await db.execute(cleanStmt);
+      } catch (e) {
+        print("🧨 Error executing: $stmt");
+        print("   👉 $e");
+      }
+    }
+
+    print("✅ Backup loaded successfully.");
+  } catch (e) {
+    print("❌ Exception during backup restore: $e");
+  }
+}
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -114,6 +194,16 @@ class _DatabaseBackupState extends State<DatabaseBackup> {
                         icon: const Icon(Icons.error, color: Colors.white),
                       );
                     }
+                  },
+                ),
+                const SizedBox(height: 20,),
+                CustomOutlineBtn(
+                  text: "Upload Backup",
+                  color: Colors.green,
+                  color2: Colors.green,
+                  height: 50,
+                  onTap: ()async{
+                    restoreBackup();
                   },
                 )
               ],

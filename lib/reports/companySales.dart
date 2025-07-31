@@ -19,6 +19,7 @@ class _CompanysalesState extends State<Companysales> {
   String? selectedCurrency;
   List<String> currencies = [];
   double? periodTotal;
+  int? totalSales;
   @override
   void initState(){
     dbHelper.getTopSellingProducts().then((value){
@@ -29,6 +30,7 @@ class _CompanysalesState extends State<Companysales> {
     loadCurrencies();
     getZWGTotalSales();
     getUSDTotalSales();
+    getAllReceipts();
   }
 
   List<Map<String, dynamic>> topProducts = [];
@@ -46,6 +48,13 @@ class _CompanysalesState extends State<Companysales> {
     });
   }
 
+  Future<void> getAllReceipts()async{
+    final receipts = await dbHelper.getSubmittedReceipts();
+    int length = receipts.length;
+    setState(() {
+      totalSales = length;
+    });
+  }
 
   Future<void> selectedStartDate(BuildContext context) async{
     final DateTime? picked = await showDatePicker(
@@ -131,7 +140,7 @@ Future<void> selectEndDate(BuildContext context) async {
                     children: [
                       Text("Transactions", style: TextStyle(color: Colors.white, fontSize: 18), textAlign: TextAlign.center,),
                       SizedBox(height: 15,),
-                      Text("2040403", style: TextStyle(color: Colors.white, fontSize: 25), textAlign: TextAlign.center,)
+                      Text("$totalSales", style: TextStyle(color: Colors.white, fontSize: 25), textAlign: TextAlign.center,)
                     ],
                   ),
                 ),

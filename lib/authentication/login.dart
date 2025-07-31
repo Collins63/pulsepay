@@ -197,10 +197,69 @@ class _LoginState extends State<Login>{
                       ),
                       GestureDetector(
                         onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const Signup()));
+                        //   Navigator.push(
+                        //     context,
+                        //     MaterialPageRoute(
+                        //       builder: (context) => const Signup()));
+                        final TextEditingController passwordController = TextEditingController();
+                        final TextEditingController reasonController = TextEditingController();
+
+                        showDialog(
+                          context: context,
+                          barrierDismissible: false,
+                          builder: (BuildContext context){
+                            return AlertDialog(
+                              title:  const Text("Enter Password"),
+                              content:Column(
+                                mainAxisSize: MainAxisSize.min ,
+                                children: [
+                                  const Text("Please enter admin password"),
+                                  const SizedBox(height: 10,),
+                                  TextField(
+                                    controller: passwordController,
+                                    obscureText: true,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Password',
+                                      border: OutlineInputBorder(),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              actions: [
+                                TextButton(
+                                onPressed: () {
+                                  Navigator.of(context).pop(); // Close the dialog
+                                },
+                                child: const Text('Cancel'),
+                              ),
+                              ElevatedButton(
+                                onPressed: () {
+                                  final enteredPassword = passwordController.text.trim();
+                                  const String correctPassword = 'admin123';
+                                  if (enteredPassword == correctPassword) {
+                                    Navigator.of(context).pop();
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => const Signup()));
+                                  } else {
+                                    Navigator.of(context).pop();
+                                    Get.snackbar(
+                                      'Denied!',
+                                      'Wrong password',
+                                      icon: const Icon(Icons.error, color: Colors.white,),
+                                      colorText: Colors.white,
+                                      backgroundColor: Colors.red,
+                                      snackPosition: SnackPosition.TOP,
+                                    );
+                                  }
+                                },
+                                child: const Text('Submit'),
+                              ),
+                              ],
+                            );
+                          }
+                        );
                         },
                         child: const Text(
                           "Create",

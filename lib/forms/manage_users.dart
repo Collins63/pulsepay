@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pulsepay/SQLite/database_helper.dart';
 import 'package:pulsepay/common/custom_button.dart';
 
@@ -13,6 +14,7 @@ class _ManageUsersState extends State<ManageUsers> {
   List<Map<String, dynamic>> users = [];
   List<int> selectedUsers = [];
   bool isLoading = true;
+  List<Map<String, dynamic>> userFromID = [];
 
   @override
   void initState() {
@@ -20,8 +22,143 @@ class _ManageUsersState extends State<ManageUsers> {
     fetchUsers();
   }
 
-  Future<void>  getUserById() async{
-    
+  Future<void> fetchuSERById(int userId) async{
+    List<Map<String, dynamic>> data = await dbHelper.getUserById(userId);
+    setState(() {
+      userFromID = data;
+      isLoading = false;
+      showUpdatePrompt();
+    });
+  }
+
+  Future<void> deactivateuser(int userId) async{
+    try {
+      await dbHelper.deactivateUser(userId);
+      Get.snackbar(
+        "Succes", 
+        "User Deactivated",
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+        icon: const Icon(Icons.check ,color: Colors.white,)
+      );
+    } catch (e) {
+      Get.snackbar(
+        "Deactivation error", 
+        "$e",
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+        icon: const Icon(Icons.error ,color: Colors.white,)
+      );
+    }
+  }
+
+  showUpdatePrompt(){
+    final TextEditingController realName  = TextEditingController();
+    final TextEditingController userName = TextEditingController();
+    final TextEditingController userPassword = TextEditingController();
+    final TextEditingController isadmin = TextEditingController();
+    final TextEditingController iscashier = TextEditingController();
+
+    realName.text = userFromID.isNotEmpty ? userFromID[0]['realName'].toString() : '';
+    userName.text = userFromID.isNotEmpty ? userFromID[0]['userName'].toString() : '';
+    userPassword.text = userFromID.isNotEmpty ? userFromID[0]['userPassword'].toString() : '';
+    isadmin.text = userFromID.isNotEmpty ? userFromID[0]['isAdmin'].toString() : '';
+    iscashier.text = userFromID.isNotEmpty ? userFromID[0]['isCashier'].toString() : '';
+    int userId = userFromID.isNotEmpty ? userFromID[0]['userId'] : 0;
+
+    showDialog(
+      context: context,
+      barrierDismissible:  false,
+      builder: (BuildContext context){
+        return AlertDialog(
+          title: const Text("Update Product"),
+          content:Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text("Type In Fields To Update Product"),
+              const SizedBox(height: 10,),
+              TextField(
+                controller: realName,
+                obscureText: false,
+                decoration: const InputDecoration(
+                  labelText: 'Real Name',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 10,),
+              TextField(
+                controller: userName,
+                obscureText: false,
+                decoration: const InputDecoration(
+                  labelText: 'Username',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 10,),
+              TextField(
+                controller: userPassword,
+                obscureText: false,
+                decoration: const InputDecoration(
+                  labelText: 'User password',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 10,),
+              TextField(
+                controller: isadmin,
+                obscureText: false,
+                decoration: const InputDecoration(
+                  labelText: 'Is Admin',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 10,),
+              TextField(
+                controller: iscashier,
+                obscureText: false,
+                decoration: const InputDecoration(
+                  labelText: 'Is Cashier',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 10,),
+            ],
+          ) ,
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close the dialog
+              },
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+            onPressed: () {
+              String name = realName.text;
+              String username = userName.text;
+              String password = userPassword.text;
+              int isAdmin = int.tryParse(isadmin.text)!;
+              int isCashier = int.tryParse(iscashier.text)!;
+              dbHelper.updateUser(userId, name, username, password, isAdmin, isCashier).then((_) {
+                Navigator.of(context).pop(); // Close the dialog
+                fetchUsers();// Refresh the product list
+                Get.snackbar(
+                  'User Update', 'User Updated Successfully',
+                  snackPosition: SnackPosition.TOP,
+                  colorText: Colors.white,
+                  backgroundColor: Colors.green,
+                  icon: const Icon(Icons.message, color: Colors.white),
+                );
+              });
+            },
+            child: const Text('Update'),
+          ),
+          ],
+        );
+      }
+    );
+
   }
 
   Future<void> fetchUsers() async {
@@ -37,6 +174,7 @@ class _ManageUsersState extends State<ManageUsers> {
       if (selectedUsers.contains(userId)) {
         selectedUsers.remove(userId);
       } else {
+        selectedUsers.clear();
         selectedUsers.add(userId);
       }
     });
@@ -62,92 +200,161 @@ class _ManageUsersState extends State<ManageUsers> {
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
-          : Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 20,),
-              SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: SingleChildScrollView(
-                    child: DataTable(
-                      headingTextStyle: const TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      headingRowColor: MaterialStateProperty.all(Colors.blue),
-                      columns: const [
-                        DataColumn(label: Text('Select')),
-                        DataColumn(label: Text('Real Name')),
-                        DataColumn(label: Text('Username')),
-                        DataColumn(label: Text('DateCreated')),
-                        DataColumn(label: Text('IsActive')),
-                        DataColumn(label: Text('IsAdmin')),
-                        DataColumn(label: Text('IsCashier')),
-                      ],
-                      rows: users
-                          .map(
-                            (user) {
-                              final userId = user['userId'];
-                              return DataRow(
-                              cells: [
-                                DataCell(
-                                  Checkbox(
-                                    value: selectedUsers.contains(userId),
-                                    onChanged: (_) => toggleSelection(userId),
+          : SingleChildScrollView(
+            scrollDirection: Axis.vertical,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 20,),
+                SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: SingleChildScrollView(
+                      child: DataTable(
+                        headingTextStyle: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        headingRowColor: MaterialStateProperty.all(Colors.blue),
+                        columns: const [
+                          DataColumn(label: Text('Real Name')),
+                          DataColumn(label: Text('Username')),
+                          DataColumn(label: Text('DateCreated')),
+                          DataColumn(label: Text('IsActive')),
+                          DataColumn(label: Text('IsAdmin')),
+                          DataColumn(label: Text('IsCashier')),
+                          DataColumn(label: Text('Actions')),
+                        ],
+                        rows: users
+                            .map(
+                              (user) {
+                                final userId = user['userId'];
+                                return DataRow(
+                                  selected: selectedUsers.contains(userId),
+                                  onSelectChanged: (selected) {
+                                    toggleSelection(userId);
+                                  },
+                                cells: [
+                                  DataCell(Text(user['realName'].toString())),
+                                  DataCell(Text(user['userName'].toString())),
+                                  DataCell(Text(user['dateCreated'].toString())),
+                                  DataCell(Text(user['isActive'].toString())),
+                                  DataCell(Text(user['isAdmin'].toString())),
+                                  DataCell(Text(user['isCashier'].toString())),
+                                  DataCell(
+                                    Row(
+                                      children: [
+                                        IconButton(
+                                          icon: const Icon(Icons.edit, color: Colors.blue),
+                                          onPressed: () {
+                                             fetchuSERById(userId);
+                                          },
+                                        ),
+                                        IconButton(
+                                          onPressed: (){
+                                            showDialog(
+                                              context: context,
+                                              barrierDismissible: false,
+                                              builder: (BuildContext context){
+                                                return AlertDialog(
+                                                  title:  const Text("De-Activate Confirmation"),
+                                                  content:const Column(
+                                                    mainAxisSize: MainAxisSize.min ,
+                                                    children: [
+                                                      Center(child: Text("Are you sure!!")),
+                                                      SizedBox(height: 10,),
+                                                    ],
+                                                  ),
+                                                  actions: [
+                                                    TextButton(
+                                                    onPressed: () {
+                                                      Navigator.of(context).pop(); // Close the dialog
+                                                    },
+                                                    child: const Text('Cancel'),
+                                                  ),
+                                                  ElevatedButton(
+                                                    onPressed: () async {
+                                                      await deactivateuser(userId);
+                                                      Navigator.of(context).pop(); // Close the dialog
+                                                    },
+                                                    child: const Text('De-Activate'),
+                                                  ),
+                                                  ],
+                                                );
+                                              }
+                                            );
+                                          }, 
+                                          icon: const Icon(Icons.remove_circle, color: Colors.red)
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(Icons.delete, color: Colors.red),
+                                          onPressed: () async {
+                                            showDialog(
+                                              context: context,
+                                              barrierDismissible: false,
+                                              builder: (BuildContext context){
+                                                return AlertDialog(
+                                                  title:  const Text("Confirm Deletion"),
+                                                  content:const Column(
+                                                    mainAxisSize: MainAxisSize.min ,
+                                                    children: [
+                                                      Text("Are you sure you want to delete this user?"),
+                                                      SizedBox(height: 10,),
+                                                    ],
+                                                  ),
+                                                  actions: [
+                                                    TextButton(
+                                                    onPressed: () {
+                                                      Navigator.of(context).pop(); // Close the dialog
+                                                    },
+                                                    child: const Text('Cancel'),
+                                                  ),
+                                                  ElevatedButton(
+                                                    onPressed: () async {
+                                                      try {
+                                                        await dbHelper.deleteUsers(userId);
+                                                        Get.snackbar(
+                                                          "Delete Success",
+                                                          "User deleted Sucessfully",
+                                                          snackPosition: SnackPosition.TOP,
+                                                          colorText: Colors.white,
+                                                          backgroundColor: Colors.green,
+                                                          icon: const Icon(Icons.check, color: Colors.white,)
+                                                        );
+                                                        fetchUsers();
+                                                      } catch (e) {
+                                                        Get.snackbar(
+                                                          "Delete Error",
+                                                          "$e",
+                                                          snackPosition: SnackPosition.TOP,
+                                                          colorText: Colors.white,
+                                                          backgroundColor: Colors.red,
+                                                          icon: const Icon(Icons.error, color: Colors.white,)
+                                                        );
+                                                      }
+                                                      Navigator.of(context).pop(); // Close the dialog   
+                                                    },
+                                                    child: const Text('Delete'),
+                                                  ),
+                                                  ],
+                                                );
+                                              }
+                                            );
+                                          },
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                ),
-                                DataCell(Text(user['realName'].toString())),
-                                DataCell(Text(user['userName'].toString())),
-                                DataCell(Text(user['dateCreated'].toString())),
-                                DataCell(Text(user['isActive'].toString())),
-                                DataCell(Text(user['isAdmin'].toString())),
-                                DataCell(Text(user['isCashier'].toString()))
-                              ],
-                            );
-                          })
-                          .toList(),
+                                ],
+                              );
+                            })
+                            .toList(),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 50,),
-                if (selectedUsers.isNotEmpty)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  CustomOutlineBtn(
-                    width: 90,
-                    height: 50,
-                    text: "Update",
-                    color: Colors.blue,
-                    color2: Colors.blue,
-                    onTap: (){
-                      //final i = selectedUsers.first;
-                      //fetchSalesForInvoice(invoiceId);
-                    },
-                  ),
-                  CustomOutlineBtn(
-                    width: 90,
-                    height: 50,
-                    text: "Delete",
-                    color:Colors.blue,
-                    color2: Colors.blue ,
-                    onTap: (){
-                      //showPasswordPrompt();
-                    },
-                  ),
-                  CustomOutlineBtn(
-                    width: 90,
-                    height: 50,
-                    text: "View",
-                    color:Colors.blue,
-                    color2: Colors.blue,
-                    onTap: (){
-                    },
-                  ),
-                ],
-              ),
-            ],
+                  const SizedBox(height: 50,),
+              ],
+            ),
           ),
 
     );

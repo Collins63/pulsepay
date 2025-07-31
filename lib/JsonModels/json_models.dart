@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 
 import 'package:flutter/services.dart';
+import 'package:pulsepay/forms/edit_productDetails.dart';
 
 Users usersFromMap(String str) => Users.fromMap(json.decode(str));
 
@@ -77,6 +78,9 @@ class Products {
   final double sellingPrice;
   final String tax;
   final int stockQty;
+  final int? sellqty;
+  final double? sellTax;
+
 
   Products({
     this.productid,
@@ -86,7 +90,9 @@ class Products {
     required this.costPrice,
     required this.sellingPrice,
     required this.tax,
-    required this.stockQty
+    required this.stockQty,
+    this.sellqty,
+    this.sellTax,
   });
 
   factory Products.fromMap(Map<String, dynamic> json) => Products(
@@ -97,7 +103,9 @@ class Products {
     costPrice: json["costPrice"],
     sellingPrice: json["sellingPrice"],
     tax: json["tax"],
-    stockQty: json["stockQty"]
+    stockQty: json["stockQty"],
+    sellqty: json["sellqty"],
+    sellTax: json["sellTax"]
   );
 
   Map<String, dynamic> toMap() => {
@@ -108,7 +116,9 @@ class Products {
     "costPrice": costPrice,
     "sellingPrice": sellingPrice,
     "tax": tax,
-    "stockQty": stockQty
+    "stockQty": stockQty,
+    "sellqty":sellqty,
+    "sellTax": sellTax
   };
 }
 
@@ -126,12 +136,16 @@ class Invoices {
   final Text date;
   final double totalAmount;
   final double totalTax;
+  final double rate;
+  final String doneBy;
 
   Invoices({
     this.invoiceId,
     required this.date,
     required this.totalAmount,
     required this.totalTax,
+    required this.rate,
+    required this.doneBy
   });
 
   factory Invoices.fromMap(Map<String, dynamic> json) => Invoices(
@@ -139,6 +153,8 @@ class Invoices {
     date: json["date"],
     totalAmount: json["totalAmount"],
     totalTax: json["totalTax"],
+    rate: json["rate"],
+    doneBy: json["doneBY"]
   );
 
   Map<String, dynamic> toMap() => {
@@ -146,6 +162,8 @@ class Invoices {
     "date": date,
     "totalAmount": totalAmount,
     "totalTax": totalTax,
+    "rate" :rate,
+    "doneBY" : doneBy
   };
 }
 
@@ -167,6 +185,9 @@ class Sales {
   final int quantity;
   final double sellingPrice;
   final double tax;
+  final String currency;
+  final double rate;
+  final String doneBY;
 
   Sales({
     this.saleId,
@@ -175,7 +196,10 @@ class Sales {
     required this.productId,
     required this.quantity,
     required this.sellingPrice,
-    required this.tax
+    required this.tax,
+    required this.currency,
+    required this.rate,
+    required this.doneBY
   });
 
   factory Sales.fromMap(Map<String, dynamic> json) => Sales(
@@ -185,7 +209,10 @@ class Sales {
     productId: json["productId"],
     quantity: json["quantity"],
     sellingPrice: json["sellingPrice"],
-    tax: json["tax"]
+    tax: json["tax"],
+    currency:  json["currency"],
+    rate: json["rate"],
+    doneBY: json["doneBY"]
   );
 
   Map<String, dynamic> toMap() => {
@@ -196,6 +223,9 @@ class Sales {
     "quantity": quantity,
     "sellingPrice":sellingPrice,
     "tax":tax,
+    "currency": currency,
+    "rate" : rate,
+    "doneBY" : doneBY
   };
 }
 
@@ -213,6 +243,7 @@ class Customer {
   final int vatNumber;
   final String address;
   final String email;
+  final int isFiscal;
 
   Customer({
     this.customerID,
@@ -220,7 +251,8 @@ class Customer {
     required this.tinNumber,
     required this.vatNumber,
     required this.address,
-    required this.email
+    required this.email,
+    required this.isFiscal
   });
 
   factory Customer.fromMap(Map<String, dynamic> json) => Customer(
@@ -229,7 +261,8 @@ class Customer {
     tinNumber: json["tinNumber"],
     vatNumber: json["vatNumber"],
     address: json["address"],
-    email: json["email"]
+    email: json["email"],
+    isFiscal: json["isFiscal"]
   );
 
   Map<String, dynamic> toMap() => {
@@ -239,10 +272,11 @@ class Customer {
     "vatNumber": vatNumber,
     "address": address,
     "email": email,
+    "isFiscal": isFiscal
   };
 }
 
-///CustomerDetailsModel//////
+///Stock Purchases//////
 ///////////////////////////////////////////////////////
 StockPurchase stockPurchaseFromMap(String str) => StockPurchase.fromMap(json.decode(str));
 
@@ -331,6 +365,233 @@ class PaymentMethod{
   };
 }
 
+
+///Banking details //////
+///////////////////////////////////////////////////////
+Banking bankingFromMap(String str) => Banking.fromMap(json.decode(str));
+
+String bankingToMap(Banking data) => json.encode(data.toMap());
+
+class Banking{
+  final int? bankId;
+  final String bank;
+  final String bankBranch;
+  final String bankAcntName;
+  final String bankAcntNo;
+  final String currency;
+
+  Banking({
+    this.bankId,
+    required this.bank,
+    required this.bankBranch,
+    required this.bankAcntName,
+    required this.bankAcntNo,
+    required this.currency
+  });
+
+  factory Banking.fromMap(Map<String, dynamic> json) => Banking(
+    bankId: json["bankId"],
+    bank: json["bank"],
+    bankBranch: json["bankBranch"],
+    bankAcntName: json["bankAcntName"],
+    bankAcntNo: json["bankAcntNo"],
+    currency: json["currency"],
+  );
+
+  Map<String, dynamic> toMap() => {
+    "bankId": bankId,
+    "bank": bank,
+    "bankBranch": bankBranch,
+    "bankAcntName": bankAcntName,
+    "bankAcntNo": bankAcntNo,
+    "currency": currency,
+  };
+}
+
+
+///Taxpayer details //////
+///////////////////////////////////////////////////////
+TaxPayer taxPayerFromMap(String str) => TaxPayer.fromMap(json.decode(str));
+
+String taxPayerToMap(TaxPayer data) => json.encode(data.toMap());
+
+class TaxPayer{
+  final int? taxPayerId;
+  final String taxPayerName;
+  final String taxPayerTin;
+  final String taxPayerVatNumber;
+  final int deviceID;
+  final String activationKey;
+  final String deviceModelName;
+  final String serialNo;
+  final String deviceModelVersion;
+
+  TaxPayer({
+    this.taxPayerId,
+    required this.taxPayerName,
+    required this.taxPayerTin,
+    required this.taxPayerVatNumber,
+    required this.deviceID,
+    required this.activationKey,
+    required this.deviceModelName,
+    required this.serialNo,
+    required this.deviceModelVersion
+  });
+
+  factory TaxPayer.fromMap(Map<String, dynamic> json) => TaxPayer(
+    taxPayerId: json["taxPayerId"],
+    taxPayerName: json['taxPayerName'],
+    taxPayerTin: json["taxPayerTin"],
+    taxPayerVatNumber: json["taxPayerVatNumber"],
+    deviceID: json["deviceID"],
+    activationKey: json["activationKey"],
+    deviceModelName: json["deviceModelName"],
+    serialNo: json['serialNo'],
+    deviceModelVersion: json['deviceModelVersion']
+  );
+
+  Map<String, dynamic> toMap() => {
+    "taxPayerId": taxPayerId,
+    "taxPayerName": taxPayerName,
+    "taxPayerTin": taxPayerTin,
+    "taxPayerVatNumber": taxPayerVatNumber,
+    "deviceID": deviceID,
+    "activationKey": activationKey,
+    "deviceModelName":deviceModelName,
+    "serialNo": serialNo,
+    "deviceModelVersion" : deviceModelVersion
+  };
+}
+
+
+
+///============================Quotations=====================================//////
+///////////////////////////////////////////////////////
+Quotation quotationFromMap(String str) => Quotation.fromMap(json.decode(str));
+
+String quotationToMap(Quotation data) => json.encode(data.toMap());
+
+class Quotation{
+  final int? quotationID;
+  final int productId;
+  final String productDescription;
+  final double quantity;
+  final double unitCost;
+  final double sellingPrice;
+  final double taxAmount;
+  final String customerID;
+  final String date;
+  final String paymentMethod;
+  final String quotationReference;
+  final String qoutationNumber;
+
+
+
+  Quotation({
+    this.quotationID,
+    required this.productId,
+    required this.productDescription,
+    required this.quantity,
+    required this.unitCost,
+    required this.sellingPrice,
+    required this.taxAmount,
+    required this.customerID,
+    required this.date,
+    required this.paymentMethod,
+    required this.quotationReference,
+    required this.qoutationNumber,
+  });
+
+  factory Quotation.fromMap(Map<String, dynamic> json) => Quotation(
+    quotationID: json["quotationID"],
+    productId: json["productId"],
+    productDescription: json["productDescription"],
+    quantity: json["quantity"],
+    unitCost: json["unitCost"],
+    sellingPrice: json["sellingPrice"],
+    taxAmount: json["taxAmount"],
+    customerID: json["customerID"],
+    date: json["date"],
+    paymentMethod: json["paymentMethod"],
+    quotationReference: json["quotationReference"],
+    qoutationNumber: json["qoutationNumber"]
+  );
+
+  Map<String, dynamic> toMap() => {
+    "quotationID": quotationID,
+    "productId": productId,
+    "productDescription": productDescription,
+    "quantity": quantity,
+    "unitCost": unitCost,
+    "sellingPrice": sellingPrice,
+    "taxAmount": taxAmount,
+    "customerID": customerID,
+    "date" : date,
+    "paymentMethod": paymentMethod,
+    "quotationReference": quotationReference,
+    "qoutationNumber": qoutationNumber,
+  };
+}
+
+QuotationInvoice quotationInvoiceFromMap(String str) => QuotationInvoice.fromMap(json.decode(str));
+
+String quotationInvoiceToMap(QuotationInvoice data) => json.encode(data.toMap());
+
+class QuotationInvoice{
+  final int? quotationInvoiceID;
+  final double quantity;
+  final double unitCost;
+  final double sellingPrice;
+  final double taxAmount;
+  final String customerID;
+  final String date;
+  final String paymentMethod;
+  final String quotationReference;
+  final String qoutationNumber;
+
+
+
+  QuotationInvoice({
+    this.quotationInvoiceID,
+    required this.quantity,
+    required this.unitCost,
+    required this.sellingPrice,
+    required this.taxAmount,
+    required this.customerID,
+    required this.date,
+    required this.paymentMethod,
+    required this.quotationReference,
+    required this.qoutationNumber,
+  });
+
+  factory QuotationInvoice.fromMap(Map<String, dynamic> json) => QuotationInvoice(
+   quotationInvoiceID: json["quotationInvoiceID"],
+    quantity: json["quantity"],
+    unitCost: json["totalCost"],
+    sellingPrice: json["sellingPrice"],
+    taxAmount: json["taxAmount"],
+    customerID: json["customerID"],
+    date: json["date"],
+    paymentMethod: json["paymentMethod"],
+    quotationReference: json["quotationReference"],
+    qoutationNumber: json["qoutationNumber"]
+  );
+
+  Map<String, dynamic> toMap() => {
+    "quotationID": quotationInvoiceID,
+    "quantity": quantity,
+    "unitCost": unitCost,
+    "sellingPrice": sellingPrice,
+    "taxAmount": taxAmount,
+    "customerID": customerID,
+    "date" : date,
+    "paymentMethod": paymentMethod,
+    "quotationReference": quotationReference,
+    "qoutationNumber": qoutationNumber,
+  };
+}
+
+
 ///Receipt Anomallies//////
 ///////////////////////////////////////////////////////
 Anomaly anomalyFromMap(String str) => Anomaly.fromMap(json.decode(str));
@@ -378,6 +639,113 @@ class Anomaly{
     "taxAmount": taxAmount,
     "salesAmountWithTax": salesAmountwithTax,
     "taxPercent": taxPercent
+  };
+}
+
+
+///==============================SHIFTs===============================================//////
+///////////////////////////////////////////////////////
+Shifts shiftsFromMap(String str) => Shifts.fromMap(json.decode(str));
+
+String shiftsToMap(Shifts data) => json.encode(data.toMap());
+
+class Shifts{
+  final int? shiftId;
+  final String shiftDescription;
+  final String startTime;
+  final String endTime;
+  final int open;
+  final String userID;
+  final double shiftTotal;
+
+  Shifts({
+    this.shiftId,
+    required this.shiftDescription,
+    required this.startTime,
+    required this.endTime,
+    required this.open,
+    required this.userID,
+    required this.shiftTotal,
+  });
+
+  factory Shifts.fromMap(Map<String, dynamic> json) => Shifts(
+    shiftId: json["shiftId"],
+    shiftDescription: json["shiftDescription"],
+    startTime: json["startTime"],
+    endTime: json["endTime"],
+    open: json["open"],
+    userID: json["userID"],
+    shiftTotal: json["shiftTotal"],
+  );
+
+  Map<String, dynamic> toMap() => {
+    "shiftId": shiftId,
+    "shiftDescription": shiftDescription,
+    "startTime": startTime,
+    "endTime": endTime,
+    "open": open,
+    "userID": userID,
+    "shiftTotal": shiftTotal,
+  };
+}
+
+
+///==============================DISCOUNTS===============================================//////
+///////////////////////////////////////////////////////
+
+Discounts discountsFromMap(String str) => Discounts.fromMap(json.decode(str));
+
+String discountsToMap(Discounts data) => json.encode(data.toMap());
+
+class Discounts{
+  final int? discountId;
+  final int productId;
+  final double discountAmount;
+  final double ogPrice;
+  final String doneBy;
+  final String doneWhen;
+  final double quantity;
+  final int invoiceNumber;
+  final String currency;
+  final double rate;
+
+  Discounts({
+    this.discountId,
+    required this.productId,
+    required this.discountAmount,
+    required this.ogPrice,
+    required this.doneBy,
+    required this.doneWhen,
+    required this.quantity,
+    required this.invoiceNumber,
+    required this.currency,
+    required this.rate,
+  });
+
+  factory Discounts.fromMap(Map<String, dynamic> json) => Discounts(
+    discountId: json["discountId"],
+    productId: json["productId"],
+    discountAmount: json["discountAmount"],
+    ogPrice: json["ogPrice"],
+    doneBy: json["doneBy"],
+    doneWhen: json["doneWhen"],
+    quantity: json["quantity"],
+    invoiceNumber:json["invoiceNumber"] ,
+    currency: json["currency"],
+    rate: json["rate"],
+  );
+
+  Map<String, dynamic> toMap() => {
+    "discountId": discountId,
+    "productId": productId,
+    "discountAmount": discountAmount,
+    "ogPrice": ogPrice,
+    "doneBy": doneBy,
+    "doneWhen": doneWhen,
+    "quantity": quantity,
+    "invoiceNumber": invoiceNumber,
+    "currency": currency,
+    "rate": rate, 
   };
 }
 
@@ -447,10 +815,6 @@ class CompanyDetails{
   final String vatNumber;
   final String? vendorNumber;
   final String? website;
-  final String? bank;
-  final String? bankBranch;
-  final String? bankAcntName;
-  final String? bankAcntNo;
   final String baseCurreny;
   final String? backUpLocation;
   final String baseTaxPercentage;
@@ -468,10 +832,6 @@ class CompanyDetails{
     required this.vatNumber,
     this.vendorNumber,
     this.website,
-    this.bank,
-    this.bankBranch,
-    this.bankAcntName,
-    this.bankAcntNo,
     required this.baseCurreny,
     this.backUpLocation,
     required this.baseTaxPercentage
@@ -490,10 +850,6 @@ class CompanyDetails{
     vatNumber: json["vatNumber"],
     vendorNumber: json["vendorNumber"],
     website: json["website"],
-    bank: json["bank"],
-    bankBranch: json["bankBranch"],
-    bankAcntName: json["bankAcntName"],
-    bankAcntNo: json["bankAcntNo"],
     baseCurreny: json["baseCurreny"],
     backUpLocation: json["backUpLocation"],
     baseTaxPercentage: json["baseTaxPercentage"],
@@ -512,10 +868,6 @@ class CompanyDetails{
     "vatNumber": vatNumber,
     "vendorNumber": vendorNumber,
     "website": website,
-    "bank": bank,
-    "bankBranch": bankBranch,
-    "bankAcntName": bankAcntName,
-    "bankAcntNo": bankAcntNo,
     "baseCurreny": baseCurreny,
     "backUpLocation": backUpLocation,
     "baseTaxPercentage": baseTaxPercentage,

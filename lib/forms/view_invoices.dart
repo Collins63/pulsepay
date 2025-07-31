@@ -6,6 +6,7 @@ import 'package:blue_thermal_printer/blue_thermal_printer.dart';
 import 'package:crypto/crypto.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:pulsepay/SQLite/database_helper.dart';
@@ -16,6 +17,7 @@ import 'package:pulsepay/fiscalization/sslContextualization.dart';
 import 'package:pulsepay/fiscalization/submitReceipts.dart';
 import 'package:pulsepay/home/home_page.dart';
 import 'package:pulsepay/main.dart';
+import 'package:pulsepay/signatureGeneration.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:sunmi_printer_plus/core/enums/enums.dart';
 import 'package:sunmi_printer_plus/core/styles/sunmi_qrcode_style.dart';
@@ -39,11 +41,20 @@ class _ViewInvoicesState extends State<ViewInvoices> {
   String? receiptDeviceSignature_signature_hex ;
   String? first16Chars;
   String? receiptDeviceSignature_signature;
-  String genericzimraqrurl = "https://fdmstest.zimra.co.zw/";
+  String genericzimraqrurl = "https://fdms.zimra.co.zw/";
   int deviceID = 25395;
   String? generatedJson;
   String? fiscalResponse;
   String? creditReason;
+  List<Map<String , dynamic>> taxPayerDetails = [];
+  List<Map<String , dynamic>> companyDetails = [];
+
+  @override
+  void initState(){
+    super.initState();
+    fetchTaxPayerDetails();
+    fetchCompanyDetails();
+  }
 
   void showViewInvoice(){
     showDialog(
@@ -143,33 +154,50 @@ class _ViewInvoicesState extends State<ViewInvoices> {
   }
 
   void validatePassword(String enteredPassword , String enteredReason) async {
-  const String correctPassword = 'admin123'; // Replace with your password logic
+    const String correctPassword = 'admin123'; // Replace with your password logic
 
-  if (enteredPassword == correctPassword && enteredReason != "") {
-    // Password is correct, proceed to cancel the invoice
-    creditReason = enteredReason;
-    generateCreditFiscalJSON();
-    Navigator.of(context).pop(); // Close the dialog 
-    
-  } else {
-    Navigator.of(context).pop();
-    Get.snackbar(
-      'Denied!',
-      'Wrong password/Reason not found',
-      icon: const Icon(Icons.error, color: Colors.white,),
-      colorText: Colors.white,
-      backgroundColor: Colors.red,
-      snackPosition: SnackPosition.TOP,
-    );
+    if (enteredPassword == correctPassword && enteredReason != "") {
+      // Password is correct, proceed to cancel the invoice
+      creditReason = enteredReason;
+      generateCreditFiscalJSON();
+      Navigator.of(context).pop(); // Close the dialog 
+      
+    } else {
+      Navigator.of(context).pop();
+      Get.snackbar(
+        'Denied!',
+        'Wrong password/Reason not found',
+        icon: const Icon(Icons.error, color: Colors.white,),
+        colorText: Colors.white,
+        backgroundColor: Colors.red,
+        snackPosition: SnackPosition.TOP,
+      );
+    }
   }
-}
-bool _isConnected = false;
-bool _isPrinting = false;
-String _printerStatus = 'Checking...';
+
+  bool _isConnected = false;
+  bool _isPrinting = false;
+  String _printerStatus = 'Checking...';
 
 final BlueThermalPrinter bluetooth  = BlueThermalPrinter.instance;
 
-    Future<void> _initializePrinter() async {
+  String formatString(String input) {
+    final buffer = StringBuffer();
+    for (int i = 0; i < input.length; i += 4) {
+      if (i + 4 <= input.length) {
+        buffer.write(input.substring(i, i + 4));
+      } else {
+        buffer.write(input.substring(i));
+      }
+
+      if (i + 4 < input.length) {
+        buffer.write('-');
+      }
+    }
+    return buffer.toString();
+  }
+
+  Future<void> _initializePrinter() async {
     try {
       // Initialize the printer first
       await SunmiPrinter.initPrinter();
@@ -192,134 +220,161 @@ final BlueThermalPrinter bluetooth  = BlueThermalPrinter.instance;
   }
 
 
-Future<void> print58mmAdvanced(Map<String, dynamic> receiptJson, String qrUrl , int invoiceId) async {
-  try {
-    // More robust printer initialization
-    print("Initializing Sunmi printer...");
-    
-    // Try multiple initialization attempts
-    bool printerReady = false;
-    int attempts = 0;
+  Future<void> print58mmAdvanced(Map<String, dynamic> receiptJson, String qrUrl , int invoiceId ,qrData) async {
+    try {
+      // More robust printer initialization
+      print("Initializing Sunmi printer...");
+      
+      // Try multiple initialization attempts
+      bool printerReady = false;
+      int attempts = 0;
+      String verificationCode = formatString(qrData);
 
-    final receipt = receiptJson['receipt'];
-    int ogInvoice = invoiceId;
+      final receipt = receiptJson['receipt'];
+      int ogInvoice = invoiceId;
 
-    // Print receipt with better formatting
-    await _printHeader();
-    await _printCustomerInfo(receipt);
-    await _printInvoiceDetails(receipt , ogInvoice);
-    await _printItems(receipt['receiptLines']);
-    await _printTotal(receipt['receiptTotal']);
-    await _printSignature(receipt['receiptDeviceSignature']);
-    await _printVerification(receipt['receiptGlobalNo']);
-    await _printQRCode(qrUrl);
-    await _finishPrint();
-    
-    print("Advanced receipt printed successfully.");
-    
-  } catch (e) {
-    print("Advanced print error: $e");
-    rethrow;
+      // Print receipt with better formatting
+      await _printHeader();
+      await _printCustomerInfo(receipt);
+      await _printInvoiceDetails(receipt , ogInvoice);
+      await _printItems(receipt['receiptLines']);
+      await _printTotal(receipt['receiptTotal'] , receipt);
+      //await _printSignature(receipt['receiptDeviceSignature']);
+      await _printVerification(receipt['receiptGlobalNo'] , verificationCode);
+      await _printQRCode(qrUrl);
+      await _finishPrint();
+      
+      print("Advanced receipt printed successfully.");
+      
+    } catch (e) {
+      print("Advanced print error: $e");
+      rethrow;
+    }
   }
-}
 
-// Helper functions for better organization
-Future<void> _printHeader() async {
-  SunmiPrintAlign.CENTER;
-  //await SunmiPrinter.setFontSize(SunmiFontSize.LG);
-  await SunmiPrinter.printText("FISCAL CREDIT NOTE" , style: SunmiTextStyle(bold: true, align: SunmiPrintAlign.CENTER));
-  await SunmiPrinter.lineWrap(3);
-  await SunmiPrinter.printText("TIGERWEB", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
-  await SunmiPrinter.resetFontSize();
-  await SunmiPrinter.printText("TIN: 1234567890" ,style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
-  await SunmiPrinter.printText("267 SIMON MZENDA, MASVINGO", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
-  await SunmiPrinter.printText("Tel: +263 77 14172798", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
-  await SunmiPrinter.printText("================================");
-}
+  // Helper functions for better organization
+  Future<void> _printHeader() async {
+    SunmiPrintAlign.CENTER;
+    //await SunmiPrinter.setFontSize(SunmiFontSize.LG);
+    await SunmiPrinter.printText("FISCAL CREDIT NOTE" , style: SunmiTextStyle(bold: true, align: SunmiPrintAlign.CENTER));
+    await SunmiPrinter.lineWrap(3);
+    await SunmiPrinter.printText("${taxPayerDetails[0]['taxPayerName']}", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+    await SunmiPrinter.resetFontSize();
+    await SunmiPrinter.printText("TIN: ${taxPayerDetails[0]['taxPayerTin']}" ,style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+    await SunmiPrinter.printText("VAT: ${taxPayerDetails[0]['taxPayerVatNumber']}" ,style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+    await SunmiPrinter.printText("${companyDetails[0]['address']}", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+    await SunmiPrinter.printText("${companyDetails[0]['tel']}", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+    await SunmiPrinter.printText("================================");
+  }
 
-Future<void> _printCustomerInfo(Map<String, dynamic> receipt) async {
-  await SunmiPrinter.setAlignment(SunmiPrintAlign.LEFT);
-  await SunmiPrinter.printText("CUSTOMER INFORMATION");
-  await SunmiPrinter.printText("--------------------------------");
-  await SunmiPrinter.printText("Name: ${receipt['buyerData']?['buyerTradeName'] ?? 'Walk-in Customer'}");
-  await SunmiPrinter.printText("TIN: ${receipt['buyerData']?['buyerTIN'] ?? 'N/A'}");
-  await SunmiPrinter.printText("VAT: ${receipt['buyerData']?['VATNumber'] ?? 'N/A'}");
-  await SunmiPrinter.printText("--------------------------------");
-  await SunmiPrinter.lineWrap(1);
-}
-
-Future<void> _printInvoiceDetails(Map<String, dynamic> receipt , int ogInvoice) async {
-  await SunmiPrinter.printText("INVOICE DETAILS");
-  await SunmiPrinter.printText("--------------------------------");
-  await SunmiPrinter.printText("Invoice No: $ogInvoice");
-  await SunmiPrinter.printText("CreditNote No: ${receipt['invoiceNo']}");
-  await SunmiPrinter.printText("Date: ${receipt['receiptDate']}");
-  await SunmiPrinter.printText("--------------------------------");
-  await SunmiPrinter.lineWrap(1);
-}
-
-Future<void> _printItems(List receiptLines) async {
-  await SunmiPrinter.printText("ITEMS");
-  await SunmiPrinter.printText("--------------------------------");
-  
-  for (var item in receiptLines) {
-    // Format item name and quantity
-    String itemLine = "${item['receiptLineName']} x${item['receiptLineQuantity']}";
-    await SunmiPrinter.printText(itemLine);
-    
-    // Format price line with proper spacing
-    String priceLine = "@\$${item['receiptLinePrice']} = \$${item['receiptLineTotal']}";
-    await SunmiPrinter.setAlignment(SunmiPrintAlign.RIGHT);
-    await SunmiPrinter.printText(priceLine);
+  Future<void> _printCustomerInfo(Map<String, dynamic> receipt) async {
     await SunmiPrinter.setAlignment(SunmiPrintAlign.LEFT);
+    await SunmiPrinter.printText("CUSTOMER INFORMATION");
+    await SunmiPrinter.printText("--------------------------------");
+    await SunmiPrinter.printText("Name: ${receipt['buyerData']?['buyerTradeName'] ?? 'Walk-in Customer'}");
+    await SunmiPrinter.printText("TIN: ${receipt['buyerData']?['buyerTIN'] ?? 'N/A'}");
+    await SunmiPrinter.printText("VAT: ${receipt['buyerData']?['VATNumber'] ?? 'N/A'}");
+    await SunmiPrinter.printText("--------------------------------");
     await SunmiPrinter.lineWrap(1);
   }
-}
 
-Future<void> _printTotal(dynamic receiptTotal) async {
-  await SunmiPrinter.printText("================================");
-  double total = double.tryParse(receiptTotal.toString()) ?? 0.0;
-  await SunmiPrinter.setAlignment(SunmiPrintAlign.CENTER);
-  //await SunmiPrinter.setFontSize(SunmiFontSize.LG);
-  await SunmiPrinter.printText("TOTAL: \$${total.toStringAsFixed(2)}");
-  await SunmiPrinter.resetFontSize();
-  await SunmiPrinter.printText("================================");
-  await SunmiPrinter.lineWrap(1);
-}
+  Future<void> _printInvoiceDetails(Map<String, dynamic> receipt , int ogInvoice) async {
+    await SunmiPrinter.printText("INVOICE DETAILS");
+    await SunmiPrinter.printText("--------------------------------");
+    await SunmiPrinter.printText("Invoice No: $ogInvoice");
+    await SunmiPrinter.printText("CreditNote No: ${receipt['invoiceNo']}");
+    await SunmiPrinter.printText("Date: ${receipt['receiptDate']}");
+    await SunmiPrinter.printText("Currency: ${receipt['receiptCurrency']}");
+    await SunmiPrinter.printText("--------------------------------");
+    await SunmiPrinter.lineWrap(1);
+  }
 
-Future<void> _printSignature(Map<String, dynamic>? signature) async {
-  await SunmiPrinter.setAlignment(SunmiPrintAlign.LEFT);
-  await SunmiPrinter.printText("SIGNATURE");
-  await SunmiPrinter.printText("--------------------------------");
-  //await SunmiPrinter.setFontSize(SunmiFontSize.SM);
-  await SunmiPrinter.printText("Hash: ${signature?['hash'] ?? 'N/A'}");
-  await SunmiPrinter.resetFontSize();
-  await SunmiPrinter.lineWrap(1);
-}
+  Future<void> _printItems(List receiptLines) async {
+    await SunmiPrinter.printText("ITEMS");
+    await SunmiPrinter.printText("--------------------------------");
+    
+    for (var item in receiptLines) {
+      // Format item name and quantity
+      String itemLine = "${item['receiptLineName']} x${item['receiptLineQuantity']}";
+      await SunmiPrinter.printText(itemLine , style: SunmiTextStyle(bold: true));
+      
+      // Format price line with proper spacing
+      String priceLine = "@\$${item['receiptLinePrice']} = \$${item['receiptLineTotal']}";
+      await SunmiPrinter.setAlignment(SunmiPrintAlign.RIGHT);
+      await SunmiPrinter.printText(priceLine, style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
+      await SunmiPrinter.setAlignment(SunmiPrintAlign.LEFT);
+      await SunmiPrinter.lineWrap(1);
+    }
+  }
 
-Future<void> _printVerification(dynamic receiptGlobalNo) async {
-  await SunmiPrinter.printText("VERIFICATION");
-  await SunmiPrinter.printText("--------------------------------");
-  await SunmiPrinter.printText("Verify at:", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
-  await SunmiPrinter.printText("https://fdmstest.zimra.co.zw",style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
-  await SunmiPrinter.lineWrap(1);
-  await SunmiPrinter.printText("Device ID: 25395", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
-  await SunmiPrinter.printText("Receipt No: ${receiptGlobalNo.toString().padLeft(10, '0')}", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
-}
+  Future<void> _printTotal(dynamic receiptTotal , Map<String, dynamic> receipt) async {
+    double totalTax = 0;
+    final receiptTaxes = receipt['receiptTaxes'];
+    for(var tax in receiptTaxes){
+      double taxesTax = double.tryParse(tax['taxAmount'])!;
+      totalTax += taxesTax;
+    }
+    await SunmiPrinter.printText("================================");
+    double total = double.tryParse(receiptTotal.toString()) ?? 0.0;
+    await SunmiPrinter.setAlignment(SunmiPrintAlign.CENTER);
+    //await SunmiPrinter.setFontSize(SunmiFontSize.LG);
+    await SunmiPrinter.printText("Tax Total: ${receipt['receiptCurrency']}-${totalTax.toStringAsFixed(2)}");
+    await SunmiPrinter.printText("TOTAL: ${receipt['receiptCurrency']}-\$${total.toStringAsFixed(2)}");
+    await SunmiPrinter.resetFontSize();
+    await SunmiPrinter.printText("================================");
+    await SunmiPrinter.lineWrap(1);
+  }
 
-Future<void> _printQRCode(String qrUrl) async {
-  await SunmiPrinter.lineWrap(2);
-  await SunmiPrinter.setAlignment(SunmiPrintAlign.CENTER);
-  await SunmiPrinter.printText("Scan to Verify");
-  await SunmiPrinter.lineWrap(1);
-  await SunmiPrinter.printQRCode(qrUrl, style: SunmiQrcodeStyle(align: SunmiPrintAlign.CENTER, qrcodeSize: 6));
-}
+  Future<void> _printSignature(Map<String, dynamic>? signature) async {
+    await SunmiPrinter.setAlignment(SunmiPrintAlign.LEFT);
+    await SunmiPrinter.printText("SIGNATURE");
+    await SunmiPrinter.printText("--------------------------------");
+    //await SunmiPrinter.setFontSize(SunmiFontSize.SM);
+    await SunmiPrinter.printText("Hash: ${signature?['hash'] ?? 'N/A'}");
+    await SunmiPrinter.resetFontSize();
+    await SunmiPrinter.lineWrap(1);
+  }
 
-Future<void> _finishPrint() async {
-  await SunmiPrinter.lineWrap(3);
-  await SunmiPrinter.cutPaper();
-}
+  Future<void> _printVerification(dynamic receiptGlobalNo , String verificationCode) async {
+    await SunmiPrinter.printText("VERIFICATION");
+    await SunmiPrinter.printText("--------------------------------");
+    await SunmiPrinter.printText("Verify at:", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+    await SunmiPrinter.printText("https://fdms.zimra.co.zw",style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+    await SunmiPrinter.lineWrap(1);
+    await SunmiPrinter.printText("Device ID: $deviceID", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+    await SunmiPrinter.printText("Receipt No: ${receiptGlobalNo.toString().padLeft(10, '0')}", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+    await SunmiPrinter.printText("Verification Code:", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+    await SunmiPrinter.printText(verificationCode, style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+  }
 
+  Future<void> _printQRCode(String qrUrl) async {
+    await SunmiPrinter.lineWrap(2);
+    await SunmiPrinter.setAlignment(SunmiPrintAlign.CENTER);
+    await SunmiPrinter.printText("Scan to Verify");
+    await SunmiPrinter.lineWrap(1);
+    await SunmiPrinter.printQRCode(qrUrl, style: SunmiQrcodeStyle(align: SunmiPrintAlign.CENTER, qrcodeSize: 6));
+  }
+
+  Future<void> _finishPrint() async {
+    await SunmiPrinter.printText("Powered by tigerweb.co.zw", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+    await SunmiPrinter.lineWrap(3);
+    await SunmiPrinter.cutPaper();
+  }
+
+  Future<void> fetchTaxPayerDetails() async{
+    List<Map<String, dynamic>> data = await dbHelper.getTaxPayerDetails();
+    setState(() {
+      taxPayerDetails = data;
+      deviceID  = data.isNotEmpty? data[0]['deviceID'] : 0;
+    });
+  }
+
+  Future<void> fetchCompanyDetails() async{
+    List<Map<String, dynamic>> data = await dbHelper.getCompanyDetails();
+    setState(() {
+      companyDetails = data;
+    });
+  }
 
 
 Future<String> createCreditNote(String receiptJsonString,
@@ -511,11 +566,23 @@ Future<void> generateCreditFiscalJSON() async{
 
     //ensure that signing does not fail
     try {
+      final byteData = await rootBundle.load('assets/private_key.pem');
+      final buffer = byteData.buffer;
+      // Write to a temp file
+      final tempDir = Directory.systemTemp;
+      final pemFile = File('${tempDir.path}/private_key.pem');
+      await pemFile.writeAsBytes(
+        buffer.asUint8List(byteData.offsetInBytes, byteData.lengthInBytes),
+      );
+      final Map<String, String> signedDataMap  = PemSigner.signDataWithMd5(
+        data: finalString,
+        privateKeyPath: pemFile.path,
+      );
       //String data = await useRawString();
       //List<String>? signature = await getSignatureSignature(data);
       //receiptDeviceSignature_signature_hex = signature?[0];
       //receiptDeviceSignature_signature  = signature?[1];
-      final Map<String, String> signedDataMap  = await signData(filePath, password, finalString);
+      //final Map<String, String> signedDataMap  = await signData(filePath, password, finalString);
       //final Map<String, dynamic> signedDataMap = jsonDecode(signedDataString);
       receiptDeviceSignature_signature_hex = signedDataMap["receiptDeviceSignature_signature_hex"] ?? "";
       receiptDeviceSignature_signature = signedDataMap["receiptDeviceSignature_signature"] ?? "";
@@ -571,7 +638,7 @@ Future<void> generateCreditFiscalJSON() async{
 
       // Parse SalesAmountwithTax
       double salesAmount = 0.0;
-      var salesAmountRaw = tax['SalesAmountwithTax'];
+      var salesAmountRaw = tax['salesAmountwithTax'];
       if (salesAmountRaw is String) {
         salesAmount = double.tryParse(salesAmountRaw) ?? 0.0;
       } else if (salesAmountRaw is num) {
@@ -580,11 +647,27 @@ Future<void> generateCreditFiscalJSON() async{
       totalSalesAmountWithTax += salesAmount;
     }
 
+    final totals = jsonData['receipt']?['receiptTaxes'];
+      double totalVAT15 = 0;
+      double totalNonVAT = 0;
+      double totalExempt = 0 ;
+      for(var items in totals){
+        double sum = items['salesAmountWithTax'];
+        int? taxId = int.tryParse(items['taxID']);
+        if(taxId == 3){
+          totalVAT15 += sum;
+        }else if(taxId == 2){
+          totalNonVAT += sum;
+        }else{
+          totalExempt += sum;
+        }
+      }
+
     if (creditNoteJson.isNotEmpty) {
       String creditNoteNumber = await dbHelper.getNextCreditNoteNumber();
       if(pingResponse=="200"){
         String apiEndpointSubmitReceipt =
-          "https://fdmsapitest.zimra.co.zw/Device/v1/25395/SubmitReceipt";
+          "https://fdmsapi.zimra.co.zw/Device/v1/$deviceID/SubmitReceipt";
         const String deviceModelName = "Server";
         const String deviceModelVersion = "v1";  
 
@@ -636,13 +719,13 @@ Future<void> generateCreditFiscalJSON() async{
             'qrurl': qrurl,
             'receiptServerSignature': responseBody['receiptServerSignature']?['signature'].toString() ?? "",
             'submitReceiptServerresponseJSON': "$submitReceiptServerresponseJson" ?? "noresponse",
-            'Total15VAT': '0.0',
-            'TotalNonVAT': 0.0,
-            'TotalExempt': 0.0,
+            'Total15VAT': totalVAT15.toString(),
+            'TotalNonVAT': totalNonVAT,
+            'TotalExempt': totalExempt,
             'TotalWT': 0.0,
             },conflictAlgorithm: ConflictAlgorithm.replace);
             print("Data inserted successfully!");
-            //print58mmAdvanced(jsonData, qrurl,invoiceId);
+            print58mmAdvanced(jsonData, qrurl,invoiceId ,creditQrData);
           } catch (e) {
             Get.snackbar(" Db Error",
             "$e",
@@ -677,13 +760,13 @@ Future<void> generateCreditFiscalJSON() async{
             'qrurl': qrurl,
             'receiptServerSignature': "",
             'submitReceiptServerresponseJSON': "noresponse",
-            'Total15VAT': '0.0',
-            'TotalNonVAT': 0.0,
-            'TotalExempt': 0.0,
+            'Total15VAT': totalVAT15.toString(),
+            'TotalNonVAT': totalNonVAT,
+            'TotalExempt': totalExempt,
             'TotalWT': 0.0,
             },conflictAlgorithm: ConflictAlgorithm.replace);
             print("Data inserted successfully!");
-            //print58mmAdvanced(jsonData, qrurl, invoiceId);
+            print58mmAdvanced(jsonData, qrurl, invoiceId ,creditQrData);
           } catch (e) {
             Get.snackbar(" Db Error",
             "$e",
@@ -720,13 +803,13 @@ Future<void> generateCreditFiscalJSON() async{
             'qrurl': qrurl,
             'receiptServerSignature': "",
             'submitReceiptServerresponseJSON': "noresponse",
-            'Total15VAT': '0.0',
-            'TotalNonVAT': 0.0,
-            'TotalExempt': 0.0,
+            'Total15VAT': totalVAT15.toString(),
+            'TotalNonVAT': totalNonVAT,
+            'TotalExempt': totalExempt,
             'TotalWT': 0.0,
             },conflictAlgorithm: ConflictAlgorithm.replace);
             print("Data inserted successfully!");
-            //print58mmAdvanced(jsonData, qrurl, invoiceId);
+            print58mmAdvanced(jsonData, qrurl, invoiceId, creditQrData);
           } catch (e) {
             Get.snackbar(" Db Error",
             "$e",
@@ -804,8 +887,6 @@ void cancelSelectedInvoice() async {
 
   }
 }
-
-
 
   Future<void> searchInvoices() async {
     final invoiceNumber = searchController.text.trim();

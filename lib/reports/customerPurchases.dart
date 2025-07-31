@@ -3,16 +3,17 @@ import 'dart:collection';
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/rendering.dart';
+import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:pulsepay/SQLite/database_helper.dart';
 
-class SalesReportPage extends StatefulWidget {
-  const SalesReportPage({super.key});
+class Customerpurchases extends StatefulWidget {
+  const Customerpurchases({super.key});
   @override
-  State<SalesReportPage> createState() => _SalesReportPageState();
+  State<Customerpurchases> createState() => _customerPurchasesPageState();
 }
 
-class _SalesReportPageState extends State<SalesReportPage> {
+class _customerPurchasesPageState extends State<Customerpurchases> {
   String selectedPeriod = "Daily"; // Default selection
   List<Map<String, dynamic>> salesData = [];
   bool isLoading = true;
@@ -20,14 +21,18 @@ class _SalesReportPageState extends State<SalesReportPage> {
   DatabaseHelper db = DatabaseHelper();
   String? selectedUser;
   List<String> users = [];
+  Map<String, dynamic>? selectedCustomer;
+  List<Map<String, dynamic>> customers =[];
+  int? selectedCustomerId;
 
-  Future<void> fetchSalesData()async{
-    List<Map<String, dynamic>> data = await db.getAllUserSalesData(selectedUser);
+  Future<void> fetchCustomers() async {
+    List<Map<String, dynamic>> data = await db.getAllCustomers();
     setState(() {
-      salesData = data;
+      customers = data;
       isLoading = false;
     });
   }
+
   Future<List<String>> fetchUsers() async{
     final List<Map<String, dynamic>> users = await db.getAllUsers();
     return users.map((row) => row['userName'] as String).toList();
@@ -45,6 +50,7 @@ class _SalesReportPageState extends State<SalesReportPage> {
   void initState() {
     super.initState();
     loadUsers();
+    fetchCustomers();
   }
 
   @override
@@ -54,7 +60,7 @@ class _SalesReportPageState extends State<SalesReportPage> {
         preferredSize: Size.fromHeight(50)
         ,child: AppBar(
           centerTitle: true,
-          title: const Text("User Sales Data" , style: TextStyle(fontSize: 18, color: Colors.white, fontWeight:  FontWeight.bold),),
+          title: const Text("Customer Purchases" , style: TextStyle(fontSize: 18, color: Colors.white, fontWeight:  FontWeight.bold),),
           iconTheme: const IconThemeData(color: Colors.white),
           backgroundColor: Colors.blue,
           shape: const RoundedRectangleBorder(
@@ -89,23 +95,37 @@ class _SalesReportPageState extends State<SalesReportPage> {
                   ),
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                    child: DropdownButton<String>(
-                      menuWidth: 200,
-                      hint: Text("Select User"),
-                      value: selectedUser,
-                      onChanged: (value)async{
-                        setState(() {
-                          selectedUser= value;
-                        });
-                        await fetchSalesData();
+                    child: DropdownButton<int>(
+                      value: selectedCustomerId,
+                      onChanged: (int? newId) async {
+                        try {
+                          setState(() {
+                            selectedCustomerId = newId;
+                          });
+                          // Find the selected customer map
+                          final selectedCustomer = customers.firstWhere(
+                            (cust) => cust['customerID'] == newId,
+                          );
+                            salesData = await db.getSalesByCustomer(selectedCustomer['customerID']);
+
+                        } catch (e) {
+                          Get.snackbar(
+                            "Error loading data",
+                            "$e",
+                            snackPosition: SnackPosition.TOP,
+                            backgroundColor: Colors.red,
+                            colorText: Colors.white
+                          );
+                        }
                       },
-                      items: users.map((user) {
-                        return DropdownMenuItem<String>(
-                          value: user,
-                          child: Text(user),
+                      hint: Text("Select a Customer"),
+                      items: customers.map<DropdownMenuItem<int>>((customer) {
+                        return DropdownMenuItem<int>(
+                          value: customer['customerID'],
+                          child: Text(customer['tradeName'] ?? 'Unknown'),
                         );
                       }).toList(),
-                    ),
+                    )
                   ),
                 ),
                 const SizedBox(height: 20,),
@@ -116,8 +136,9 @@ class _SalesReportPageState extends State<SalesReportPage> {
                     child: SingleChildScrollView(
                       child: DataTable(
                         columns: const [
-                          DataColumn(label: Text('Invoice ID')),
-                          DataColumn(label: Text('Date')),
+                          DataColumn(label: Text('Sale ID')),
+                          DataColumn(label: Text('Invoice Id')),
+                          DataColumn(label: Text('Product Id')),
                           DataColumn(label: Text('Currency')),
                           DataColumn(label: Text('Total Amount')),
                           DataColumn(label: Text('Tax')),
@@ -127,11 +148,12 @@ class _SalesReportPageState extends State<SalesReportPage> {
                             .map(
                               (sale) => DataRow(
                                 cells: [
+                                  DataCell(Text(sale['saleId'].toString())),
                                   DataCell(Text(sale['invoiceId'].toString())),
-                                  DataCell(Text(sale['date'].toString())),
+                                  DataCell(Text(sale['productId'].toString())),
                                   DataCell(Text(sale['currency'].toString())),
-                                  DataCell(Text(sale['totalAmount'].toString())),
-                                  DataCell(Text(sale['totalTax'].toString())),
+                                  DataCell(Text(sale['sellingPrice'].toString())),
+                                  DataCell(Text(sale['tax'].toString())),
                                   DataCell(Text(sale['rate'].toString()))
                                 ],
                               ),

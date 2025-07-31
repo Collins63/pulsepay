@@ -57,32 +57,40 @@ class _InvoicesPageState extends State<InvoicesPage> {
         body: isLoading
             ? const Center(child: CircularProgressIndicator())
             : SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: SingleChildScrollView(
-                  child: DataTable(
-                    columns: const [
-                      DataColumn(label: Text('Invoice ID')),
-                      DataColumn(label: Text('Date')),
-                      DataColumn(label: Text('Total Items')),
-                      DataColumn(label: Text('Total Price')),
-                      DataColumn(label: Text('Total Tax')),
-                    ],
-                    rows: invoices
-                        .map(
-                          (invoice) => DataRow(
-                            cells: [
-                              DataCell(Text(invoice['invoiceId'].toString())),
-                              DataCell(Text(invoice['date'].toString())),
-                              DataCell(Text(invoice['totalItems'].toString())),
-                              DataCell(Text(invoice['totalPrice'].toString())),
-                              DataCell(Text(invoice['totalTax'].toString())),
-                            ],
-                          ),
-                        )
-                        .toList(),
-                  ),
-                ),
+              scrollDirection: Axis.vertical,
+              child: Column(
+                children: [
+                  const SizedBox(height: 20,),
+                  SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: SingleChildScrollView(
+                        child: DataTable(
+                          columns: const [
+                            DataColumn(label: Text('Invoice ID')),
+                            DataColumn(label: Text('Date')),
+                            DataColumn(label: Text('Total Items')),
+                            DataColumn(label: Text('Total Price')),
+                            DataColumn(label: Text('Total Tax')),
+                          ],
+                          rows: invoices
+                              .map(
+                                (invoice) => DataRow(
+                                  cells: [
+                                    DataCell(Text(invoice['invoiceId'].toString())),
+                                    DataCell(Text(invoice['date'].toString())),
+                                    DataCell(Text(invoice['totalItems'].toString())),
+                                    DataCell(Text(invoice['totalPrice'].toString())),
+                                    DataCell(Text(invoice['totalTax'].toString())),
+                                  ],
+                                ),
+                              )
+                              .toList(),
+                        ),
+                      ),
+                    ),
+                ],
               ),
+            ),
       ),
     );
   }

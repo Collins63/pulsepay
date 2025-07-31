@@ -12,6 +12,7 @@ import 'package:pulsepay/pointOfSale/pos.dart';
 //import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
 import 'package:pulsepay/settings/backUp.dart';
+import 'package:pulsepay/settings/baking%20details.dart';
 import 'package:pulsepay/settings/printer_settings.dart';
 
 class Settings extends StatefulWidget{
@@ -111,8 +112,8 @@ class _SettingsState extends State<Settings>{
                           borderRadius: BorderRadius.circular(15.0)
                         ),
                         child: TextButton(onPressed: (){
-                          Navigator.push(context,
-                          MaterialPageRoute(builder: (context) => const AddProduct()  ));
+                          // Navigator.push(context,
+                          // MaterialPageRoute(builder: (context) => const AddProduct()  ));
                         },
                         child: const Padding(
                           padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
@@ -203,13 +204,15 @@ class _SettingsState extends State<Settings>{
                           color: Colors.blue,
                           borderRadius: BorderRadius.circular(15.0)
                         ),
-                        child: TextButton(onPressed: (){},
+                        child: TextButton(onPressed: (){
+                          Get.to(()=> const BakingDetails());
+                        },
                         child: const Padding(
                           padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),
                           child: Column(
                             children: [
-                              Icon(Icons.check , size: 40, color: Colors.white),
-                              Text('Account Terms',textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10 , color:Colors.white),)
+                              Icon(Icons.money_sharp , size: 40, color: Colors.white),
+                              Text('Banking Details',textAlign: TextAlign.center ,style: TextStyle(fontWeight: FontWeight.bold, fontSize: 10 , color:Colors.white),)
                             ],
                           ),
                         )),
@@ -284,8 +287,8 @@ class _SettingsState extends State<Settings>{
                           borderRadius: BorderRadius.circular(15.0)
                         ),
                         child: TextButton(onPressed: (){
-                          Navigator.push(context,
-                          MaterialPageRoute(builder: (context)=> const UsersPage()));
+                          // Navigator.push(context,
+                          // MaterialPageRoute(builder: (context)=> const UsersPage()));
                         },
                         child: const Padding(
                           padding: EdgeInsets.symmetric(vertical: 8 , horizontal: 15),

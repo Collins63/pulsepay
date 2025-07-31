@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:crypto/crypto.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
@@ -22,6 +23,7 @@ import 'package:pulsepay/home/home_page.dart';
 import 'package:pulsepay/home/settings.dart';
 import 'package:pulsepay/main.dart';
 import 'package:pulsepay/pointOfSale/pos.dart';
+import 'package:pulsepay/signatureGeneration.dart';
 
 class FiscalPage extends StatefulWidget {
   const FiscalPage({super.key});
@@ -39,23 +41,40 @@ class _FiscalPageState extends State<FiscalPage> {
     fetchReceiptsSubmitted();
     fetchAllReceipts();
     fetchDayReceiptCounter();
+    fetchTaxPayerDetails();
   }
 
   final DatabaseHelper dbHelper  = DatabaseHelper();
   int currentFiscal = 0;
-  String deviceID = "25395";
-  String taxPayerName = "STEAM TEAM (PVT)LTD";
-  String tinNumber = "2000002740";
-  String vatNumber = "220022786";
-  String serialNumber = "steamTest-1";
+  int deviceID = 0;
+  String taxPayerName = "0000";
+  String tinNumber = "0000";
+  String vatNumber = "0000";
+  String serialNumber = "0000";
   String modelName = "Server";
   List<Map<String, dynamic>> receiptsPending= [];
+  List<Map<String , dynamic>> taxPayerDetails = [];
   List<Map<String, dynamic>> receiptsSubmitted= [];
   List<Map<String , dynamic>> allReceipts=[];
   List<Map<String,dynamic>> dayReceiptCounter = [];
   String? receiptDeviceSignature_signature_hex ;
   String? first16Chars;
   String? receiptDeviceSignature_signature;
+
+
+
+  Future<void> fetchTaxPayerDetails() async{
+    List<Map<String, dynamic>> data = await dbHelper.getTaxPayerDetails();
+    setState(() {
+      taxPayerDetails = data;
+      deviceID  = data.isNotEmpty?  data[0]['deviceID'] :  0;
+      taxPayerName = data.isNotEmpty?  data[0]['taxPayerName'] :  '00';
+      tinNumber = data.isNotEmpty?  data[0]['taxPayerTin'] : '00';
+      vatNumber = data.isNotEmpty? data[0]['taxPayerVatNumber'] : '00';
+      serialNumber = data.isNotEmpty? data[0]['serialNo'] : '00';
+    });
+  }
+
 
   Future<void> fetchReceiptsPending() async {
     List<Map<String, dynamic>> data = await dbHelper.getReceiptsPending();
@@ -110,7 +129,7 @@ class _FiscalPageState extends State<FiscalPage> {
 
   try {
     final response = await http.post(
-      Uri.parse("https://fdmsapitest.zimra.co.zw/Device/v1/25395/OpenDay"), // Update this URL
+      Uri.parse("https://fdmsapi.zimra.co.zw/Device/v1/$deviceID/OpenDay"), // Update this URL
       headers: {
         "Content-Type": "application/json",
         "DeviceModelName": "Server",
@@ -133,7 +152,7 @@ class _FiscalPageState extends State<FiscalPage> {
 }
 
 Future<String> getConfig() async {
-  String apiEndpointGetConfig = "https://fdmsapitest.zimra.co.zw/Device/v1/25395/GetConfig"; // Replace with actual API endpoint
+  String apiEndpointGetConfig = "https://fdmsapi.zimra.co.zw/Device/v1/$deviceID/GetConfig"; // Replace with actual API endpoint
   String responseMessage = "There was no response from the server. Check your connection !!";
 
   try {
@@ -258,7 +277,7 @@ Future<String> getConfig() async {
   
   Future<void> getStatus() async {
     String apiEndpointGetStatus =
-      "https://fdmsapitest.zimra.co.zw/Device/v1/25395/GetStatus";
+      "https://fdmsapi.zimra.co.zw/Device/v1/$deviceID/GetStatus";
     const String deviceModelName = "Server";
     const String deviceModelVersion = "v1";
 
@@ -285,7 +304,7 @@ Future<String> getConfig() async {
 
   Future<String> ping() async {
   String apiEndpointPing =
-      "https://fdmsapitest.zimra.co.zw/Device/v1/25395/Ping";
+      "https://fdmsapi.zimra.co.zw/Device/v1/$deviceID/Ping";
   const String deviceModelName = "Server";
   const String deviceModelVersion = "v1"; 
 
@@ -323,7 +342,7 @@ Future<String> getConfig() async {
     // Get the database instance
     final db = await dbHelper.initDB();
     String apiEndpointSubmitReceipt =
-      "https://fdmsapitest.zimra.co.zw/Device/v1/25395/SubmitReceipt";
+      "https://fdmsapi.zimra.co.zw/Device/v1/$deviceID/SubmitReceipt";
     const String deviceModelName = "Server";
     const String deviceModelVersion = "v1"; 
     SSLContextProvider sslContextProvider = SSLContextProvider();
@@ -569,8 +588,8 @@ Future<int> getlatestFiscalDay() async {
                     color: Colors.blue,
                     color2: Colors.blue,
                     onTap: () async{
-                      String filePath = "/storage/emulated/0/Pulse/Configurations/steamTest_T_certificate.p12";
-                      String password = "steamTest123";
+                      String filePath = "/storage/emulated/0/Pulse/Configurations/hotash_P_certificate.p12";
+                      String password = "hotash123";
                       int fiscalDay = currentFiscal;
                       List<Map<String , dynamic>> openDayData = await dbHelper.getDayOpenedDate(fiscalDay);
                       String openDayDate = openDayData[0]["FiscalDayOpened"];
@@ -591,7 +610,19 @@ Future<int> getlatestFiscalDay() async {
       
                       //signature generation
                       try {
-                        final Map<String, String> signedDataMap = await signData(filePath, password, finalStringConcat);
+                        final byteData = await rootBundle.load('assets/private_key.pem');
+                        final buffer = byteData.buffer;
+                        // Write to a temp file
+                        final tempDir = Directory.systemTemp;
+                        final pemFile = File('${tempDir.path}/private_key.pem');
+                        await pemFile.writeAsBytes(
+                          buffer.asUint8List(byteData.offsetInBytes, byteData.lengthInBytes),
+                        );
+                        final Map<String, String> signedDataMap  = PemSigner.signDataWithMd5(
+                          data: finalStringConcat,
+                          privateKeyPath: pemFile.path,
+                        );
+                        //final Map<String, String> signedDataMap = await signData(filePath, password, finalStringConcat);
                         receiptDeviceSignature_signature_hex = signedDataMap["receiptDeviceSignature_signature_hex"] ?? "";
                         receiptDeviceSignature_signature = signedDataMap["receiptDeviceSignature_signature"] ?? "";
                         first16Chars = signedDataMap["receiptDeviceSignature_signature_md5_first16"] ?? "";
@@ -600,7 +631,7 @@ Future<int> getlatestFiscalDay() async {
                       }
       
                       String apiEndpointCloseDay =
-                        "https://fdmsapitest.zimra.co.zw/Device/v1/25395/CloseDay";
+                        "https://fdmsapi.zimra.co.zw/Device/v1/$deviceID/CloseDay";
                       const String deviceModelName = "Server";
                       const String deviceModelVersion = "v1";  
       
@@ -798,7 +829,7 @@ class FiscalDayCounter {
     if (type == 'BalanceByMoneyType') {
       if(value == 0.0) return ''; // skip zero balances
       buf.write(moneyType!.toUpperCase());
-    } else if (taxID != 1 && percent != null) {
+    } else if (taxID != 3 && percent != null) {
       buf.write(percent!.toStringAsFixed(2));
     }
 
@@ -845,11 +876,11 @@ Future<(
       final taxAmt = rawTaxAmt is num ? rawTaxAmt.toDouble() : double.tryParse(rawTaxAmt.toString()) ?? 0;
       final salesAmt = rawSales is num ? rawSales.toDouble() : double.tryParse(rawSales.toString()) ?? 0;
       final taxCode = t['taxCode'];
-      final perc = (taxCode == "A") ? 0.0 : double.parse(t['taxPercent'] as String);
+      final perc = (taxCode == "C") ? 0.0 : double.parse(t['taxPercent'] as String);
       final taxId = int.parse(t['taxID'].toString());
 
       if (!isCredit) {
-        if (taxCode == "A") {
+        if (taxCode == "C") {
           final sbtKey = 'SaleByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
           invMap.putIfAbsent(sbtKey, () => FiscalDayCounter(
             type: 'SaleByTax', currency: curr, taxID: taxId))
@@ -871,7 +902,7 @@ Future<(
             .accumulate(taxAmt);
         }
       } else {
-        if (taxCode == "A") {
+        if (taxCode == "C") {
           final cbtKey = 'CreditNoteByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
           crdMap.putIfAbsent(cbtKey, () => FiscalDayCounter(
             type: 'CreditNoteByTax', currency: curr, taxID: taxId))

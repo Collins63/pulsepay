@@ -32,9 +32,30 @@ class _viewProductsState extends State<ViewProducts> {
     });
   }
 
-  Future<void> fetchProductById() async{
-    int productid = selectedProduct[0];
-    List<Map<String, dynamic>> data = await dbHelper.getProductById(productid);
+  Future<void> deleteProduct(int productId) async{
+    try {
+      await dbHelper.deleteProduct(productId);
+      Get.snackbar("Deletion Success",
+        "Product Deleted Successfully",
+        snackPosition: SnackPosition.TOP,
+        colorText: Colors.white,
+        backgroundColor: Colors.green,
+        icon: const Icon(Icons.message, color: Colors.white),
+      );
+      fetchProducts();
+    } catch (e) {
+      Get.snackbar("Delete Error",
+        "$e",
+        snackPosition: SnackPosition.TOP,
+        colorText: Colors.white,
+        backgroundColor: Colors.red,
+        icon: const Icon(Icons.error, color: Colors.white),
+      );
+    }
+  }
+
+  Future<void> fetchProductById(int id) async{
+    List<Map<String, dynamic>> data = await dbHelper.getProductById(id);
     setState(() {
       productFromID = data;
       isLoading = false;
@@ -57,6 +78,7 @@ class _viewProductsState extends State<ViewProducts> {
     costPriceController.text = productFromID.isNotEmpty ? productFromID[0]['costPrice'].toString() : '';
     sellingController.text = productFromID.isNotEmpty ? productFromID[0]['sellingPrice'].toString() : '';
     taxController.text = productFromID.isNotEmpty ? productFromID[0]['tax'].toString() : '';
+    int productid = productFromID.isNotEmpty ? productFromID[0]['productid'] : 0;
 
     showDialog(
       context: context,
@@ -134,7 +156,6 @@ class _viewProductsState extends State<ViewProducts> {
             ),
             ElevatedButton(
             onPressed: () {
-              int productid = selectedProduct[0];
               String name = nameController.text;
               String barcode = barcodeController.text;
               String hscode = hcodeController.text;
@@ -193,96 +214,107 @@ class _viewProductsState extends State<ViewProducts> {
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
-          : Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const SizedBox(height: 20,),
-              SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: SingleChildScrollView(
-                    child: DataTable(
-                      headingTextStyle: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                      headingRowColor: MaterialStateProperty.all(Colors.blue),
-                      columns: const [
-                        DataColumn(label: Text("Select")),
-                        DataColumn(label: Text('ProductName')),
-                        DataColumn(label: Text('BarCode')),
-                        DataColumn(label: Text('HS Code')),
-                        DataColumn(label: Text('costPrice')),
-                        DataColumn(label: Text("SellingPrice")),
-                        DataColumn(label: Text('TAX')),
-                        DataColumn(label: Text('Stock QTY')),
-                      ],
-                      rows: products
-                          .map(
-                            (product) {
-                              final productId = product['productid'];
-                              return DataRow(
-                              cells: [
-                                DataCell(
-                                  Checkbox(
-                                    value: selectedProduct.contains(productId),
-                                    onChanged: (_) => toggleSelection(productId),
+          : SingleChildScrollView(
+            scrollDirection: Axis.vertical,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 20,),
+                SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: SingleChildScrollView(
+                      child: DataTable(
+                        headingTextStyle: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                        headingRowColor: MaterialStateProperty.all(Colors.blue),
+                        columns: const [
+                          DataColumn(label: Text('ProductName')),
+                          DataColumn(label: Text('BarCode')),
+                          DataColumn(label: Text('HS Code')),
+                          DataColumn(label: Text('costPrice')),
+                          DataColumn(label: Text("SellingPrice")),
+                          DataColumn(label: Text('TAX')),
+                          DataColumn(label: Text('Stock QTY')),
+                          DataColumn(label: Text('Actions'))
+                        ],
+                        rows: products
+                            .map(
+                              (product) {
+                                final productId = product['productid'];
+                                return DataRow(
+                                  selected: selectedProduct.contains(productId),
+                                  onSelectChanged: (selected) {
+                                    toggleSelection(productId);
+                                  },
+                                cells: [
+                                  DataCell(Text(product['productName'].toString())),
+                                  DataCell(Text(product['barcode'].toString())),
+                                  DataCell(Text(product['hsCode'].toString())),
+                                  DataCell(Text(product['costPrice'].toString())),
+                                  DataCell(Text(product['sellingPrice'].toString())),
+                                  DataCell(Text(product["tax"].toString())),
+                                  DataCell(Text(product["stockQty"].toString())),
+                                  DataCell(
+                                    Row(
+                                      children: [
+                                        IconButton(
+                                          icon: const Icon(Icons.edit, color: Colors.blue),
+                                          onPressed: () {
+                                             fetchProductById(productId);
+                                          },
+                                        ),
+                                        IconButton(
+                                          icon: const Icon(Icons.delete, color: Colors.red),
+                                          onPressed: () async {
+                                            showDialog(
+                                              context: context,
+                                              barrierDismissible: false,
+                                              builder: (BuildContext context){
+                                                return AlertDialog(
+                                                  title:  const Text("Confirm Deletion"),
+                                                  content:const Column(
+                                                    mainAxisSize: MainAxisSize.min ,
+                                                    children: [
+                                                      Text("Are you sure you want to delete this product?"),
+                                                      SizedBox(height: 10,),
+                                                    ],
+                                                  ),
+                                                  actions: [
+                                                    TextButton(
+                                                    onPressed: () {
+                                                      Navigator.of(context).pop(); // Close the dialog
+                                                    },
+                                                    child: const Text('Cancel'),
+                                                  ),
+                                                  ElevatedButton(
+                                                    onPressed: () async {
+                                                      await deleteProduct(productId);
+                                                      Navigator.of(context).pop(); // Close the dialog   
+                                                    },
+                                                    child: const Text('Delete'),
+                                                  ),
+                                                  ],
+                                                );
+                                              }
+                                            );
+                                          },
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                ),
-                                DataCell(Text(product['productName'].toString())),
-                                DataCell(Text(product['barcode'].toString())),
-                                DataCell(Text(product['hsCode'].toString())),
-                                DataCell(Text(product['costPrice'].toString())),
-                                DataCell(Text(product['sellingPrice'].toString())),
-                                DataCell(Text(product["tax"].toString())),
-                                DataCell(Text(product["stockQty"].toString()))
-                              ],
-                            );
-                          })
-                          .toList(),
+                                ],
+                              );
+                            })
+                            .toList(),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 50,),
-                if (selectedProduct.isNotEmpty)
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  CustomOutlineBtn(
-                    width: 90,
-                    height: 50,
-                    text: "View",
-                    color:const Color.fromARGB(255, 14, 19, 29),
-                    color2: const Color.fromARGB(255, 14, 19, 29),
-                    onTap: (){
-                      //final i = selectedUsers.first;
-                      //fetchSalesForInvoice(invoiceId);
-                      fetchProductById();
-                    },
-                  ),
-                  CustomOutlineBtn(
-                    width: 90,
-                    height: 50,
-                    text: "Cancel",
-                    color:const Color.fromARGB(255, 14, 19, 29),
-                    color2: const Color.fromARGB(255, 14, 19, 29) ,
-                    onTap: (){
-                      //showPasswordPrompt();
-                    },
-                  ),
-                  CustomOutlineBtn(
-                    width: 90,
-                    height: 50,
-                    text: "Edit",
-                    color:const Color.fromARGB(255, 14, 19, 29),
-                    color2: const Color.fromARGB(255, 14, 19, 29),
-                    onTap: (){
-                      fetchProductById();
-                    },
-                  ),
-                ],
-              ),
-            ],
+                  const SizedBox(height: 50,),
+              ],
+            ),
           ),
 
     );

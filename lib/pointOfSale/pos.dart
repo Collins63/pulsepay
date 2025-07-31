@@ -26,8 +26,10 @@ import 'package:pulsepay/fiscalization/ping.dart';
 import 'package:pulsepay/fiscalization/receiptResponse.dart';
 import 'package:pulsepay/fiscalization/sslContextualization.dart';
 import 'package:pulsepay/fiscalization/submitReceipts.dart';
+import 'package:pulsepay/forms/companyDetails.dart';
 import 'package:pulsepay/home/home_page.dart';
 import 'package:pulsepay/main.dart';
+import 'package:pulsepay/signatureGeneration.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:pdf/pdf.dart';
@@ -60,23 +62,29 @@ class _PosState extends State<Pos>{
     fetchDefaultRate();
     _initializePrinter();
     //initializePrivateKey();
+    fetchTaxPayerDetails();
+    fetchCompanyDetails();
   }
 
   late String privateKey;
-
   final TextEditingController controller = TextEditingController();
   final TextEditingController customerNameController = TextEditingController();
   final TextEditingController tinController = TextEditingController();
   final TextEditingController vatController = TextEditingController();
   final TextEditingController addressController = TextEditingController();
+  final TextEditingController houseNoController = TextEditingController();
+  final TextEditingController streetNameController = TextEditingController();
+  final TextEditingController cityController = TextEditingController();
+  final TextEditingController provinceController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
+  final TextEditingController isFiscaltag = TextEditingController();
   final TextEditingController paidController = TextEditingController();
   final TextEditingController searchCustomer = TextEditingController();
   final DatabaseHelper dbHelper  = DatabaseHelper();
   final pdf = pw.Document();
-
-
   List<Map<String , dynamic>> defaultPayMethod = [];
+  List<Map<String , dynamic>> taxPayerDetails = [];
+  List<Map<String , dynamic>> companyDetails = [];
   List<Map<String, dynamic>> payMethods = [];
   List<Map<String, dynamic>> searchResults = [];
   List<Map<String, dynamic>> products = [];
@@ -91,6 +99,7 @@ class _PosState extends State<Pos>{
   bool isActve = true;
   String? defaultCurrency;
   double? defaultRate;
+  double? amountPaid = 0;
   int currentFiscal = 0;
   String transactionCurrency = "USD"; 
   List<Map<String, dynamic>> receiptItems = [];
@@ -111,8 +120,8 @@ class _PosState extends State<Pos>{
   String? first16Chars;
   // ignore: non_constant_identifier_names
   String? receiptDeviceSignature_signature;
-  String genericzimraqrurl = "https://fdmstest.zimra.co.zw/";
-  int deviceID = 25395;
+  String genericzimraqrurl = "https://fdms.zimra.co.zw/";
+  int deviceID = 0;
   int? nextCustomerID;
   final BlueThermalPrinter bluetooth = BlueThermalPrinter.instance;
     bool _isConnected = false;
@@ -120,6 +129,27 @@ class _PosState extends State<Pos>{
   String _printerStatus = 'Checking...';
   String activeUser = '';
   int? isCashier ;
+  bool isFiscaltag1 = false;
+  bool isNonFiscal = false;
+
+
+///====================PRINTER CODE===================================================
+
+String formatString(String input) {
+    final buffer = StringBuffer();
+    for (int i = 0; i < input.length; i += 4) {
+      if (i + 4 <= input.length) {
+        buffer.write(input.substring(i, i + 4));
+      } else {
+        buffer.write(input.substring(i));
+      }
+
+      if (i + 4 < input.length) {
+        buffer.write('-');
+      }
+    }
+    return buffer.toString();
+  }
 
  Future<void> _initializePrinter() async {
     try {
@@ -143,15 +173,14 @@ class _PosState extends State<Pos>{
     }
   }
 
-Future<void> print58mmAdvanced(Map<String, dynamic> receiptJson, String qrUrl) async {
+Future<void> print58mmAdvanced(Map<String, dynamic> receiptJson, String qrUrl , String qrData) async {
   try {
     // More robust printer initialization
-    print("Initializing Sunmi printer...");
     
     // Try multiple initialization attempts
     bool printerReady = false;
     int attempts = 0;
-
+    String verificationCode = formatString(qrData);
     final receipt = receiptJson['receipt'];
 
     // Print receipt with better formatting
@@ -159,9 +188,9 @@ Future<void> print58mmAdvanced(Map<String, dynamic> receiptJson, String qrUrl) a
     await _printCustomerInfo(receipt);
     await _printInvoiceDetails(receipt);
     await _printItems(receipt['receiptLines']);
-    await _printTotal(receipt['receiptTotal']);
+    await _printTotal(receipt['receiptTotal'] , receipt);
     //await _printSignature(receipt['receiptDeviceSignature']);
-    await _printVerification(receipt['receiptGlobalNo']);
+    await _printVerification(receipt['receiptGlobalNo'] , verificationCode);
     await _printQRCode(qrUrl);
     await _finishPrint();
     
@@ -179,11 +208,12 @@ Future<void> _printHeader() async {
   //await SunmiPrinter.setFontSize(SunmiFontSize.LG);
   await SunmiPrinter.printText("FISCAL TAX INVOICE" , style: SunmiTextStyle(bold: true, align: SunmiPrintAlign.CENTER));
   await SunmiPrinter.lineWrap(3);
-  await SunmiPrinter.printText("PULSE PVT LTD", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+  await SunmiPrinter.printText("${taxPayerDetails[0]['taxPayerName']}", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
   await SunmiPrinter.resetFontSize();
-  await SunmiPrinter.printText("TIN: 1234567890" ,style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
-  await SunmiPrinter.printText("16 Ganges Road, Harare", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
-  await SunmiPrinter.printText("Tel: +263 77 14172798", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+  await SunmiPrinter.printText("TIN: ${taxPayerDetails[0]['taxPayerTin']}" ,style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+  await SunmiPrinter.printText("VAT: ${taxPayerDetails[0]['taxPayerVatNumber']}" ,style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+  await SunmiPrinter.printText("${companyDetails[0]['address']}", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+  await SunmiPrinter.printText("${companyDetails[0]['tel']}", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
   await SunmiPrinter.printText("================================");
 }
 
@@ -204,6 +234,7 @@ Future<void> _printInvoiceDetails(Map<String, dynamic> receipt) async {
   await SunmiPrinter.printText("Invoice No: ${receipt['invoiceNo']}");
   await SunmiPrinter.printText("Date: ${receipt['receiptDate']}");
   await SunmiPrinter.printText("Cashier: $activeUser");
+  await SunmiPrinter.printText("Currency: ${receipt['receiptCurrency']}");
   await SunmiPrinter.printText("--------------------------------");
   await SunmiPrinter.lineWrap(1);
 }
@@ -215,24 +246,35 @@ Future<void> _printItems(List receiptLines) async {
   for (var item in receiptLines) {
     // Format item name and quantity
     String itemLine = "${item['receiptLineName']} x${item['receiptLineQuantity']}";
-    await SunmiPrinter.printText(itemLine);
+    await SunmiPrinter.printText(itemLine , style: SunmiTextStyle(bold: true));
     
     // Format price line with proper spacing
     String priceLine = "@\$${item['receiptLinePrice']} = \$${item['receiptLineTotal']}";
     await SunmiPrinter.setAlignment(SunmiPrintAlign.RIGHT);
-    await SunmiPrinter.printText(priceLine);
+    await SunmiPrinter.printText(priceLine, style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
     await SunmiPrinter.setAlignment(SunmiPrintAlign.LEFT);
     await SunmiPrinter.lineWrap(1);
   }
 }
 
-Future<void> _printTotal(dynamic receiptTotal) async {
+Future<void> _printTotal(dynamic receiptTotal , Map<String, dynamic> receipt) async {
+  double totalTax = 0;
+  final receiptTaxes = receipt['receiptTaxes'];
+  for(var tax in receiptTaxes){
+    double taxesTax = double.tryParse(tax['taxAmount'])!;
+    totalTax += taxesTax;
+  }
   await SunmiPrinter.printText("================================");
   double total = double.tryParse(receiptTotal.toString()) ?? 0.0;
+  double change = amountPaid! - total;
   await SunmiPrinter.setAlignment(SunmiPrintAlign.CENTER);
   //await SunmiPrinter.setFontSize(SunmiFontSize.LG);
-  await SunmiPrinter.printText("TOTAL: \$${total.toStringAsFixed(2)}");
+  await SunmiPrinter.printText("Tax Total: ${receipt['receiptCurrency']}-${totalTax.toStringAsFixed(2)}");
+  await SunmiPrinter.printText("TOTAL: ${receipt['receiptCurrency']}-\$${total.toStringAsFixed(2)}");
   await SunmiPrinter.resetFontSize();
+  await SunmiPrinter.printText("================================");
+  await SunmiPrinter.printText("Paid: ${amountPaid!.toStringAsFixed(2)}");
+  await SunmiPrinter.printText("Change: ${change.toStringAsFixed(2)}");
   await SunmiPrinter.printText("================================");
   await SunmiPrinter.lineWrap(1);
 }
@@ -247,14 +289,17 @@ Future<void> _printSignature(Map<String, dynamic>? signature) async {
   await SunmiPrinter.lineWrap(1);
 }
 
-Future<void> _printVerification(dynamic receiptGlobalNo) async {
+Future<void> _printVerification(dynamic receiptGlobalNo, String verificationCode) async {
   await SunmiPrinter.printText("VERIFICATION", style: SunmiTextStyle(bold: true, align: SunmiPrintAlign.CENTER));
   await SunmiPrinter.printText("--------------------------------");
   await SunmiPrinter.printText("Verify at:", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
-  await SunmiPrinter.printText("https://fdmstest.zimra.co.zw", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+  //await SunmiPrinter.printText("$verificationCode", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+  await SunmiPrinter.printText("https://fdms.zimra.co.zw", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
   await SunmiPrinter.lineWrap(1);
-  await SunmiPrinter.printText("Device ID: 25395", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+  await SunmiPrinter.printText("Device ID: $deviceID", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
   await SunmiPrinter.printText("Receipt No: ${receiptGlobalNo.toString().padLeft(10, '0')}", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+  await SunmiPrinter.printText("Verification Code:", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+  await SunmiPrinter.printText("$verificationCode", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
 }
 
 Future<void> _printQRCode(String qrUrl) async {
@@ -266,6 +311,7 @@ Future<void> _printQRCode(String qrUrl) async {
 }
 
 Future<void> _finishPrint() async {
+  await SunmiPrinter.printText("Powered by tigerweb.co.zw", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
   await SunmiPrinter.lineWrap(3);
   await SunmiPrinter.cutPaper();
 }
@@ -367,7 +413,7 @@ Future<void> _finishPrint() async {
               pw.Text('Signature Hash:', style: pw.TextStyle(fontSize: 10)),
               pw.Text(receipt['receiptDeviceSignature']?['hash'] ?? '', style: pw.TextStyle(fontSize: 8)),
               pw.Text("You can verify this manually at:", style: pw.TextStyle(fontSize: 10)),
-              pw.Text("https://fdmstest.zimra.co.zw", style: pw.TextStyle(fontSize: 8, color: PdfColors.blue)),
+              pw.Text("https://fdms.zimra.co.zw", style: pw.TextStyle(fontSize: 8, color: PdfColors.blue)),
               pw.Text("Device ID: $deviceID", style: pw.TextStyle(fontSize: 10)),
               pw.Text("Receipt Global No: $receiptGlobalNo", style: pw.TextStyle(fontSize: 10)),
             ],
@@ -393,12 +439,12 @@ Future<void> _finishPrint() async {
   }
   
   Future<bool> requestStoragePermission() async {
-  if (await Permission.storage.isGranted) {
-    return true;
+    if (await Permission.storage.isGranted) {
+      return true;
+    }
+    var status = await Permission.storage.request();
+    return status.isGranted;
   }
-  var status = await Permission.storage.request();
-  return status.isGranted;
-}
 
   addItem() async{
     String saleCurrency = selectedPayMethod.isEmpty ? defaultCurrency.toString() : returnCurrency();
@@ -430,15 +476,15 @@ Future<void> _finishPrint() async {
       taxCode = "B";
       itemTax = totalPrice * double.parse(taxPercent);
     } else if (productTax == "vat") {
-      taxID = 3;
+      taxID = 1;
       taxPercent = "15.00"; // Convert 15% to decimal
-      taxCode = "C";
+      taxCode = "A";
       itemTax = totalPrice * 0.15;
       salesAmountwithTax += totalPrice;
     } else {
-      taxID = 1;
+      taxID = 3;
       taxPercent = "0";
-      taxCode = "A";
+      taxCode = "C";
       itemTax = totalPrice * 0;
     }
 
@@ -459,80 +505,63 @@ Future<void> _finishPrint() async {
   }
 }
 
-  static Future<String?> getSignatureHash(String data) async {
-    try {
-      final String? result = await platform.invokeMethod('SignatureHash', {"data": data});
-      return result;
-    } on PlatformException catch (e) {
-      return "Failed to get hash: '${e.message}'.";
-    }
-  }
-
-  static Future<List<String>?> getSignatureSignature(String data) async {
-    try {
-      final List<dynamic>? result = await platform.invokeMethod('SignatureSignature', {"data": data});
-      return result?.map((e) => e as String).toList();
-    } on PlatformException catch (e) {
-      return ["Failed to sign: '${e.message}'.", ""];
-    }
-  }
 
   String buildZimraCanonicalString({
   required Map<String, dynamic> receipt,
   required String deviceID,
   required String previousReceiptHash,
-}) {
-  final buffer = StringBuffer();
+  }) {
+    final buffer = StringBuffer();
 
-  // 1. Device ID
-  buffer.write(deviceID);
+    // 1. Device ID
+    buffer.write(deviceID);
 
-  // 2. Receipt Type
-  buffer.write(receipt['receiptType']);
+    // 2. Receipt Type
+    buffer.write(receipt['receiptType']);
 
-  // 3. Currency
-  buffer.write(receipt['receiptCurrency']);
+    // 3. Currency
+    buffer.write(receipt['receiptCurrency']);
 
-  // 4. Receipt Global No
-  buffer.write(receipt['receiptGlobalNo']);
+    // 4. Receipt Global No
+    buffer.write(receipt['receiptGlobalNo']);
 
-  // 5. Receipt Date
-  buffer.write(receipt['receiptDate']);
+    // 5. Receipt Date
+    buffer.write(receipt['receiptDate']);
 
-  // 6. Total amount in cents
-  final double totalAmount = double.parse(receipt['receiptTotal'].toString());
-  buffer.write((totalAmount * 100).round().toString());
+    // 6. Total amount in cents
+    final double totalAmount = double.parse(receipt['receiptTotal'].toString());
+    buffer.write((totalAmount * 100).round().toString());
 
-  // 7. Tax blocks
-  final List<dynamic> receiptTaxes = receipt['receiptTaxes'] ?? [];
+    // 7. Tax blocks
+    final List<dynamic> receiptTaxes = receipt['receiptTaxes'] ?? [];
 
-  for (var tax in receiptTaxes) {
-    final String taxCode = tax['taxCode'];
-    final double taxPercent = double.parse(tax['taxPercent'].toString());
-    final double taxAmount = double.parse(tax['taxAmount'].toString());
-    final double salesAmountWithTax = double.parse(tax['salesAmountWithTax'].toString());
+    for (var tax in receiptTaxes) {
+      final String taxCode = tax['taxCode'];
+      final double taxPercent = double.parse(tax['taxPercent'].toString());
+      final double taxAmount = double.parse(tax['taxAmount'].toString());
+      final double salesAmountWithTax = double.parse(tax['salesAmountWithTax'].toString());
 
-    buffer.write(taxCode);
+      buffer.write(taxCode);
 
-    // ✅ Apply the rule for taxCode 'A'
-    if (taxCode == 'A') {
-      buffer.write('0');
-    } else {
-      buffer.write(taxPercent.toStringAsFixed(2));
+      // ✅ Apply the rule for taxCode 'A'
+      if (taxCode == 'A') {
+        buffer.write('0');
+      } else {
+        buffer.write(taxPercent.toStringAsFixed(2));
+      }
+
+      buffer.write((taxAmount * 100).round().toString());
+      buffer.write((salesAmountWithTax * 100).round().toString());
     }
 
-    buffer.write((taxAmount * 100).round().toString());
-    buffer.write((salesAmountWithTax * 100).round().toString());
+    // 8. Receipt Counter
+    buffer.write(receipt['receiptCounter'].toString());
+
+    // 9. Previous Receipt Hash
+    buffer.write(previousReceiptHash);
+
+    return buffer.toString();
   }
-
-  // 8. Receipt Counter
-  buffer.write(receipt['receiptCounter'].toString());
-
-  // 9. Previous Receipt Hash
-  buffer.write(previousReceiptHash);
-
-  return buffer.toString();
-}
 
 
   Future<String> generateFiscalJSON() async {
@@ -540,24 +569,37 @@ Future<void> _finishPrint() async {
   try {
     print("Entered generateFiscalJSON");
 
-    String filePath = "/storage/emulated/0/Pulse/Configurations/steamTest_T_certificate.p12";
-    String password = "steamTest123";
-
+    String filePath = "/storage/emulated/0/Pulse/Configurations/hotash_P_certificate.p12";
+    String password = "hotash123";
+    
     // Ensure signing does not fail
     DateTime now = DateTime.now();
     String formattedDate = DateFormat("yyyy-MM-ddTHH:mm:ss").format(now);
     try {
       String data = await useRawString(formattedDate);
+      final byteData = await rootBundle.load('assets/private_key.pem');
+      final buffer = byteData.buffer;
+      // Write to a temp file
+      final tempDir = Directory.systemTemp;
+      final pemFile = File('${tempDir.path}/private_key.pem');
+      await pemFile.writeAsBytes(
+        buffer.asUint8List(byteData.offsetInBytes, byteData.lengthInBytes),
+      );
+      final Map<String, String> signedDataMap  = PemSigner.signDataWithMd5(
+        data: data,
+        privateKeyPath: pemFile.path,
+      );
+      
       //List<String>? signature = await getSignatureSignature(data);
       //receiptDeviceSignature_signature_hex = signature?[0];
       //receiptDeviceSignature_signature  = signature?[1];
-      final Map<String, String> signedDataMap  = await signData(filePath, password, data);
+      //final Map<String, String> signedDataMap  = await signData(filePath, password, data);
       //final Map<String, dynamic> signedDataMap = jsonDecode(signedDataString);
       receiptDeviceSignature_signature_hex = signedDataMap["receiptDeviceSignature_signature_hex"] ?? "";
       receiptDeviceSignature_signature = signedDataMap["receiptDeviceSignature_signature"] ?? "";
       first16Chars = signedDataMap["receiptDeviceSignature_signature_md5_first16"] ?? "";
       
-      verifySignatureAndShowResult(context, filePath, password, data, receiptDeviceSignature_signature.toString());
+      //verifySignatureAndShowResult(context, filePath, password, data, receiptDeviceSignature_signature.toString());
       
     } catch (e) {
       Get.snackbar("Signing Error", "$e", snackPosition: SnackPosition.TOP);
@@ -645,7 +687,17 @@ Future<void> _finishPrint() async {
           "VATNumber": selectedCustomer.isNotEmpty? selectedCustomer[0]['vatNumber'].toString() : "123456789",
           "buyerTradeName": selectedCustomer.isNotEmpty? selectedCustomer[0]['tradeName'] : "Cash Sale",
           "buyerTIN": selectedCustomer.isNotEmpty? selectedCustomer[0]['tinNumber'].toString() : "0000000000",
-          "buyerRegisterName": selectedCustomer.isNotEmpty? selectedCustomer[0]['tradeName'] : "Cash Sale"   
+          "buyerRegisterName": selectedCustomer.isNotEmpty? selectedCustomer[0]['tradeName'] : "Cash Sale",
+          "buyerAddress": {
+            'province' : selectedCustomer.isNotEmpty? selectedCustomer[0]['province'].toString() : "Zimbabwe",
+            'city' : selectedCustomer.isNotEmpty? selectedCustomer[0]['city'].toString() : "Zimbawe",
+            'street': selectedCustomer.isNotEmpty? selectedCustomer[0]['street'].toString() : "Zimbabwe",
+            'houseNo': selectedCustomer.isNotEmpty? selectedCustomer[0]['houseNo'].toString() : "0000",
+          },
+          "buyerContactS":{
+            "email" : selectedCustomer.isNotEmpty? selectedCustomer[0]['email'].toString() : "buyer@buyer.com",
+            "phoneNo":"0000000000"
+          }
         },
         "receiptTotal": totalAmount.toStringAsFixed(2),
         "receiptLinesTaxInclusive": true,
@@ -705,11 +757,6 @@ List<Map<String, dynamic>> generateReceiptTaxes(List<dynamic> receiptItems) {
         "salesAmountWithTax": 0.0
       };
     }
-
-    // Calculate tax amount
-    //double taxAmount = taxPercent.isEmpty
-      //  ? 0.00  // If taxPercent is empty, set taxAmount to 0.00
-       // : total - double.parse((total / 1.15).toString());
     double taxAmount;
     if(taxPercent.isEmpty){
       taxAmount = 0.00;
@@ -724,26 +771,16 @@ List<Map<String, dynamic>> generateReceiptTaxes(List<dynamic> receiptItems) {
     taxGroups[taxID]!["salesAmountWithTax"] += total;
   }
 
-  // Convert map to list and round values
-  // return taxGroups.values.map((tax) {
-  //   return {
-  //     "taxID": tax["taxID"],
-  //     "taxPercent": tax["taxPercent"],  // Blank if empty
-  //     "taxCode": tax["taxCode"],
-  //     "taxAmount": tax["taxAmount"].toStringAsFixed(2), // Rounded to 2 decimal places
-  //     "salesAmountWithTax": tax["salesAmountWithTax"],
-  //   };
-  // }).toList();
   return taxGroups.values.map((tax) {
     final taxID = tax["taxID"];
     final taxCode = tax["taxCode"];
-    final isGroupA = (taxCode == "A" || taxID == 1);
+    final isGroupC = (taxCode == "C" || taxID == 3);
 
     return {
       "taxID": taxID.toString(),
-      if (!isGroupA) "taxPercent": tax["taxPercent"], // Omit if group A
+      if (!isGroupC) "taxPercent": tax["taxPercent"], // Omit if group C
       "taxCode": taxCode,
-      "taxAmount": isGroupA ? "0" : tax["taxAmount"].toStringAsFixed(2),
+      "taxAmount": isGroupC ? "0" : tax["taxAmount"].toStringAsFixed(2),
       "salesAmountWithTax": tax["salesAmountWithTax"],
     };
   }).toList();
@@ -798,7 +835,7 @@ String generateTaxSummary(List<dynamic> receiptItems) {
     final salesAmount = (tax["salesAmountWithTax"] * 100).round().toString();
 
     // Omit taxPercent for taxCode A
-    if (taxCode == "A") {
+    if (taxCode == "C") {
       return "$taxCode$taxAmount$salesAmount";
     }
 
@@ -817,28 +854,27 @@ String generateTaxSummary(List<dynamic> receiptItems) {
     });
   }
 
-
 /// Function to generate the final concatenated receipt string
-String generateReceiptString({
-  required int deviceID,
-  required String receiptType,
-  required String receiptCurrency,
-  required int receiptGlobalNo,
-  required String receiptDate,
-  required double receiptTotal,
-  required List<dynamic> receiptItems,
-  required String getPreviousReceiptHash,
-}) {
-  //String formattedDate = receiptDate.toIso8601String().split('.').first;
-  //print("Formatted Date: $formattedDate");
-  String formattedTotal = receiptTotal.toStringAsFixed(2);
-  double receiptTotal_numeric = receiptTotal;
-  int receiptTotal_ampl = (receiptTotal_numeric * 100).round();
-  String receiptTotal_adj = receiptTotal_ampl.toString();
-  String receiptTaxes = generateTaxSummary(receiptItems);
+  String generateReceiptString({
+    required int deviceID,
+    required String receiptType,
+    required String receiptCurrency,
+    required int receiptGlobalNo,
+    required String receiptDate,
+    required double receiptTotal,
+    required List<dynamic> receiptItems,
+    required String getPreviousReceiptHash,
+  }) {
+    //String formattedDate = receiptDate.toIso8601String().split('.').first;
+    //print("Formatted Date: $formattedDate");
+    String formattedTotal = receiptTotal.toStringAsFixed(2);
+    double receiptTotal_numeric = receiptTotal;
+    int receiptTotal_ampl = (receiptTotal_numeric * 100).round();
+    String receiptTotal_adj = receiptTotal_ampl.toString();
+    String receiptTaxes = generateTaxSummary(receiptItems);
 
-  return "$deviceID$receiptType$receiptCurrency$receiptGlobalNo$receiptDate$receiptTotal_adj$receiptTaxes$getPreviousReceiptHash";
-}
+    return "$deviceID$receiptType$receiptCurrency$receiptGlobalNo$receiptDate$receiptTotal_adj$receiptTaxes$getPreviousReceiptHash";
+  }
 
   /// Generate SHA-256 Hash
   /// 
@@ -857,7 +893,7 @@ String generateReceiptString({
     String getLatestReceiptHash = await dbHelper.getLatestReceiptHash();
     if (dayReceiptCounter.isEmpty){
       String receiptString = generateReceiptString(
-        deviceID: 25395,
+        deviceID: deviceID,
         receiptType: "FISCALINVOICE",
         receiptCurrency: saleCurrency,
         receiptGlobalNo: currentGlobalNo,
@@ -870,7 +906,7 @@ String generateReceiptString({
       return receiptString;
     }else{
       String receiptString = generateReceiptString(
-        deviceID: 25395,
+        deviceID: deviceID,
         receiptType: "FISCALINVOICE",
         receiptCurrency: saleCurrency,
         receiptGlobalNo: currentGlobalNo,
@@ -902,7 +938,7 @@ String generateReceiptString({
     String getLatestReceiptHash = await dbHelper.getLatestReceiptHash();
     if(dayReceiptCounter.isEmpty){
       receiptString = generateReceiptString(
-        deviceID: 25395,
+        deviceID: deviceID,
         receiptType: "FISCALINVOICE",
         receiptCurrency: saleCurrency,
         receiptGlobalNo: currentGlobalNo,
@@ -916,7 +952,7 @@ String generateReceiptString({
     }
     else{
       receiptString = generateReceiptString(
-        deviceID: 25395,
+        deviceID: deviceID,
         receiptType: "FISCALINVOICE",
         receiptCurrency: saleCurrency,
         receiptGlobalNo: currentGlobalNo,
@@ -936,33 +972,34 @@ String generateReceiptString({
   }
   
   Future<String> ping() async {
-  String apiEndpointPing =
-      "https://fdmsapitest.zimra.co.zw/Device/v1/25395/Ping";
-  const String deviceModelName = "Server";
-  const String deviceModelVersion = "v1"; 
+    String apiEndpointPing =
+        "https://fdmsapi.zimra.co.zw/Device/v1/$deviceID/Ping";
+    const String deviceModelName = "Server";
+    const String deviceModelVersion = "v1"; 
 
-  SSLContextProvider sslContextProvider = SSLContextProvider();
-  SecurityContext securityContext = await sslContextProvider.createSSLContext();
+    SSLContextProvider sslContextProvider = SSLContextProvider();
+    SecurityContext securityContext = await sslContextProvider.createSSLContext();
 
-  // Call the Ping function
-  final String response = await PingService.ping(
-    apiEndpointPing: apiEndpointPing,
-    deviceModelName: deviceModelName,
-    deviceModelVersion: deviceModelVersion,
-    securityContext: securityContext,
-  );
-
-  //print("Response: \n$response");
-  Get.snackbar(
-      "Zimra Response", "$response",
-      snackPosition: SnackPosition.TOP,
-      colorText: Colors.white,
-      backgroundColor: Colors.green,
-      icon: const Icon(Icons.message, color: Colors.white),
+    // Call the Ping function
+    final String response = await PingService.ping(
+      apiEndpointPing: apiEndpointPing,
+      deviceModelName: deviceModelName,
+      deviceModelVersion: deviceModelVersion,
+      securityContext: securityContext,
     );
+
+    //print("Response: \n$response");
+    Get.snackbar(
+        "Zimra Response", "$response",
+        snackPosition: SnackPosition.TOP,
+        colorText: Colors.white,
+        backgroundColor: Colors.green,
+        icon: const Icon(Icons.message, color: Colors.white),
+      );
+    
+      return response;
+  }
   
-    return response;
-}
   Map<String , dynamic> jsonDatatest = {"receipt":{"receiptLines":[{"receiptLineNo":"1","receiptLineHSCode":"99001000","receiptLinePrice":"434.78","taxID":3,"taxPercent":"15.00","receiptLineType":"Sale","receiptLineQuantity":"1.0","taxCode":"C","receiptLineTotal":"434.78","receiptLineName":"RENTAL JANUARY 2025 "}],"receiptType":"FISCALINVOICE","receiptGlobalNo":6,"receiptCurrency":"USD","receiptPrintForm":"InvoiceA4","receiptDate":"2025-01-31T17:18:37","receiptPayments":[{"moneyTypeCode":"Cash","paymentAmount":"434.78"}],"receiptCounter":5,"receiptTaxes":[{"taxID":"3","taxPercent":"15.00","taxCode":"C","taxAmount":"56.71","SalesAmountwithTax":434.78}],"receiptDeviceSignature":{"signature":"","hash": ""},"buyerData":{"VATNumber":"123456789","buyerTradeName":"SAT ","buyerTIN":"0000000000","buyerRegisterName":"SAT "},"receiptTotal":"434.78","receiptLinesTaxInclusive":true,"invoiceNo":"00000390"}};
   String getReceiptQrData(String receiptDeviceSignatureSignatureHexsent) {
     return receiptDeviceSignatureSignatureHexsent.length > 16 
@@ -1026,10 +1063,11 @@ String generateReceiptString({
       String testQrData = getReceiptQrData(testHash);
       String qrurl = genericzimraqrurl + formattedDeviceID + formattedDateStr + formatedReceiptGlobalNo + receiptQrData;
       print("QR URL: $qrurl");
+
       
     if(pingResponse=="200"){
       String apiEndpointSubmitReceipt =
-      "https://fdmsapitest.zimra.co.zw/Device/v1/25395/SubmitReceipt";
+      "https://fdmsapi.zimra.co.zw/Device/v1/$deviceID/SubmitReceipt";
       const String deviceModelName = "Server";
       const String deviceModelVersion = "v1";  
 
@@ -1057,104 +1095,103 @@ String generateReceiptString({
       int statusCode = response["statusCode"];
       String submitReceiptServerresponseJson = responseBody.toString();
       print("your server server response is $submitReceiptServerresponseJson");
-      if (statusCode == 200) {
-      print("Code is 200, saving receipt...");
 
-      // Check if 'receiptPayments' is non-empty before accessing index 0
-      
-      try {
-        final Database dbinit = await dbHelper.initDB();
-        await dbinit.insert('submittedReceipts',
-          {
-            'receiptCounter': jsonData['receipt']?['receiptCounter'] ?? 0,
-            'FiscalDayNo' : fiscalDayNo,
-            'InvoiceNo': int.tryParse(jsonData['receipt']?['invoiceNo']?.toString() ?? "0") ?? 0,
-            'receiptID': responseBody['receiptID'] ?? 0,
-            'receiptType': jsonData['receipt']['receiptType']?.toString() ?? "",
-            'receiptCurrency': jsonData['receipt']?['receiptCurrency']?.toString() ?? "",
-            'moneyType': moneyType,
-            'receiptDate': jsonData['receipt']?['receiptDate']?.toString() ?? "",
-            'receiptTime': jsonData['receipt']?['receiptDate']?.toString() ?? "",
-            'receiptTotal': receiptTotal,
-            'taxCode': "C",
-            'taxPercent': "15.00",
-            'taxAmount': taxAmount ?? 0,
-            'SalesAmountwithTax': salesAmountwithTax ?? 0,
-            'receiptHash': jsonData['receipt']?['receiptDeviceSignature']?['hash']?.toString() ?? "",
-            'receiptJsonbody': receiptJsonbody?.toString() ?? "",
-            'StatustoFDMS': "Submitted".toString(),
-            'qrurl': qrurl,
-            'receiptServerSignature': responseBody['receiptServerSignature']?['signature'].toString() ?? "",
-            'submitReceiptServerresponseJSON': "$submitReceiptServerresponseJson" ?? "noresponse",
-            'Total15VAT': totalVAT15.toString(),
-            'TotalNonVAT': totalNonVAT,
-            'TotalExempt': totalExempt,
-            'TotalWT': 0.0,
-          },
-          conflictAlgorithm: ConflictAlgorithm.replace,
-        );
-         //print("Data inserted successfully!");
-        //generateInvoiceFromJson(jsonData, qrurl);
-        print58mmAdvanced(jsonData, qrurl);
-      } catch (e) {
-        Get.snackbar(" Db Error",
-          "$e",
-          snackPosition: SnackPosition.TOP,
-          colorText: Colors.white,
-          backgroundColor: Colors.red,
-          icon: const Icon(Icons.error),
-        );
-    }
-    
-  }
-  else{
-    try {
-        final Database dbinit = await dbHelper.initDB();
-        await dbinit.insert('submittedReceipts',
-          {
-            'receiptCounter': jsonData['receipt']?['receiptCounter'] ?? 0,
-            'FiscalDayNo' : fiscalDayNo,
-            'InvoiceNo': int.tryParse(jsonData['receipt']?['invoiceNo']?.toString() ?? "0") ?? 0,
-            'receiptID': 0,
-            'receiptType': jsonData['receipt']['receiptType']?.toString() ?? "",
-            'receiptCurrency': jsonData['receipt']?['receiptCurrency']?.toString() ?? "",
-            'moneyType': moneyType,
-            'receiptDate': jsonData['receipt']?['receiptDate']?.toString() ?? "",
-            'receiptTime': jsonData['receipt']?['receiptDate']?.toString() ?? "",
-            'receiptTotal': receiptTotal,
-            'taxCode': "C",
-            'taxPercent': "15.00",
-            'taxAmount': taxAmount ?? 0,
-            'SalesAmountwithTax': salesAmountwithTax ?? 0,
-            'receiptHash': jsonData['receipt']?['receiptDeviceSignature']?['hash']?.toString() ?? "",
-            'receiptJsonbody': receiptJsonbody?.toString() ?? "",
-            'StatustoFDMS': "NOTSubmitted".toString(),
-            'qrurl': qrurl,
-            'receiptServerSignature':"",
-            'submitReceiptServerresponseJSON':"noresponse",
-            'Total15VAT': totalVAT15.toString(),
-            'TotalNonVAT': totalNonVAT,
-            'TotalExempt': totalExempt,
-            'TotalWT': 0.0,
-          },
-          conflictAlgorithm: ConflictAlgorithm.replace,
-        );
-         print("Data inserted successfully!");
-         //generateInvoiceFromJson(jsonData, qrurl);
-         print58mmAdvanced(jsonData, qrurl);
-      } catch (e) {
-        Get.snackbar("Db Error",
-          "$e",
-          snackPosition: SnackPosition.TOP,
-          colorText: Colors.white,
-          backgroundColor: Colors.red,
-          icon: const Icon(Icons.error),
-        );
-    }
-  }
+      if (statusCode == 200) {
+        print("Code is 200, saving receipt...");
+
+        // Check if 'receiptPayments' is non-empty before accessing index 0
+        
+        try {
+          final Database dbinit = await dbHelper.initDB();
+          await dbinit.insert('submittedReceipts',
+            {
+              'receiptCounter': jsonData['receipt']?['receiptCounter'] ?? 0,
+              'FiscalDayNo' : fiscalDayNo,
+              'InvoiceNo': int.tryParse(jsonData['receipt']?['invoiceNo']?.toString() ?? "0") ?? 0,
+              'receiptID': responseBody['receiptID'] ?? 0,
+              'receiptType': jsonData['receipt']['receiptType']?.toString() ?? "",
+              'receiptCurrency': jsonData['receipt']?['receiptCurrency']?.toString() ?? "",
+              'moneyType': moneyType,
+              'receiptDate': jsonData['receipt']?['receiptDate']?.toString() ?? "",
+              'receiptTime': jsonData['receipt']?['receiptDate']?.toString() ?? "",
+              'receiptTotal': receiptTotal,
+              'taxCode': "C",
+              'taxPercent': "15.00",
+              'taxAmount': taxAmount ?? 0,
+              'SalesAmountwithTax': salesAmountwithTax ?? 0,
+              'receiptHash': jsonData['receipt']?['receiptDeviceSignature']?['hash']?.toString() ?? "",
+              'receiptJsonbody': receiptJsonbody?.toString() ?? "",
+              'StatustoFDMS': "Submitted".toString(),
+              'qrurl': qrurl,
+              'receiptServerSignature': responseBody['receiptServerSignature']?['signature'].toString() ?? "",
+              'submitReceiptServerresponseJSON': "$submitReceiptServerresponseJson" ?? "noresponse",
+              'Total15VAT': totalVAT15.toString(),
+              'TotalNonVAT': totalNonVAT,
+              'TotalExempt': totalExempt,
+              'TotalWT': 0.0,
+            },
+            conflictAlgorithm: ConflictAlgorithm.replace,
+          );
+          //print("Data inserted successfully!");
+          //generateInvoiceFromJson(jsonData, qrurl);
+          print58mmAdvanced(jsonData, qrurl, receiptQrData);
+        } catch (e) {
+          Get.snackbar(" Db Error",
+            "$e",
+            snackPosition: SnackPosition.TOP,
+            colorText: Colors.white,
+            backgroundColor: Colors.red,
+            icon: const Icon(Icons.error),
+          );
+        } 
+      }
+      else{
+        try {
+            final Database dbinit = await dbHelper.initDB();
+            await dbinit.insert('submittedReceipts',
+              {
+                'receiptCounter': jsonData['receipt']?['receiptCounter'] ?? 0,
+                'FiscalDayNo' : fiscalDayNo,
+                'InvoiceNo': int.tryParse(jsonData['receipt']?['invoiceNo']?.toString() ?? "0") ?? 0,
+                'receiptID': 0,
+                'receiptType': jsonData['receipt']['receiptType']?.toString() ?? "",
+                'receiptCurrency': jsonData['receipt']?['receiptCurrency']?.toString() ?? "",
+                'moneyType': moneyType,
+                'receiptDate': jsonData['receipt']?['receiptDate']?.toString() ?? "",
+                'receiptTime': jsonData['receipt']?['receiptDate']?.toString() ?? "",
+                'receiptTotal': receiptTotal,
+                'taxCode': "C",
+                'taxPercent': "15.00",
+                'taxAmount': taxAmount ?? 0,
+                'SalesAmountwithTax': salesAmountwithTax ?? 0,
+                'receiptHash': jsonData['receipt']?['receiptDeviceSignature']?['hash']?.toString() ?? "",
+                'receiptJsonbody': receiptJsonbody?.toString() ?? "",
+                'StatustoFDMS': "NOTSubmitted".toString(),
+                'qrurl': qrurl,
+                'receiptServerSignature':"",
+                'submitReceiptServerresponseJSON':"noresponse",
+                'Total15VAT': totalVAT15.toString(),
+                'TotalNonVAT': totalNonVAT,
+                'TotalExempt': totalExempt,
+                'TotalWT': 0.0,
+              },
+              conflictAlgorithm: ConflictAlgorithm.replace,
+            );
+            print("Data inserted successfully!");
+            //generateInvoiceFromJson(jsonData, qrurl);
+            print58mmAdvanced(jsonData, qrurl, receiptQrData);
+          } catch (e) {
+            Get.snackbar("Db Error",
+              "$e",
+              snackPosition: SnackPosition.TOP,
+              colorText: Colors.white,
+              backgroundColor: Colors.red,
+              icon: const Icon(Icons.error),
+            );
+        }
+      }
     }
     else{
-      
       try {
         final Database dbinit = await dbHelper.initDB();
         await dbinit.insert('submittedReceipts',
@@ -1188,7 +1225,7 @@ String generateReceiptString({
         );
          print("Data inserted successfully!");
          //generateInvoiceFromJson(jsonData, qrurl);
-         print58mmAdvanced(jsonData, qrurl);
+         print58mmAdvanced(jsonData, qrurl , receiptQrData);
       } catch (e) {
         Get.snackbar("DB error Error",
           "$e",
@@ -1204,51 +1241,52 @@ String generateReceiptString({
   completeSale() async {
     try {
       final double totalAmount = calculateTotalPrice();
-    final double totalTax = calculateTotalTax();
-    final double indiTax = calculateIndividualtax();
-    final int customerID;
-    String saleCurrency = selectedPayMethod.isEmpty ? defaultCurrency.toString() : returnCurrency();
-    
-    if(selectedCustomer.isEmpty){
-      customerID = 999999;
-      //= selectedCustomer[0]['customerID']
-      await dbHelper.saveSale(cartItems, totalAmount, totalTax , indiTax, customerID , saleCurrency, activeUser);
-      for (var item in cartItems){
-      int sellQty = item['sellqty'];
-      int productid = item['productid'];
-      final product = await dbHelper.getProductById(productid);
-      setState(() {
-        productOnSale = product;
-      });
-      int productOnSaleQty = productOnSale[0]['stockQty'];
-      int remainingStock = productOnSaleQty - sellQty;
-      dbHelper.updateProductStockQty(productid, remainingStock);
-    }
-    }
-    else{
-      customerID = selectedCustomer[0]['customerID'];
-      await dbHelper.saveSale(cartItems, totalAmount, totalTax , indiTax, customerID, saleCurrency, activeUser );
-      for (var item in cartItems){
-      int sellQty = item['sellqty'];
-      int productid = item['productid'];
-      final product = await dbHelper.getProductById(productid);
-      setState(() {
-        productOnSale = product;
-      });
-      int productOnSaleQty = productOnSale[0]['stockQty'];
-      int remainingStock = productOnSaleQty - sellQty;
-      dbHelper.updateProductStockQty(productid, remainingStock);
-    }
-    }
-    Get.snackbar(
-      'Succes',
-      'Sales Done',
-      icon: const Icon(Icons.check, color: Colors.white,),
-      colorText: Colors.white,
-      backgroundColor: Colors.green,
-      snackPosition: SnackPosition.TOP,
-    );
-    clearCart();
+      final double totalTax = calculateTotalTax();
+      final double indiTax = calculateIndividualtax();
+      final int customerID;
+      String saleCurrency = selectedPayMethod.isEmpty ? defaultCurrency.toString() : returnCurrency();
+      double rate= selectedPayMethod.isEmpty ? defaultPayMethod[0]['rate'] : selectedPayMethod[0]['rate'] ;
+      
+      if(selectedCustomer.isEmpty){
+        customerID = 999999;
+        //= selectedCustomer[0]['customerID']
+        await dbHelper.saveSale(cartItems, totalAmount, totalTax , indiTax, customerID , saleCurrency, activeUser , rate);
+        for (var item in cartItems){
+        int sellQty = item['sellqty'];
+        int productid = item['productid'];
+        final product = await dbHelper.getProductById(productid);
+        setState(() {
+          productOnSale = product;
+        });
+        int productOnSaleQty = productOnSale[0]['stockQty'];
+        int remainingStock = productOnSaleQty - sellQty;
+        dbHelper.updateProductStockQty(productid, remainingStock);
+      }
+      }
+      else{
+        customerID = selectedCustomer[0]['customerID'];
+        await dbHelper.saveSale(cartItems, totalAmount, totalTax , indiTax, customerID, saleCurrency, activeUser, rate );
+        for (var item in cartItems){
+        int sellQty = item['sellqty'];
+        int productid = item['productid'];
+        final product = await dbHelper.getProductById(productid);
+        setState(() {
+          productOnSale = product;
+        });
+        int productOnSaleQty = productOnSale[0]['stockQty'];
+        int remainingStock = productOnSaleQty - sellQty;
+        dbHelper.updateProductStockQty(productid, remainingStock);
+      }
+      }
+      Get.snackbar(
+        'Succes',
+        'Sales Done',
+        icon: const Icon(Icons.check, color: Colors.white,),
+        colorText: Colors.white,
+        backgroundColor: Colors.green,
+        snackPosition: SnackPosition.TOP,
+      );
+      clearCart();
     } catch (e) {
       Get.snackbar(
         "Error",
@@ -1269,6 +1307,7 @@ String generateReceiptString({
     });
   }
 
+  ///=============================FETCH CODE========================================================
   void searchProducts(String query) async{
     final results = await dbHelper.searchProducts(query);
     setState(() {
@@ -1290,6 +1329,21 @@ String generateReceiptString({
     });
   }
 
+  Future<void> fetchTaxPayerDetails() async{
+    List<Map<String, dynamic>> data = await dbHelper.getTaxPayerDetails();
+    setState(() {
+      taxPayerDetails = data;
+      deviceID  = data.isNotEmpty? data[0]['deviceID'] : 0;
+    });
+  }
+
+  Future<void> fetchCompanyDetails() async{
+    List<Map<String, dynamic>> data = await dbHelper.getCompanyDetails();
+    setState(() {
+      companyDetails = data;
+    });
+  }
+
   Future<void> fetchDefaultCurrency() async {
     try {
       String? currency = await dbHelper.getDefaultCurrency();
@@ -1304,6 +1358,7 @@ String generateReceiptString({
     }
 
   }
+
 
   Future<void> fetchDefaultRate() async {
     try {
@@ -1337,7 +1392,45 @@ String generateReceiptString({
   }
 
   void addToCustomer(Map<String , dynamic> customer){
-    selectedCustomer.add(customer);
+    String address = customer['address'];
+    String tradeName = customer['tradeName'];
+    String tinNumber = customer['tinNumber'].toString();
+    String vatNumber = customer['vatNumber'].toString();
+    String email = customer['email'];
+    int customerId = customer['customerID'];
+
+
+    List<String> parts = address.split(',').map((e) => e.trim()).toList();
+    String houseNumber ='';
+    String street ='';
+    String city = '';
+    String province= '';
+    if (parts.length == 4) {
+      houseNumber = parts[0];
+      street = parts[1];
+      city = parts[2];
+      province = parts[3];
+    } else {
+      Get.snackbar(
+        "Wrong Address",
+        "Address format is wrong",
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+        icon: const Icon(Icons.error)
+      );
+    }
+    selectedCustomer.add({
+      'customerID':  customerId,
+      'tradeName': tradeName,
+      'tinNumber': tinNumber,
+      'vatNumber': vatNumber,
+      'houseNo': houseNumber,
+      'street': street,
+      'city': city,
+      'province': province,
+      'email': email,
+    });
     Get.snackbar(
       "Success",
       "Customer Added",
@@ -1348,8 +1441,19 @@ String generateReceiptString({
     Navigator.pop(context);
   }
 
-  void addToPayments(Map<String , dynamic> payMethod){
-    selectedPayMethod.add(payMethod);
+  void addToPayments(Map<String , dynamic> payMethod) async{
+    if(selectedPayMethod.isEmpty){
+      setState(() {
+        selectedPayMethod.add(payMethod);
+      });
+    }
+    else{
+      selectedPayMethod.clear();
+      setState(() {
+        selectedPayMethod.add(payMethod);
+      });
+    }
+    
 
     Get.snackbar(
       "Success",
@@ -1366,7 +1470,6 @@ String generateReceiptString({
       String selectedCurrency = selectedPayMethod[0]['currency'];
       print(selectedCurrency);
       return selectedCurrency;
-      
     } else {
       return defaultCurrency ?? 'N/A';
     }
@@ -1449,8 +1552,6 @@ String generateReceiptString({
     return indiTax;
   }
 
- 
-
   double calculateTotalPrice() {
     return cartItems.fold(0.0, (total, item) {
       final double sellingPrice = item['sellingPrice'] ?? 0.0; // Default to 0.0 if null
@@ -1479,241 +1580,315 @@ String generateReceiptString({
       isDismissible: false,
       context: context,
       builder: (context){
-        return Container(
-          height: 600,
-          child: Padding(
-            padding:  EdgeInsets.only(
-              left: 16.0,
-              right: 16.0,
-              top: 16.0,
-              bottom: MediaQuery.of(context).viewInsets.bottom
-            ),
-            child: Form(
-              key: formKey,
-              child: ListView(
-                scrollDirection: Axis.vertical,
-                  children: [
-                    Center(
-                      child: Container(
-                        height: 5,
-                        width: 100,
-                        decoration: BoxDecoration(
-                          color: kDark,
-                          borderRadius: BorderRadius.circular(20), 
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 10,),
-                    Row(
-                      children: [
-                        IconButton(onPressed: (){
-                          Navigator.pop(context);
-                        }, icon:const Icon(Icons.arrow_circle_left_sharp, size: 40, color: kDark,)),
-                        const Center(child: const Text("Customer Details" , style: TextStyle(color: Colors.black,fontSize: 18, fontWeight: FontWeight.w500),)),
-                      ],
-                    ),
-                    SizedBox(height: 15,),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      children: [
-                        Text("Existing?"),
-                        SizedBox(height: 10,),
-                        Expanded(
-                          child: TextField(
-                            controller: searchCustomer,
-                            onChanged: searchCustomerDetails,
-                            decoration: InputDecoration(
-                              labelText: 'Name',
-                              labelStyle: TextStyle(color:Colors.grey.shade600 ),
-                              filled: true,
-                              fillColor: Colors.grey.shade300,
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(12.0),
-                                borderSide: BorderSide.none
-                              )
-                            ),
-                            
-                          )
-                        ),
-                        IconButton(
-                          onPressed: (){
-                            searchCustomerDetails(searchCustomer.text);
-                            setState(() {
-                              isActve = false;
-                            });
-                          },
-                          icon: Icon(Icons.person_search_rounded)
-                        )
-                      ],
-                    ),
-                    SizedBox(height: 10,),
-                    Container(
-                      height: 100,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(10.0),
-                        border: Border.all(width: 1 , color: const Color.fromARGB(255, 14, 19, 29)),
-                        color:const Color.fromARGB(255, 14, 19, 29),
-                      ),
-                      child: ListView.builder(
-                        itemCount: customerDetails.length,
-                        itemBuilder: (context , index){
-                          final customer = customerDetails[index];
-                          return Container(
-                            margin: const EdgeInsets.symmetric(vertical: 5.0, horizontal: 10.0),
-                            decoration: BoxDecoration(
-                              border: Border.all(color: Colors.grey, width: 1.0),
-                              borderRadius: BorderRadius.circular(10.0), 
-                              color: Colors.white, 
-                            ),
-                            child: ListTile(
-                              title: Text(customer['tradeName']),
-                              subtitle: Text("Price: \$${customer['tinNumber']}"),
-                              trailing: IconButton(onPressed: ()=>addToCustomer(customer), icon:const Icon(Icons.add_circle_outline_sharp)),
-                            ),
-                          );
-                        }
-                      ),
-                    ),
-                    SizedBox(height: 10,),
-
-                    TextFormField(
-                      controller: customerNameController,
-                      decoration: InputDecoration(
-                          labelText: 'Trade Name',
-                          labelStyle: TextStyle(color:Colors.grey.shade600 ),
-                          enabled: true,
-                          filled: true,
-                          fillColor: Colors.grey.shade300,
-                          border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12.0),
-                              borderSide: BorderSide.none
-                          )
-                      ),
-                    ),
-                    const SizedBox(height: 10,),
-                    TextFormField(
-                      controller: tinController,
-                      decoration: InputDecoration(
-                          labelText: 'TIN Number',
-                          labelStyle: TextStyle(color:Colors.grey.shade600 ),
-                          enabled: true,
-                          filled: true,
-                          fillColor: Colors.grey.shade300,
-                          border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12.0),
-                              borderSide: BorderSide.none
-                          )
-                      ),
-                      validator: (value){
-                          if(value!.isEmpty){
-                            return "TIN Required";
-                          }return null;
-                        },
-                    ),
-                    const SizedBox(height: 10,),
-                    TextFormField(
-                      controller: vatController,
-                      decoration: InputDecoration(
-                          labelText: 'VAT Number',
-                          enabled: true,
-                          labelStyle: TextStyle(color:Colors.grey.shade600 ),
-                          filled: true,
-                          fillColor: Colors.grey.shade300,
-                          border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12.0),
-                              borderSide: BorderSide.none
-                          )
-                      ),
-                      validator: (value){
-                          if(value!.isEmpty){
-                            return "VAT Required";
-                          }return null;
-                        },
-                    ),
-                    const SizedBox(height: 10,),
-                    TextFormField(
-                      controller: addressController,
-                      decoration: InputDecoration(
-                          labelText: 'Address',
-                          labelStyle: TextStyle(color:Colors.grey.shade600 ),
-                          enabled: true,
-                          filled: true,
-                          fillColor: Colors.grey.shade300,
-                          border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12.0),
-                              borderSide: BorderSide.none
-                          )
-                      ),
-                    ),
-                    const SizedBox(height: 10,),
-                    TextFormField(
-                      controller: emailController,
-                      decoration: InputDecoration(
-                          labelText: 'Email',
-                          labelStyle: TextStyle(color:Colors.grey.shade600 ),
-                          enabled: true,
-                          filled: true,
-                          fillColor: Colors.grey.shade300,
-                          border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12.0),
-                              borderSide: BorderSide.none
-                          )
-                      ),
-                    ),
-                    const SizedBox(height: 10,),
-                    
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () async{
-                          if(formKey.currentState!.validate()){
-                            final db = DatabaseHelper();
-                            await db.addCustomer(Customer(
-                              tradeName: customerNameController.text,
-                              tinNumber: int.parse(tinController.text),
-                              vatNumber: int.parse(vatController.text),
-                              address: addressController.text,
-                              email: emailController.text
-                            ));
-                            setState(() {
-                              selectedCustomer.add({
-                                'customerID': nextCustomerID,
-                                'tradeName': customerNameController.text,
-                                'tinNumber': tinController.text,
-                                'vatNumber': vatController.text,
-                                'address': addressController.text,
-                                'email': emailController.text,
-                              });
-                            });
-                            
-                            Navigator.pop(context);
-                            Get.snackbar(
-                              'Success',
-                              'Customer Details Saved',
-                              snackPosition: SnackPosition.TOP,
-                              backgroundColor: Colors.green,
-                              colorText: Colors.white
-                            );
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: kDark,
-                          padding:const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12.0),
+        return StatefulBuilder(
+          builder: (context , setState){
+            return Container(
+            height: 600,
+            child: Padding(
+              padding:  EdgeInsets.only(
+                left: 16.0,
+                right: 16.0,
+                top: 16.0,
+                bottom: MediaQuery.of(context).viewInsets.bottom
+              ),
+              child: Form(
+                key: formKey,
+                child: ListView(
+                  scrollDirection: Axis.vertical,
+                    children: [
+                      Center(
+                        child: Container(
+                          height: 5,
+                          width: 100,
+                          decoration: BoxDecoration(
+                            color: kDark,
+                            borderRadius: BorderRadius.circular(20), 
                           ),
                         ),
-                        child: const Text(
-                          'Save Customer',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                      ),
+                      const SizedBox(height: 10,),
+                      Row(
+                        children: [
+                          IconButton(onPressed: (){
+                            Navigator.pop(context);
+                          }, icon:const Icon(Icons.arrow_circle_left_sharp, size: 40, color: kDark,)),
+                          const Center(child: const Text("Customer Details" , style: TextStyle(color: Colors.black,fontSize: 18, fontWeight: FontWeight.w500),)),
+                        ],
+                      ),
+                      SizedBox(height: 15,),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.start,
+                        children: [
+                          Text("Existing?"),
+                          SizedBox(height: 10,),
+                          Expanded(
+                            child: TextField(
+                              controller: searchCustomer,
+                              onChanged: searchCustomerDetails,
+                              decoration: InputDecoration(
+                                labelText: 'Name',
+                                labelStyle: TextStyle(color:Colors.grey.shade600 ),
+                                filled: true,
+                                fillColor: Colors.grey.shade300,
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12.0),
+                                  borderSide: BorderSide.none
+                                )
+                              ),
+                              
+                            )
+                          ),
+                          IconButton(
+                            onPressed: (){
+                              searchCustomerDetails(searchCustomer.text);
+                              setState(() {
+                                isActve = false;
+                              });
+                            },
+                            icon: Icon(Icons.person_search_rounded)
+                          )
+                        ],
+                      ),
+                      SizedBox(height: 10,),
+                      Container(
+                        height: 100,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(10.0),
+                          border: Border.all(width: 1 , color: const Color.fromARGB(255, 14, 19, 29)),
+                          color:const Color.fromARGB(255, 14, 19, 29),
+                        ),
+                        child: ListView.builder(
+                          itemCount: customerDetails.length,
+                          itemBuilder: (context , index){
+                            final customer = customerDetails[index];
+                            return Container(
+                              margin: const EdgeInsets.symmetric(vertical: 5.0, horizontal: 10.0),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.grey, width: 1.0),
+                                borderRadius: BorderRadius.circular(10.0), 
+                                color: Colors.white, 
+                              ),
+                              child: ListTile(
+                                title: Text(customer['tradeName']),
+                                subtitle: Text("TIN: ${customer['tinNumber']}"),
+                                trailing: IconButton(onPressed: ()=>addToCustomer(customer), icon:const Icon(Icons.add_circle_outline_sharp)),
+                              ),
+                            );
+                          }
                         ),
                       ),
-                    ),
-                  ],
-                
+                      SizedBox(height: 10,),
+
+                      TextFormField(
+                        controller: customerNameController,
+                        decoration: InputDecoration(
+                            labelText: 'Trade Name',
+                            labelStyle: TextStyle(color:Colors.grey.shade600 ),
+                            enabled: true,
+                            filled: true,
+                            fillColor: Colors.grey.shade300,
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12.0),
+                                borderSide: BorderSide.none
+                            )
+                        ),
+                      ),
+                      const SizedBox(height: 10,),
+                      TextFormField(
+                        controller: tinController,
+                        decoration: InputDecoration(
+                            labelText: 'TIN Number',
+                            labelStyle: TextStyle(color:Colors.grey.shade600 ),
+                            enabled: true,
+                            filled: true,
+                            fillColor: Colors.grey.shade300,
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12.0),
+                                borderSide: BorderSide.none
+                            )
+                        ),
+                        validator: (value){
+                            if(value!.isEmpty){
+                              return "TIN Required";
+                            }return null;
+                          },
+                      ),
+                      const SizedBox(height: 10,),
+                      TextFormField(
+                        controller: vatController,
+                        decoration: InputDecoration(
+                            labelText: 'VAT Number',
+                            enabled: true,
+                            labelStyle: TextStyle(color:Colors.grey.shade600 ),
+                            filled: true,
+                            fillColor: Colors.grey.shade300,
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12.0),
+                                borderSide: BorderSide.none
+                            )
+                        ),
+                        validator: (value){
+                            if(value!.isEmpty){
+                              return "VAT Required";
+                            }return null;
+                          },
+                      ),
+                      const SizedBox(height: 10,),
+                      TextFormField(
+                        controller: houseNoController,
+                        decoration: InputDecoration(
+                            labelText: 'House Number',
+                            labelStyle: TextStyle(color:Colors.grey.shade600 ),
+                            enabled: true,
+                            filled: true,
+                            fillColor: Colors.grey.shade300,
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12.0),
+                                borderSide: BorderSide.none
+                            )
+                        ),
+                      ),
+                      const SizedBox(height: 10,),
+                      TextFormField(
+                        controller: streetNameController,
+                        decoration: InputDecoration(
+                            labelText: 'Street Name',
+                            labelStyle: TextStyle(color:Colors.grey.shade600 ),
+                            enabled: true,
+                            filled: true,
+                            fillColor: Colors.grey.shade300,
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12.0),
+                                borderSide: BorderSide.none
+                            )
+                        ),
+                      ),
+                      const SizedBox(height: 10,),
+                      TextFormField(
+                        controller: cityController,
+                        decoration: InputDecoration(
+                            labelText: 'City',
+                            labelStyle: TextStyle(color:Colors.grey.shade600 ),
+                            enabled: true,
+                            filled: true,
+                            fillColor: Colors.grey.shade300,
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12.0),
+                                borderSide: BorderSide.none
+                            )
+                        ),
+                      ),
+                      const SizedBox(height: 10,),
+                      TextFormField(
+                        controller: provinceController,
+                        decoration: InputDecoration(
+                            labelText: 'Province',
+                            labelStyle: TextStyle(color:Colors.grey.shade600 ),
+                            enabled: true,
+                            filled: true,
+                            fillColor: Colors.grey.shade300,
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12.0),
+                                borderSide: BorderSide.none
+                            )
+                        ),
+                      ),
+                      const SizedBox(height: 10,),
+                      TextFormField(
+                        controller: emailController,
+                        decoration: InputDecoration(
+                            labelText: 'Email',
+                            labelStyle: TextStyle(color:Colors.grey.shade600 ),
+                            enabled: true,
+                            filled: true,
+                            fillColor: Colors.grey.shade300,
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12.0),
+                                borderSide: BorderSide.none
+                            )
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      CheckboxListTile(
+                          title: const Text("Fiscal"),
+                          value: isFiscaltag1,
+                          onChanged:(bool? value){
+                            setState(() {
+                              isFiscaltag1 = value!;
+                              if(isFiscaltag1) isNonFiscal = false;
+                            });
+                          },
+                        ),
+                    const SizedBox(height: 16,),
+                    CheckboxListTile(
+                          title: const Text("Non Fiscal"),
+                          value: isNonFiscal,
+                          onChanged:(bool? value){
+                            setState(() {
+                              isNonFiscal = value!;
+                              if(isNonFiscal) isFiscaltag1 = false;
+                            });
+                          },
+                        ),
+                      const SizedBox(height: 10,),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: () async{
+                            if(formKey.currentState!.validate()){
+                              final db = DatabaseHelper();
+                              await db.addCustomer(Customer(
+                                tradeName: customerNameController.text,
+                                tinNumber: int.parse(tinController.text),
+                                vatNumber: int.parse(vatController.text),
+                                address: '${houseNoController.text},${streetNameController.text},${cityController.text},${provinceController.text}',
+                                email: emailController.text,
+                                isFiscal: isFiscaltag1 ? 1 : 0,
+                              ));
+                              setState(() {
+                                selectedCustomer.add({
+                                  'customerID': nextCustomerID,
+                                  'tradeName': customerNameController.text,
+                                  'tinNumber': tinController.text,
+                                  'vatNumber': vatController.text,
+                                  'houseNo': houseNoController.text,
+                                  'street': streetNameController.text,
+                                  'city': cityController.text,
+                                  'province': provinceController.text,
+                                  'email': emailController.text,
+                                });
+                              });
+                              
+                              Navigator.pop(context);
+                              Get.snackbar(
+                                'Success',
+                                'Customer Details Saved',
+                                snackPosition: SnackPosition.TOP,
+                                backgroundColor: Colors.green,
+                                colorText: Colors.white
+                              );
+                            }
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: kDark,
+                            padding:const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12.0),
+                            ),
+                          ),
+                          child: const Text(
+                            'Save Customer',
+                            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+                          ),
+                        ),
+                      ),
+                    ],
+                  
+                ),
               ),
             ),
-          ),
+          );
+          }
         );
       }
     );
@@ -1890,6 +2065,7 @@ String generateReceiptString({
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('username'); // Returns null if not set
   }
+
   Future<String?> getUSerRole() async{
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString('role');
@@ -1918,18 +2094,76 @@ String generateReceiptString({
     await dbHelper.resetActiveUser();
   }
   
+  Future<void> printQuoteHeader() async{
+    SunmiPrintAlign.CENTER;
+    //await SunmiPrinter.setFontSize(SunmiFontSize.LG);
+    await SunmiPrinter.printText("QUOTATION" , style: SunmiTextStyle(bold: true, align: SunmiPrintAlign.CENTER));
+    await SunmiPrinter.lineWrap(3);
+    await SunmiPrinter.printText("${taxPayerDetails[0]['taxPayerName']}", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+    await SunmiPrinter.resetFontSize();
+    await SunmiPrinter.printText("TIN: ${taxPayerDetails[0]['taxPayerTin']}" ,style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+    await SunmiPrinter.printText("VAT: ${taxPayerDetails[0]['taxPayerVatNumber']}" ,style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+    await SunmiPrinter.printText("${companyDetails[0]['address']}", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+    await SunmiPrinter.printText("${companyDetails[0]['tel']}", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+    await SunmiPrinter.printText("================================");
+  }
+
+  Future<void> printQuoteCustomer() async{
+    await SunmiPrinter.setAlignment(SunmiPrintAlign.LEFT);
+    await SunmiPrinter.printText("CUSTOMER INFORMATION", style: SunmiTextStyle(bold: true, align: SunmiPrintAlign.CENTER));
+    await SunmiPrinter.printText("--------------------------------");
+    await SunmiPrinter.printText("Name: ${selectedCustomer.isNotEmpty ? selectedCustomer[0]['tradeName'] : 'Cash'}");
+    await SunmiPrinter.printText("TIN: ${selectedCustomer.isNotEmpty ? selectedCustomer[0]['tinNumber'] : '0000000000'}");
+    await SunmiPrinter.printText("VAT: ${selectedCustomer.isNotEmpty ? selectedCustomer[0]['vatNumber'] : '000000000'}");
+    await SunmiPrinter.printText("Email: ${selectedCustomer.isNotEmpty ? selectedCustomer[0]['email'] : '----'}");
+    await SunmiPrinter.printText("--------------------------------");
+    await SunmiPrinter.lineWrap(1);
+  }
+
+  Future<void> printQuoteItems() async{
+    String currency = selectedPayMethod.isNotEmpty ? selectedPayMethod[0]['currency'] : defaultPayMethod[0]['currency'] ;
+    await SunmiPrinter.printText("Currency: $currency");
+    await SunmiPrinter.printText("--------------------------------");
+    await SunmiPrinter.printText("ITEMS", style: SunmiTextStyle(bold: true, align: SunmiPrintAlign.CENTER));
+    await SunmiPrinter.printText("--------------------------------");
+    double quoeTotal = 0;
+    for(var item in cartItems){
+      double quoteRate = selectedPayMethod.isNotEmpty ? selectedPayMethod[0]['rate'] : defaultPayMethod[0]['rate'];
+      double linePrice = item['sellingPrice'] * quoteRate;
+      double lineTotal = linePrice * item['sellqty'];
+      quoeTotal += lineTotal;
+      String itemLine = "${item['productName']} x${item['sellqty']}";
+      await SunmiPrinter.printText(itemLine);
+      String priceLine = "@\$${item['sellingPrice']} = \$$lineTotal";
+      await SunmiPrinter.setAlignment(SunmiPrintAlign.RIGHT);
+      await SunmiPrinter.printText(priceLine);
+      await SunmiPrinter.setAlignment(SunmiPrintAlign.LEFT);
+      await SunmiPrinter.lineWrap(1);
+    }
+    await SunmiPrinter.printText("--------------------------------");
+    await SunmiPrinter.printText("Total: $currency-${quoeTotal.toStringAsFixed(2)}");
+    await SunmiPrinter.printText("--------------------------------");
+    await SunmiPrinter.lineWrap(5);
+    await SunmiPrinter.printText("Powered by tiger.co.zw", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+  }
+
+  
+  
   saveQoutation() async{
     if(cartItems.isEmpty){
       Get.snackbar(
         "Save Error",
-        "Cannot sace qoutation , cart is empty",
+        "Cannot save qoutation , cart is empty",
         snackPosition: SnackPosition.TOP,
         backgroundColor: Colors.amber,
         icon:const Icon(Icons.warning)
       );
     }else{
       try {
-        
+        await printQuoteHeader();
+        await printQuoteCustomer();
+        await printQuoteItems();
+        await _finishPrint();
       } catch (e) {
         Get.snackbar(
           "Save Quotation Error",
@@ -2210,7 +2444,7 @@ String generateReceiptString({
                     
                   ],
                 ),
-                const SizedBox(height: 20,),
+                const SizedBox(height: 10,),
                 const Text(
                   "Cart",
                   style: TextStyle(fontSize: 16 , fontWeight: FontWeight.w500),
@@ -2271,7 +2505,8 @@ String generateReceiptString({
                           } else {
                               // Swipe to the left to add or subtract
                               //_showQuantityAdjustmentDialog(product);
-                            return false; // Prevent dismissal
+                            //return false; // Prevent dismissal
+                            addToCart(product);
                           }
                         },
                         onDismissed: (direction) {
@@ -2297,7 +2532,11 @@ String generateReceiptString({
                           child: ListTile(
                               title: Text(product['productName']),
                               subtitle: Text("Price: \$${product['sellingPrice']} - Tax: ${product['tax'].toUpperCase()}"),
-                              trailing: IconButton(onPressed: (){}, icon:const Icon(Icons.minimize_outlined)),
+                              trailing: IconButton(onPressed: (){
+                                setState(() {
+                                  product['sellqty'] -= 1;
+                                });
+                              }, icon:const Icon(Icons.minimize_outlined)),
                               leading: Container(
                                 width: 40,
                                 height: 40,
@@ -2321,7 +2560,8 @@ String generateReceiptString({
                 ),
                 const SizedBox(height: 10,),
                 Container(
-                  height: 80,
+                  height: 100,
+                  width: 600,
                   decoration: BoxDecoration(
                     color: Colors.blue,
                     borderRadius: BorderRadius.circular(10.0)
@@ -2329,18 +2569,11 @@ String generateReceiptString({
                   child: Padding(
                     padding: const EdgeInsets.all(8.0),
                     child: SingleChildScrollView(
-                      scrollDirection: Axis.horizontal,
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      scrollDirection: Axis.vertical,
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.start,
-                            children: [
-                              Text(defaultCurrency != null && selectedPayMethod.isEmpty ? '$defaultCurrency' : returnCurrency() , style:const TextStyle(color: Colors.white , fontWeight: FontWeight.bold , fontSize: 20),),
-                              Text(":\$${calculateTotalPrice().toStringAsFixed(2)}" , style:const TextStyle(color: Colors.white , fontWeight: FontWeight.bold , fontSize: 20),),
-                            ],
-                          ),
-                          const SizedBox(width: 20),
+                          Text("${defaultCurrency != null && selectedPayMethod.isEmpty ? '$defaultCurrency' : returnCurrency() }:\$${calculateTotalPrice().toStringAsFixed(2)}", style:const TextStyle(color: Colors.white , fontWeight: FontWeight.bold , fontSize: 20),),
                           //Text("\$${calculateTotalPrice().toStringAsFixed(2)}" , style: TextStyle(color: Colors.white , fontWeight: FontWeight.bold , fontSize: 20),),
                           Text("QTY: ${cartItems.length}" , style:const TextStyle(color: Colors.white , fontWeight: FontWeight.bold , fontSize: 20),),
                           const SizedBox(width: 20),
@@ -2615,6 +2848,7 @@ String generateReceiptString({
                                             
                                             // Complete the sale if all validations pass
                                             DateTime transactionTime = DateTime.now();
+                                            amountPaid = paid;
                                             String formattedDate = DateFormat("yyyy-MM-ddTHH:mm:ss").format(transactionTime);
                                             currentDateTime = DateTime.parse(formattedDate);
                                             await addItem();
@@ -2636,7 +2870,6 @@ String generateReceiptString({
                                               transitionDuration: Duration.zero,
                                               ),
                                             );
-
                                             } catch (e) {
                                               Get.snackbar(
                                                 "Error",

@@ -31,42 +31,62 @@ class _SalesPageState extends State<SalesPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Sales Summary'),
+      appBar: PreferredSize(
+        preferredSize: Size.fromHeight(50)
+        ,child: AppBar(
+          centerTitle: true,
+          title: const Text("Sales Data" , style: TextStyle(fontSize: 18, color: Colors.white, fontWeight:  FontWeight.bold),),
+          iconTheme: const IconThemeData(color: Colors.white),
+          backgroundColor: Colors.blue,
+          shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(25),
+                  bottomRight: Radius.circular(25)
+                )
+              ),
+        )
       ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: SingleChildScrollView(
-                child: DataTable(
-                  columns: const [
-                    DataColumn(label: Text('Invoice ID')),
-                    DataColumn(label: Text('Date')),
-                    DataColumn(label: Text('Product')),
-                    DataColumn(label: Text('Quantity')),
-                    DataColumn(label: Text('Selling Price')),
-                    DataColumn(label: Text('Total Price')),
-                    DataColumn(label: Text('Tax')),
-                  ],
-                  rows: salesData
-                      .map(
-                        (sale) => DataRow(
-                          cells: [
-                            DataCell(Text(sale['invoiceId'].toString())),
-                            DataCell(Text(sale['date'].toString())),
-                            DataCell(Text(sale['productName'].toString())),
-                            DataCell(Text(sale['quantity'].toString())),
-                            DataCell(Text(sale['sellingPrice'].toString())),
-                            DataCell(Text(sale['totalPrice'].toString())),
-                            DataCell(Text(sale['tax'].toString())),
-                          ],
-                        ),
-                      )
-                      .toList(),
-                ),
-              ),
+            scrollDirection: Axis.vertical,
+            child: Column(
+              children: [
+                const SizedBox(height: 20,),
+                SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: SingleChildScrollView(
+                      child: DataTable(
+                        columns: const [
+                          DataColumn(label: Text('Invoice ID')),
+                          DataColumn(label: Text('Date')),
+                          DataColumn(label: Text('Product')),
+                          DataColumn(label: Text('Quantity')),
+                          DataColumn(label: Text('Selling Price')),
+                          DataColumn(label: Text('Total Price')),
+                          DataColumn(label: Text('Tax')),
+                        ],
+                        rows: salesData
+                            .map(
+                              (sale) => DataRow(
+                                cells: [
+                                  DataCell(Text(sale['invoiceId'].toString())),
+                                  DataCell(Text(sale['date'].toString())),
+                                  DataCell(Text(sale['productName'].toString())),
+                                  DataCell(Text(sale['quantity'].toString())),
+                                  DataCell(Text(sale['sellingPrice'].toString())),
+                                  DataCell(Text(sale['totalPrice'].toString())),
+                                  DataCell(Text(sale['tax'].toString())),
+                                ],
+                              ),
+                            )
+                            .toList(),
+                      ),
+                    ),
+                  ),
+              ],
             ),
+          ),
     );
   }
 }

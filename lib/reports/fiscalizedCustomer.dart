@@ -1,16 +1,17 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:pulsepay/SQLite/database_helper.dart';
 
-
-class Customerslist extends StatefulWidget {
-  const Customerslist({super.key});
+class Fiscalizedcustomers extends StatefulWidget {
+  const Fiscalizedcustomers({super.key});
 
   @override
-  _CustomerslistState createState() => _CustomerslistState();
+  State<Fiscalizedcustomers> createState() => _FiscalizedcustomersState();
 }
 
-class _CustomerslistState extends State<Customerslist> {
+class _FiscalizedcustomersState extends State<Fiscalizedcustomers> {
+
   final DatabaseHelper dbHelper = DatabaseHelper();
   List<Map<String, dynamic>> customersData = [];
   bool isLoading = true;
@@ -18,17 +19,17 @@ class _CustomerslistState extends State<Customerslist> {
   @override
   void initState() {
     super.initState();
-    fetchSalesData();
+    fetchCustomerData();
   }
 
-  Future<void> fetchSalesData() async {
-    List<Map<String, dynamic>> data = await dbHelper.getAllCustomers();
+  Future<void> fetchCustomerData() async {
+    List<Map<String, dynamic>> data = await dbHelper.getAllFiscalCustomers();
     setState(() {
       customersData = data;
       isLoading = false;
     });
   }
-
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -36,7 +37,7 @@ class _CustomerslistState extends State<Customerslist> {
           preferredSize: Size.fromHeight(50)
           ,child: AppBar(
             centerTitle: true,
-            title: const Text("Customers List" , style: TextStyle(fontSize: 18, color: Colors.white, fontWeight:  FontWeight.bold),),
+            title: const Text("Fiscalized Customers List" , style: TextStyle(fontSize: 18, color: Colors.white, fontWeight:  FontWeight.bold),),
             leading: IconButton(
               icon: const Icon(Icons.arrow_back_ios_new_rounded),
               onPressed: () {
@@ -55,13 +56,14 @@ class _CustomerslistState extends State<Customerslist> {
         ),
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-            scrollDirection: Axis.vertical,
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.only(top: 20),
-                  child: SingleChildScrollView(
+          : Padding(
+            padding: const EdgeInsets.only(top: 20),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.vertical,
+              child: Column(
+                children: [
+                  const SizedBox(height: 10,),  
+                  SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: SingleChildScrollView(
                         child: DataTable(
@@ -78,7 +80,6 @@ class _CustomerslistState extends State<Customerslist> {
                             DataColumn(label: Text('VAT')),
                             DataColumn(label: Text('Address')),
                             DataColumn(label: Text('Email')),
-                            DataColumn(label: Text('isFiscal')),
                           ],
                           rows: customersData
                               .map(
@@ -90,7 +91,6 @@ class _CustomerslistState extends State<Customerslist> {
                                     DataCell(Text(customer['vatNumber'].toString())),
                                     DataCell(Text(customer['address'].toString())),
                                     DataCell(Text(customer['email'].toString())),
-                                    DataCell(Text(customer['isFiscal'].toString()))
                                   ],
                                 ),
                               )
@@ -98,8 +98,8 @@ class _CustomerslistState extends State<Customerslist> {
                         ),
                       ),
                     ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
     );
