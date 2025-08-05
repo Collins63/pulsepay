@@ -96,6 +96,7 @@ class _PosState extends State<Pos>{
   List<Map<String,dynamic>> dayReceiptCounter = [];
   final formKey = GlobalKey<FormState>();
   final paidKey = GlobalKey<FormState>();
+  final freePriceFormKey = GlobalKey<FormState>();
   bool isActve = true;
   String? defaultCurrency;
   double? defaultRate;
@@ -120,7 +121,7 @@ class _PosState extends State<Pos>{
   String? first16Chars;
   // ignore: non_constant_identifier_names
   String? receiptDeviceSignature_signature;
-  String genericzimraqrurl = "https://fdms.zimra.co.zw/";
+  String genericzimraqrurl = "https://fdmstest.zimra.co.zw/";
   int deviceID = 0;
   int? nextCustomerID;
   final BlueThermalPrinter bluetooth = BlueThermalPrinter.instance;
@@ -476,15 +477,15 @@ Future<void> _finishPrint() async {
       taxCode = "B";
       itemTax = totalPrice * double.parse(taxPercent);
     } else if (productTax == "vat") {
-      taxID = 1;
+      taxID = 3;
       taxPercent = "15.00"; // Convert 15% to decimal
-      taxCode = "A";
+      taxCode = "C";
       itemTax = totalPrice * 0.15;
       salesAmountwithTax += totalPrice;
     } else {
-      taxID = 3;
+      taxID = 1;
       taxPercent = "0";
-      taxCode = "C";
+      taxCode = "A";
       itemTax = totalPrice * 0;
     }
 
@@ -774,7 +775,7 @@ List<Map<String, dynamic>> generateReceiptTaxes(List<dynamic> receiptItems) {
   return taxGroups.values.map((tax) {
     final taxID = tax["taxID"];
     final taxCode = tax["taxCode"];
-    final isGroupC = (taxCode == "C" || taxID == 3);
+    final isGroupC = (taxCode == "A" || taxID == 1);
 
     return {
       "taxID": taxID.toString(),
@@ -835,7 +836,7 @@ String generateTaxSummary(List<dynamic> receiptItems) {
     final salesAmount = (tax["salesAmountWithTax"] * 100).round().toString();
 
     // Omit taxPercent for taxCode A
-    if (taxCode == "C") {
+    if (taxCode == "A") {
       return "$taxCode$taxAmount$salesAmount";
     }
 
@@ -973,7 +974,7 @@ String generateTaxSummary(List<dynamic> receiptItems) {
   
   Future<String> ping() async {
     String apiEndpointPing =
-        "https://fdmsapi.zimra.co.zw/Device/v1/$deviceID/Ping";
+        "https://fdmsapitest.zimra.co.zw/Device/v1/$deviceID/Ping";
     const String deviceModelName = "Server";
     const String deviceModelVersion = "v1"; 
 
@@ -1067,7 +1068,7 @@ String generateTaxSummary(List<dynamic> receiptItems) {
       
     if(pingResponse=="200"){
       String apiEndpointSubmitReceipt =
-      "https://fdmsapi.zimra.co.zw/Device/v1/$deviceID/SubmitReceipt";
+      "https://fdmsapitest.zimra.co.zw/Device/v1/$deviceID/SubmitReceipt";
       const String deviceModelName = "Server";
       const String deviceModelVersion = "v1";  
 
@@ -1473,6 +1474,22 @@ String generateTaxSummary(List<dynamic> receiptItems) {
     } else {
       return defaultCurrency ?? 'N/A';
     }
+  }
+
+  void addToCartFreePrice(int productId ,String productName ,String barcode, int hsCode, double costPrice, double sellingPrice,
+    double sellqty, String tax, double sellTax ,int stockQty){
+    cartItems.add({
+      'productid':productId,
+      'productName':productName,
+      'barcode':barcode,
+      'hsCode': hsCode,
+      'costPrice': costPrice,
+      'sellingPrice': sellingPrice,
+      'sellqty': sellqty,
+      'tax': tax,
+      'sellTax': sellTax,
+      'stockQty': stockQty,
+    });
   }
 
   void addToCart(Map<String, dynamic> product) {
@@ -2177,6 +2194,102 @@ String generateTaxSummary(List<dynamic> receiptItems) {
     }
   }
 
+  void freePriceDialog(Map<String, dynamic> product){
+    TextEditingController quantity = TextEditingController();
+    TextEditingController price = TextEditingController();
+    int stockQty = product['stockQty'];
+    if(stockQty > 0){
+      showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context){
+        return AlertDialog(
+          title:  const Text("Price and quantity"),
+          content:Form(
+            key: freePriceFormKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min ,
+              children: [
+                const Text("Please enter price and quantity"),
+                const SizedBox(height: 10,),
+                TextFormField(
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(
+                      RegExp(r'^\d+\.?\d{0,2}$'), // allows whole numbers and decimals, up to 2 decimal places
+                    ),
+                  ],
+                  controller: price,
+                  decoration: InputDecoration(
+                    labelText: 'Price',
+                    labelStyle: TextStyle(color:Colors.grey.shade600 ),
+                    filled: true,
+                    fillColor: Colors.grey.shade300,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12.0),
+                      borderSide: BorderSide.none
+                    )
+                  ),
+                  style: const TextStyle(color: Colors.black),
+                  validator: (value){
+                  if(value!.isEmpty){
+                    return "Price is Required";
+                  }return null;
+                  },
+                ),
+                const SizedBox(height: 10,),
+                TextFormField(
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly
+                  ],
+                  controller: quantity,
+                  decoration: InputDecoration(
+                    labelText: 'Quantity',
+                    labelStyle: TextStyle(color:Colors.grey.shade600 ),
+                    filled: true,
+                    fillColor: Colors.grey.shade300,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12.0),
+                      borderSide: BorderSide.none
+                    )
+                  ),
+                  style: const TextStyle(color: Colors.black),
+                  validator: (value){
+                  if(value!.isEmpty){
+                    return "Price is Required";
+                  }return null;
+                  },
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close the dialog
+              },
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                addToCartFreePrice(product['productid'], product['productName'], product['barcode'], product['hsCode'], product['costPrice'], double.tryParse(price.text)!, double.tryParse(quantity.text)!, product['tax'], product['sellTax'] ?? 0.0, product['stockQty']);
+              },
+              child: const Text('Submit'),
+            ),
+          ],
+        );
+      }
+      );
+    }else{
+      Get.snackbar("Low Stock",
+        "Product is out of stock",
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.amber,
+        colorText: Colors.black,
+        icon: const Icon(Icons.warning)
+      );
+    }
+  }
+
   //=================END OF FUNCTIONS============================//a
   //======================================================//
   
@@ -2278,7 +2391,16 @@ String generateTaxSummary(List<dynamic> receiptItems) {
                         child: ListTile(
                           title: Text(product['productName']),
                           subtitle: Text("Price: \$${product['sellingPrice']}"),
-                          trailing: IconButton(onPressed: ()=>addToCart(product), icon:const Icon(Icons.add_circle_outline_sharp)),
+                          trailing: SizedBox(
+                            width: 100,
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.start,
+                              children: [
+                                IconButton(onPressed: ()=>addToCart(product), icon:const Icon(Icons.add_circle_outline_sharp)),
+                                IconButton(onPressed: ()=>freePriceDialog(product), icon:const Icon(Icons.accessibility_sharp)),
+                              ],
+                            ),
+                          ),
                         ),
                       );
                     }
@@ -2758,7 +2880,7 @@ String generateTaxSummary(List<dynamic> receiptItems) {
                                           child: TextFormField(
                                             inputFormatters: [
                                               FilteringTextInputFormatter.allow(
-                                                RegExp(r'^\d*\.?\d*'), // Allows only digits and a single decimal point
+                                                RegExp(r'^\d+\.?\d{0,2}$'), // allows whole numbers and decimals, up to 2 decimal places
                                               ),
                                             ],
                                             controller: paidController,

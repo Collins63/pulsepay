@@ -398,17 +398,38 @@ Future<void> saveQuotation(List<Map<String, dynamic>> cartItems, double totalAmo
     ///Cancel Invoice
     Future<void> cancelInvoice(int invoiceId) async {
       final db = await initDB();
-      await db.update(
-        'invoices',
-        { 'cancelled': 1 },
-        where: 'invoiceId = ?',
-        whereArgs: [invoiceId],
-      );
-      await db.delete(
-        'sales',
-        where: 'invoiceId = ?',
-        whereArgs: [invoiceId],
-      );
+      await db.transaction((txn)async{
+        // Step 1: Mark invoice as cancelled
+        await txn.update(
+          'invoices',
+          { 'cancelled': 1 },
+          where: 'invoiceId = ?',
+          whereArgs: [invoiceId],
+        );
+        // Step 2: Get sales data for this invoice
+        final salesRows = await txn.query(
+          'sales',
+          where: 'invoiceId = ?',
+          whereArgs: [invoiceId],
+        );
+        // Step 3: Restore stock for each product sold
+        for (var sale in salesRows) {
+          final productId = sale['productId'] as int;
+          final quantitySold = sale['quantity'] as int;
+
+          await db.rawUpdate('''
+            UPDATE products
+            SET stockQty = stockQty + ?
+            WHERE productid = ?
+          ''', [quantitySold, productId]);
+        }
+        // Step 4: Delete the sales records
+        await db.delete(
+          'sales',
+          where: 'invoiceId = ?',
+          whereArgs: [invoiceId],
+        );
+      });
     }
 
     Future<void> deactivateUser(int userID) async{

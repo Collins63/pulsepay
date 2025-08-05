@@ -41,7 +41,7 @@ class _ViewInvoicesState extends State<ViewInvoices> {
   String? receiptDeviceSignature_signature_hex ;
   String? first16Chars;
   String? receiptDeviceSignature_signature;
-  String genericzimraqrurl = "https://fdms.zimra.co.zw/";
+  String genericzimraqrurl = "https://fdmstest.zimra.co.zw/";
   int deviceID = 25395;
   String? generatedJson;
   String? fiscalResponse;
@@ -667,7 +667,7 @@ Future<void> generateCreditFiscalJSON() async{
       String creditNoteNumber = await dbHelper.getNextCreditNoteNumber();
       if(pingResponse=="200"){
         String apiEndpointSubmitReceipt =
-          "https://fdmsapi.zimra.co.zw/Device/v1/$deviceID/SubmitReceipt";
+          "https://fdmsapitest.zimra.co.zw/Device/v1/$deviceID/SubmitReceipt";
         const String deviceModelName = "Server";
         const String deviceModelVersion = "v1";  
 

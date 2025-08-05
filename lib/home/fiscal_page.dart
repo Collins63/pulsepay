@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:http/io_client.dart';
 import 'package:intl/intl.dart';
 import 'package:pulsepay/SQLite/database_helper.dart';
 import 'package:pulsepay/common/constants.dart';
@@ -120,7 +121,7 @@ class _FiscalPageState extends State<FiscalPage> {
   String iso8601 = DateFormat("yyyy-MM-dd'T'HH:mm:ss").format(DateTime.now());
 
   String openDayRequest = jsonEncode({
-    "fiscalDayNo": fiscalDayNo,
+    "fiscalDayNo": 30,
     "fiscalDayOpened": iso8601,
     "taxID": taxIDSetting,
   });
@@ -129,7 +130,7 @@ class _FiscalPageState extends State<FiscalPage> {
 
   try {
     final response = await http.post(
-      Uri.parse("https://fdmsapi.zimra.co.zw/Device/v1/$deviceID/OpenDay"), // Update this URL
+      Uri.parse("https://fdmsapitest.zimra.co.zw/Device/v1/$deviceID/OpenDay"), // Update this URL
       headers: {
         "Content-Type": "application/json",
         "DeviceModelName": "Server",
@@ -139,7 +140,7 @@ class _FiscalPageState extends State<FiscalPage> {
     );
     if (response.statusCode == 200) {
       print("Open Day posted successfully!");
-      await dbHelper.insertOpenDay(fiscalDayNo, "unprocessed", iso8601);
+      await dbHelper.insertOpenDay(30, "unprocessed", iso8601);
       return "Open Day Successfully Recorded!";
     } else {
       print("Failed to post Open Day: ${response.body}");
@@ -152,19 +153,25 @@ class _FiscalPageState extends State<FiscalPage> {
 }
 
 Future<String> getConfig() async {
-  String apiEndpointGetConfig = "https://fdmsapi.zimra.co.zw/Device/v1/$deviceID/GetConfig"; // Replace with actual API endpoint
+  String apiEndpointGetConfig = "https://fdmsapitest.zimra.co.zw/Device/v1/$deviceID/GetConfig"; // Replace with actual API endpoint
   String responseMessage = "There was no response from the server. Check your connection !!";
 
   try {
     final uri = Uri.parse(apiEndpointGetConfig);
+    SSLContextProvider sslContextProvider = SSLContextProvider();
+    SecurityContext securityContext = await sslContextProvider.createSSLContext();
+    final httpClient = HttpClient(context: securityContext)
+    ..badCertificateCallback = (X509Certificate cert , String host , int port) => true;
 
-    final response = await http.get(
+    final ioClient = IOClient(httpClient);
+
+    final response = await ioClient.get(
       uri,
       headers: {
         'Content-Type': 'application/json',
-        'DeviceModelName': 'Server', // Replace with actual model
-        'DeviceModelVersion': 'v1' // Replace with actual version
-      },
+        'DeviceModelName': 'Server',
+        'DeviceModelVersion': 'v1'
+      }
     );
 
     if (response.statusCode == 200) {
@@ -277,7 +284,7 @@ Future<String> getConfig() async {
   
   Future<void> getStatus() async {
     String apiEndpointGetStatus =
-      "https://fdmsapi.zimra.co.zw/Device/v1/$deviceID/GetStatus";
+      "https://fdmsapitest.zimra.co.zw/Device/v1/$deviceID/GetStatus";
     const String deviceModelName = "Server";
     const String deviceModelVersion = "v1";
 
@@ -304,7 +311,7 @@ Future<String> getConfig() async {
 
   Future<String> ping() async {
   String apiEndpointPing =
-      "https://fdmsapi.zimra.co.zw/Device/v1/$deviceID/Ping";
+      "https://fdmsapitest.zimra.co.zw/Device/v1/$deviceID/Ping";
   const String deviceModelName = "Server";
   const String deviceModelVersion = "v1"; 
 
@@ -342,7 +349,7 @@ Future<String> getConfig() async {
     // Get the database instance
     final db = await dbHelper.initDB();
     String apiEndpointSubmitReceipt =
-      "https://fdmsapi.zimra.co.zw/Device/v1/$deviceID/SubmitReceipt";
+      "https://fdmsapitest.zimra.co.zw/Device/v1/$deviceID/SubmitReceipt";
     const String deviceModelName = "Server";
     const String deviceModelVersion = "v1"; 
     SSLContextProvider sslContextProvider = SSLContextProvider();
@@ -631,14 +638,12 @@ Future<int> getlatestFiscalDay() async {
                       }
       
                       String apiEndpointCloseDay =
-                        "https://fdmsapi.zimra.co.zw/Device/v1/$deviceID/CloseDay";
+                        "https://fdmsapitest.zimra.co.zw/Device/v1/$deviceID/CloseDay";
                       const String deviceModelName = "Server";
                       const String deviceModelVersion = "v1";  
       
                       SSLContextProvider sslContextProvider = SSLContextProvider();
                       SecurityContext securityContext = await sslContextProvider.createSSLContext();
-      
-      
       
                       // JSON payload:
                       final payload = { 
@@ -829,7 +834,7 @@ class FiscalDayCounter {
     if (type == 'BalanceByMoneyType') {
       if(value == 0.0) return ''; // skip zero balances
       buf.write(moneyType!.toUpperCase());
-    } else if (taxID != 3 && percent != null) {
+    } else if (taxID != 1 && percent != null) {
       buf.write(percent!.toStringAsFixed(2));
     }
 
@@ -995,198 +1000,3 @@ Future<(
 
   return (invoices, creditNotes, balances, concat.toString());
 }
-
-// class FiscalDayCounter {
-//   final String type;
-//   final String currency;
-//   final double? percent;
-//   final int? taxID;
-//   final String? moneyType;
-//   double value;
-
-//   FiscalDayCounter({
-//     required this.type,
-//     required this.currency,
-//     this.percent,
-//     this.taxID,
-//     this.moneyType,
-//     this.value = 0,
-//   });
-
-//   String get key {
-//     if (type == 'BalanceByMoneyType') {
-//       return '$type|$currency|$moneyType';
-//     }
-//     return '$type|$currency|${percent!.toStringAsFixed(2)}|$taxID';
-//   }
-
-//   void accumulate(double addMe) => value += addMe;
-
-//   Map<String, dynamic> toJson() {
-//     final double roundedValue = double.parse(value.toStringAsFixed(2));
-//     if (roundedValue == 0.0) return {};
-
-//     final m = {
-//       'fiscalCounterType': type,
-//       'fiscalCounterCurrency': currency,
-//       'fiscalCounterValue':
-//           type.startsWith('CreditNote') ? roundedValue : roundedValue.abs(),
-//     };
-//     if (percent != null) m['fiscalCounterTaxPercent'] = percent!.toStringAsFixed(2);
-//     if (taxID != null) m['fiscalCounterTaxID'] = taxID.toString();
-//     if (moneyType != null) m['fiscalCounterMoneyType'] = moneyType.toString();
-//     return m;
-//   }
-
-//   String toConcatString() {
-//     if (type == 'SaleTaxByTax' && percent?.toStringAsFixed(2) != '15.00') return '';
-//     if (type == 'CreditNoteTaxByTax' && percent?.toStringAsFixed(2) != '15.00') return '';
-
-//     final buf = StringBuffer(type.toUpperCase());
-//     buf.write(currency.toUpperCase());
-
-//     if (type == 'BalanceByMoneyType') {
-//       if(value == 0) return ''; // Skip zero balances
-//       buf.write(moneyType!.toUpperCase());
-//     } else if (taxID != 1 && percent != null) {
-//       buf.write(percent!.toStringAsFixed(2));
-//     }
-
-//     if (type.startsWith('CreditNote')) {
-//       buf.write((value * 100).round());
-//     } else {
-//       buf.write((value.abs() * 100).round());
-//     }
-
-//     return buf.toString();
-//   }
-// }
-
-// Future<(
-//   List<FiscalDayCounter> invoices,
-//   List<FiscalDayCounter> creditNotes,
-//   List<FiscalDayCounter> balances,
-//   String concatenatedString
-// )> buildFiscalDayCountersAndConcat(int fiscalDayNo) async {
-//   final invMap = <String, FiscalDayCounter>{};
-//   final crdMap = <String, FiscalDayCounter>{};
-//   final balMap = <String, FiscalDayCounter>{};
-
-//   DatabaseHelper dbHelper = DatabaseHelper();
-//   final db = await dbHelper.initDB();
-
-//   final rows = await db.query(
-//     'submittedReceipts',
-//     columns: ['receiptType', 'receiptJsonbody'],
-//     where: 'FiscalDayNo = ?',
-//     whereArgs: [fiscalDayNo],
-//   );
-
-//   for (final row in rows) {
-//     final receiptType = row['receiptType'] as String;
-//     final body = json.decode(row['receiptJsonbody'] as String);
-//     final r = body['receipt'] as Map<String, dynamic>;
-//     final curr = r['receiptCurrency'] as String;
-//     final isCredit = receiptType != 'FISCALINVOICE';
-
-//     for (final t in r['receiptTaxes'] as List<dynamic>) {
-//       final rawTaxAmt = t['taxAmount'];
-//       final rawSales = t['salesAmountWithTax'];
-//       final taxAmt = rawTaxAmt is num ? rawTaxAmt.toDouble() : double.tryParse(rawTaxAmt.toString()) ?? 0;
-//       final salesAmt = rawSales is num ? rawSales.toDouble() : double.tryParse(rawSales.toString()) ?? 0;
-//       final taxCode = t['taxCode'];
-//       final perc = (taxCode == "A") ? 0.0 : double.parse(t['taxPercent'] as String);
-//       final taxId = int.parse(t['taxID'].toString());
-
-//       if (!isCredit) {
-//         final sbtKey = 'SaleByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
-//         invMap.putIfAbsent(sbtKey, () => FiscalDayCounter(
-//           type: 'SaleByTax', currency: curr, percent: perc, taxID: taxId))
-//           .accumulate(salesAmt);
-
-//         final sttKey = 'SaleTaxByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
-//         invMap.putIfAbsent(sttKey, () => FiscalDayCounter(
-//           type: 'SaleTaxByTax', currency: curr, percent: perc, taxID: taxId))
-//           .accumulate(taxAmt);
-//       } else {
-//         final cbtKey = 'CreditNoteByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
-//         crdMap.putIfAbsent(cbtKey, () => FiscalDayCounter(
-//           type: 'CreditNoteByTax', currency: curr, percent: perc, taxID: taxId))
-//           .accumulate(salesAmt);
-
-//         final cttKey = 'CreditNoteTaxByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
-//         crdMap.putIfAbsent(cttKey, () => FiscalDayCounter(
-//           type: 'CreditNoteTaxByTax', currency: curr, percent: perc, taxID: taxId))
-//           .accumulate(taxAmt);
-//       }
-//     }
-
-//     for (final p in r['receiptPayments'] as List<dynamic>) {
-//       final mType = p['moneyTypeCode'] as String;
-//       final rawAmt = p['paymentAmount'];
-//       final amt = rawAmt is num ? rawAmt.toDouble() : double.tryParse(rawAmt.toString()) ?? 0;
-
-//       final bKey = 'BalanceByMoneyType|$curr|$mType';
-//       balMap.putIfAbsent(bKey, () => FiscalDayCounter(
-//         type: 'BalanceByMoneyType', currency: curr, moneyType: mType))
-//         .accumulate(amt);
-//     }
-//   }
-
-//   final allCounters = [
-//     ...invMap.values,
-//     ...crdMap.values,
-//     ...balMap.values,
-//   ];
-
-//   // Sort based on Python implementation
-//   allCounters.sort((a, b) {
-//     int typePriority(String type) {
-//       switch (type) {
-//         case 'SaleByTax': return 1;
-//         case 'SaleTaxByTax': return 2;
-//         case 'CreditNoteByTax': return 3;
-//         case 'CreditNoteTaxByTax': return 4;
-//         case 'DebitNoteByTax': return 5;
-//         case 'DebitNoteTaxByTax': return 6;
-//         case 'BalanceByMoneyType': return 7;
-//         default: return 99;
-//       }
-//     }
-
-//     final priorityA = typePriority(a.type);
-//     final priorityB = typePriority(b.type);
-//     if (priorityA != priorityB) return priorityA.compareTo(priorityB);
-
-//     final currencyComparison = a.currency.compareTo(b.currency);
-//     if (currencyComparison != 0) return currencyComparison;
-
-//     if (a.type == 'BalanceByMoneyType') {
-//       return (a.moneyType ?? '').compareTo(b.moneyType ?? '');
-//     }
-
-//     return (a.taxID ?? 0).compareTo(b.taxID ?? 0);
-//   });
-
-//   final concat = StringBuffer();
-//   for (final c in allCounters) {
-//     final concatStr = c.toConcatString();
-//     if (concatStr.isNotEmpty) {
-//       concat.write(concatStr);
-//     }
-//   }
-
-//   final invoices = allCounters
-//       .where((c) => c.type.startsWith('Sale') && double.parse(c.value.toStringAsFixed(2)) != 0.0)
-//       .toList();
-//   final creditNotes = allCounters
-//       .where((c) => c.type.startsWith('CreditNote') && double.parse(c.value.toStringAsFixed(2)) != 0.0)
-//       .toList();
-//   final balances = allCounters
-//       .where((c) => c.type == 'BalanceByMoneyType' && double.parse(c.value.toStringAsFixed(2)) != 0.0)
-//       .toList();
-
-//   debugPrint("Canonical Signature String: ${concat.toString()}");
-
-//   return (invoices, creditNotes, balances, concat.toString());
-// }
