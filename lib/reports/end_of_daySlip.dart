@@ -8,6 +8,7 @@ import 'package:pulsepay/SQLite/database_helper.dart';
 import 'package:pulsepay/common/app_bar.dart';
 import 'package:pulsepay/common/constants.dart';
 import 'package:pulsepay/common/custom_button.dart';
+import 'package:pulsepay/common/heading.dart';
 import 'package:pulsepay/common/reusable_text.dart';
 import 'package:sunmi_printer_plus/core/enums/enums.dart';
 import 'package:sunmi_printer_plus/core/styles/sunmi_text_style.dart';
@@ -180,6 +181,9 @@ class _EndOfDayslipState extends State<EndOfDayslip> {
     await SunmiPrinter.printText('User: $selectedUser', style: SunmiTextStyle(align: SunmiPrintAlign.LEFT, bold: true));
     await SunmiPrinter.printText('-----------------------------\n');
     await SunmiPrinter.printText('-----------------------------\n');
+    await SunmiPrinter.printText('N0. of transactions: ${userSalesData.length}\n');
+    await SunmiPrinter.printText('-----------------------------\n');
+    await SunmiPrinter.printText('-----------------------------\n');
     totalsByCurrency.forEach((currency, totals) async {
       print('Currency: $currency');
       print('  Total Amount: ${totals['totalAmount']?.toStringAsFixed(2)}');
@@ -227,93 +231,80 @@ class _EndOfDayslipState extends State<EndOfDayslip> {
       ),
       body: Padding(
         padding:const EdgeInsets.symmetric(horizontal: 10),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: [
-            const SizedBox(height: 50,),
-            const Center(child: ReusableText(text: "Print Options", style: TextStyle(fontSize: 16 , fontWeight: FontWeight.w500))),
-            const SizedBox(height: 20,),
-            
-            Container(
-              height: 100,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(10.0),
-                color: Colors.green
-              ),
-              child: Center(
-                child: Text(
-                  todayDate, style: TextStyle(color: Colors.white),
+        child: SingleChildScrollView(
+          scrollDirection: Axis.vertical,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.start,
+            children: [
+              const SizedBox(height: 50,),
+              const Center(child: Image(image: AssetImage('assets/print.gif'),)),
+              const SizedBox(height: 20,),
+              Container(
+                height: 75,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10.0),
+                  color: Colors.grey.shade400
+                ),
+                child: Center(
+                  child: Text(
+                    todayDate, style: TextStyle(color: Colors.white),
+                  ),
                 ),
               ),
-            ),
-            const SizedBox(height:20,),
-            CustomOutlineBtn(
-              text: "Print For All",
-              color: kDark,
-              color2: kDark,
-              height: 50,
-              onTap: (){
-                printEndOfDayReport();
-              },
-            ),
-            const SizedBox(height: 20,),
-            const Center(child: ReusableText(text: "Print For User", style: TextStyle(fontSize: 16 , fontWeight: FontWeight.w500))),
-            const SizedBox(height: 10,),
-            Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  width: 2,
-                  color: const Color(0xffC5C5C5),
-                )
+              const SizedBox(height:20,),
+              const Heading(text: 'Print for all',),
+              const SizedBox(height: 10,),
+              CustomOutlineBtn(
+                text: "Print",
+                color: Colors.blue,
+                color2: Colors.blue,
+                height: 50,
+                onTap: (){
+                  printEndOfDayReport();
+                },
               ),
-            ),
-            const SizedBox(height: 20,),
-            CustomOutlineBtn(
-              text: "Print For User",
-              color: Colors.orange,
-              color2: Colors.orange,
-              height: 50,
-            ),
-            const SizedBox(height: 20,),
-            Container(
-                  height: 70,
-                  width: 390,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.3), // shadow color
-                        spreadRadius: 4, // how much the shadow spreads
-                        blurRadius: 10,  // how soft the shadow is
-                        offset: Offset(0, 6), // horizontal and vertical offset
+              const SizedBox(height: 30,),
+              const Heading(text: 'Print for user',),
+              const SizedBox(height: 20,),
+              Container(
+                    height: 70,
+                    width: 390,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.3), // shadow color
+                          spreadRadius: 4, // how much the shadow spreads
+                          blurRadius: 10,  // how soft the shadow is
+                          offset: Offset(0, 6), // horizontal and vertical offset
+                        ),
+                      ],
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                      child: DropdownButton<String>(
+                        menuWidth: 200,
+                        hint: Text("Select User"),
+                        value: selectedUser,
+                        onChanged: (value)async{
+                          setState(() {
+                            selectedUser= value;
+                          });
+                          await loadUserTotals();
+                        },
+                        items: users.map((user) {
+                          return DropdownMenuItem<String>(
+                            value: user,
+                            child: Text(user),
+                          );
+                        }).toList(),
                       ),
-                    ],
-                  ),
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                    child: DropdownButton<String>(
-                      menuWidth: 200,
-                      hint: Text("Select User"),
-                      value: selectedUser,
-                      onChanged: (value)async{
-                        setState(() {
-                          selectedUser= value;
-                        });
-                        await loadUserTotals();
-                      },
-                      items: users.map((user) {
-                        return DropdownMenuItem<String>(
-                          value: user,
-                          child: Text(user),
-                        );
-                      }).toList(),
                     ),
                   ),
-                ),
-          ],
+            ],
+          ),
         ),
       ),
     );

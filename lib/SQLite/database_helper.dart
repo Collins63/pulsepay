@@ -985,15 +985,6 @@ Future<void> saveQuotation(List<Map<String, dynamic>> cartItems, double totalAmo
       ''');
     }
 
-    Future<Map<String, dynamic>?> getProductByBarcode(String barcode) async {
-    final db = await initDB();
-    final result = await db.query(
-      'products',
-      where: 'barcode = ?',
-      whereArgs: [barcode],
-    );
-    return result.isNotEmpty ? result.first : null;
-  }
 
   Future<Map<String, int>> getPreviousReceiptData() async {
     final db = await initDB();
@@ -1237,8 +1228,8 @@ Future<void> saveQuotation(List<Map<String, dynamic>> cartItems, double totalAmo
       '''
         SELECT invoices.*
         FROM invoices
-        WHERE doneBY = ? AND date =? AND cancelled = 0
-      ''' , [user , today]
+        WHERE doneBY = ? AND date LIKE ? AND cancelled = 0
+      ''' , [user , '$today%']
     );
   }
 
@@ -1305,6 +1296,47 @@ Future<void> saveQuotation(List<Map<String, dynamic>> cartItems, double totalAmo
     ''');
   }
 
+  Future<List<Map<String, dynamic>>> getTopCustomers() async {
+    final database = await initDB();
+    return await database.rawQuery('''
+      SELECT
+        customer.tradeName AS customerName,
+        COUNT(DISTINCT sales.invoiceId) AS totalInvoices,
+        SUM(sales.quantity * sales.sellingPrice) AS totalSpent
+      FROM
+        sales
+      INNER JOIN
+        customer ON sales.customerID = customer.customerID
+      INNER JOIN
+        invoices ON sales.invoiceId = invoices.invoiceId
+      WHERE
+        invoices.cancelled = 0
+      GROUP BY
+        sales.customerID
+      ORDER BY
+        totalSpent DESC
+    ''');
+  }
+
+  Future<List<Map<String, dynamic>>> getTopSellingCashiers() async {
+    final database = await initDB();
+    return await database.rawQuery('''
+      SELECT
+        sales.doneBY,
+        COUNT(DISTINCT sales.invoiceId) AS totalInvoices,
+        SUM(sales.quantity * sales.sellingPrice) AS totalSales
+      FROM
+        sales
+      INNER JOIN
+        invoices ON sales.invoiceId = invoices.invoiceId
+      WHERE
+        invoices.cancelled = 0
+      GROUP BY
+        sales.doneBY
+      ORDER BY
+        totalSales DESC
+    ''');
+  }
 
   Future<List<Map<String, dynamic>>> getzwg()async{
     final db  = await initDB();
@@ -1469,6 +1501,26 @@ Future<void> saveQuotation(List<Map<String, dynamic>> cartItems, double totalAmo
     return result.isNotEmpty ? (result[0]['totalSales'] as double) : 0.0;
   }
 
+  Future<double> getTotalTaxWithinDateRange({
+    required String currency,
+    required String startDate,
+    required String endDate,
+  }) async {
+  final db = await initDB();
+
+  final result = await db.rawQuery('''
+      SELECT 
+        IFNULL(SUM(invoices.totalTax), 0) AS totalTax
+      FROM 
+        invoices
+      WHERE 
+        invoices.currency = ? AND cancelled = 0
+        AND invoices.date BETWEEN ? AND ?
+    ''', [currency, startDate, endDate]);
+
+    return result.isNotEmpty ? (result[0]['totalTax'] as num).toDouble() : 0.0;
+  }
+
 
   //get daily sales summmary
 
@@ -1542,4 +1594,18 @@ Future<void> saveQuotation(List<Map<String, dynamic>> cartItems, double totalAmo
       WHERE sales.customerID = ?
     ''', [customerId]);
   }
+
+  Future<Map<String, dynamic>?> getProductByBarcode(String barcode) async {
+    final db = await initDB(); // your open db instance
+    final results = await db.query(
+      'products',
+      where: 'barcode = ?',
+      whereArgs: [barcode],
+    );
+    if (results.isNotEmpty) {
+      return results.first; // returns first product found
+    }
+    return null; // no product found
+  }
+
 }

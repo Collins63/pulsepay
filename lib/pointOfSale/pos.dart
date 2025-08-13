@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:audioplayers/audioplayers.dart';
 import 'package:basic_utils/basic_utils.dart';
 import 'package:blue_thermal_printer/blue_thermal_printer.dart';
 import 'package:crypto/crypto.dart';
@@ -10,6 +11,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:logger/logger.dart';
 import 'package:lottie/lottie.dart';
+import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:pointycastle/digests/sha256.dart';
@@ -460,9 +462,9 @@ Future<void> _finishPrint() async {
         : (item['sellingPrice'].toDouble()) * rate;
     
     int quantity = (item['sellqty'] is String) 
-        ? int.parse(item['sellqty']) 
-        : item['sellqty'];
-
+    ? double.parse(item['sellqty']).toInt()
+    : (item['sellqty'] is num)
+      ? (item['sellqty'] as num).toInt() : 0;
     double totalPrice = itemTotal * quantity;
     double itemTax;
     int taxID;
@@ -1253,7 +1255,10 @@ String generateTaxSummary(List<dynamic> receiptItems) {
         //= selectedCustomer[0]['customerID']
         await dbHelper.saveSale(cartItems, totalAmount, totalTax , indiTax, customerID , saleCurrency, activeUser , rate);
         for (var item in cartItems){
-        int sellQty = item['sellqty'];
+        int sellQty = (item['sellqty'] is String) 
+        ? double.parse(item['sellqty']).toInt()
+        : (item['sellqty'] is num)
+          ? (item['sellqty'] as num).toInt() : 0;
         int productid = item['productid'];
         final product = await dbHelper.getProductById(productid);
         setState(() {
@@ -1478,17 +1483,19 @@ String generateTaxSummary(List<dynamic> receiptItems) {
 
   void addToCartFreePrice(int productId ,String productName ,String barcode, int hsCode, double costPrice, double sellingPrice,
     double sellqty, String tax, double sellTax ,int stockQty){
-    cartItems.add({
-      'productid':productId,
-      'productName':productName,
-      'barcode':barcode,
-      'hsCode': hsCode,
-      'costPrice': costPrice,
-      'sellingPrice': sellingPrice,
-      'sellqty': sellqty,
-      'tax': tax,
-      'sellTax': sellTax,
-      'stockQty': stockQty,
+    setState(() {
+      cartItems.add({
+        'productid':productId,
+        'productName':productName,
+        'barcode':barcode,
+        'hsCode': hsCode,
+        'costPrice': costPrice,
+        'sellingPrice': sellingPrice,
+        'sellqty': sellqty,
+        'tax': tax,
+        'sellTax': sellTax,
+        'stockQty': stockQty,
+      });
     });
   }
 
@@ -1570,13 +1577,28 @@ String generateTaxSummary(List<dynamic> receiptItems) {
   }
 
   double calculateTotalPrice() {
+    // return cartItems.fold(0.0, (total, item) {
+    //   final double sellingPrice = item['sellingPrice'] ?? 0.0; // Default to 0.0 if null
+    // final int sellQty = item['sellqty'] is int
+    //     ? item['sellqty'] // already an int
+    //     : int.tryParse(item['sellqty'].toString()) ?? 1; // Default to 1.0 if null
+    //   if(selectedPayMethod.isEmpty){
+    //     return total + (sellingPrice * sellQty);
+    //   }else{
+    //     double rate  = selectedPayMethod[0]['rate'];
+    //     return total + (sellingPrice * sellQty * rate);
+    //   }
+    // });
     return cartItems.fold(0.0, (total, item) {
-      final double sellingPrice = item['sellingPrice'] ?? 0.0; // Default to 0.0 if null
-      final int sellQty = item['sellqty'] ?? 1.0; // Default to 1.0 if null
-      if(selectedPayMethod.isEmpty){
+      final double sellingPrice = (item['sellingPrice'] ?? 0.0) as double;
+      final double sellQty = (item['sellqty'] is num)
+          ? (item['sellqty'] as num).toDouble()
+          : double.tryParse(item['sellqty'].toString()) ?? 1.0;
+
+      if (selectedPayMethod.isEmpty) {
         return total + (sellingPrice * sellQty);
-      }else{
-        double rate  = selectedPayMethod[0]['rate'];
+      } else {
+        double rate = selectedPayMethod[0]['rate'] ?? 1.0;
         return total + (sellingPrice * sellQty * rate);
       }
     });
@@ -2207,59 +2229,62 @@ String generateTaxSummary(List<dynamic> receiptItems) {
           title:  const Text("Price and quantity"),
           content:Form(
             key: freePriceFormKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min ,
-              children: [
-                const Text("Please enter price and quantity"),
-                const SizedBox(height: 10,),
-                TextFormField(
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(
-                      RegExp(r'^\d+\.?\d{0,2}$'), // allows whole numbers and decimals, up to 2 decimal places
+            child: SingleChildScrollView(
+              scrollDirection: Axis.vertical,
+              child: Column(
+                mainAxisSize: MainAxisSize.min ,
+                children: [
+                  const Text("Please enter price and quantity"),
+                  const SizedBox(height: 10,),
+                  TextFormField(
+                    inputFormatters: [
+                      FilteringTextInputFormatter.allow(
+                        RegExp(r'^\d+\.?\d{0,2}$'), // allows whole numbers and decimals, up to 2 decimal places
+                      ),
+                    ],
+                    controller: price,
+                    decoration: InputDecoration(
+                      labelText: 'Price',
+                      labelStyle: TextStyle(color:Colors.grey.shade600 ),
+                      filled: true,
+                      fillColor: Colors.grey.shade300,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12.0),
+                        borderSide: BorderSide.none
+                      )
                     ),
-                  ],
-                  controller: price,
-                  decoration: InputDecoration(
-                    labelText: 'Price',
-                    labelStyle: TextStyle(color:Colors.grey.shade600 ),
-                    filled: true,
-                    fillColor: Colors.grey.shade300,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12.0),
-                      borderSide: BorderSide.none
-                    )
+                    style: const TextStyle(color: Colors.black),
+                    validator: (value){
+                    if(value!.isEmpty){
+                      return "Price is Required";
+                    }return null;
+                    },
                   ),
-                  style: const TextStyle(color: Colors.black),
-                  validator: (value){
-                  if(value!.isEmpty){
-                    return "Price is Required";
-                  }return null;
-                  },
-                ),
-                const SizedBox(height: 10,),
-                TextFormField(
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly
-                  ],
-                  controller: quantity,
-                  decoration: InputDecoration(
-                    labelText: 'Quantity',
-                    labelStyle: TextStyle(color:Colors.grey.shade600 ),
-                    filled: true,
-                    fillColor: Colors.grey.shade300,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12.0),
-                      borderSide: BorderSide.none
-                    )
+                  const SizedBox(height: 10,),
+                  TextFormField(
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly
+                    ],
+                    controller: quantity,
+                    decoration: InputDecoration(
+                      labelText: 'Quantity',
+                      labelStyle: TextStyle(color:Colors.grey.shade600 ),
+                      filled: true,
+                      fillColor: Colors.grey.shade300,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12.0),
+                        borderSide: BorderSide.none
+                      )
+                    ),
+                    style: const TextStyle(color: Colors.black),
+                    validator: (value){
+                    if(value!.isEmpty){
+                      return "Price is Required";
+                    }return null;
+                    },
                   ),
-                  style: const TextStyle(color: Colors.black),
-                  validator: (value){
-                  if(value!.isEmpty){
-                    return "Price is Required";
-                  }return null;
-                  },
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           actions: [
@@ -2272,6 +2297,15 @@ String generateTaxSummary(List<dynamic> receiptItems) {
             ElevatedButton(
               onPressed: () {
                 addToCartFreePrice(product['productid'], product['productName'], product['barcode'], product['hsCode'], product['costPrice'], double.tryParse(price.text)!, double.tryParse(quantity.text)!, product['tax'], product['sellTax'] ?? 0.0, product['stockQty']);
+                Navigator.of(context).pop();
+                Get.snackbar("Free price",
+                  "${product['productName']} added on free price",
+                  snackPosition: SnackPosition.TOP,
+                  backgroundColor: Colors.green,
+                  colorText: Colors.white,
+                  icon: const Icon(Icons.check)
+                );
+                print(cartItems);
               },
               child: const Text('Submit'),
             ),
@@ -2290,9 +2324,16 @@ String generateTaxSummary(List<dynamic> receiptItems) {
     }
   }
 
+  final player  = AudioPlayer();
+  DateTime lastScanTime = DateTime.now().subtract(const Duration(seconds: 2));
+  String? lastScannedCode;
+
+  Future<void> playBeep() async {
+    await player.play(AssetSource('beep.mp3'), mode: PlayerMode.lowLatency);
+  }
+
   //=================END OF FUNCTIONS============================//a
   //======================================================//
-  
   //=================Interface Code ============================//
 
   @override  Widget build(BuildContext context) {
@@ -2369,6 +2410,41 @@ String generateTaxSummary(List<dynamic> receiptItems) {
             padding:const  EdgeInsets.symmetric(horizontal: 5.0 , vertical: 10.0) ,
             child: Column(
               children: [
+                isBarcodeEnabled ?
+                SizedBox(
+                  height: 50,
+                  width: 200,
+                  child: MobileScanner(
+                    onDetect: (barcodeCapture) async {
+                      final String? code= barcodeCapture.barcodes.first.rawValue;
+                      if(code != null){
+                        final now = DateTime.now();
+                        
+                        if (code == lastScannedCode && now.difference(lastScanTime) < Duration(seconds: 2)) {
+                          return;
+                        }
+
+                        lastScannedCode = code;
+                        lastScanTime = now;
+
+                        final product = await dbHelper.getProductByBarcode(code);
+                        if(product != null){
+                          
+                          setState(() {
+                            addToCart(product);
+                          });
+                          await playBeep();
+                        }else{
+                          Get.snackbar("Not Found","Pruct not found for barcode $code",
+                            snackPosition: SnackPosition.TOP,
+                            backgroundColor: Colors.amber,
+                            icon: const Icon(Icons.warning)
+                          );
+                        }
+                      }
+                    },
+                  ),
+                ) : SizedBox.shrink(),
                 const SizedBox(height: 20,),
                 Container(
                   height: 200,

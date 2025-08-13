@@ -112,6 +112,9 @@ class _FiscalPageState extends State<FiscalPage> {
   final previousData = await dbHelper.getPreviousReceiptData();
   final previousFiscalDayNo = await dbHelper.getPreviousFiscalDayNo();
   final taxIDSetting = await getConfig();
+  String openDayEndPoint = "https://fdmsapitest.zimra.co.zw/Device/v1/$deviceID/OpenDay";
+  const String deviceModelName = "Server";
+  const String deviceModelVersion = "v1";  
 
   int fiscalDayNo = (previousData["receiptCounter"] == 0 &&
           previousData["receiptGlobalNo"] == 0)
@@ -121,7 +124,7 @@ class _FiscalPageState extends State<FiscalPage> {
   String iso8601 = DateFormat("yyyy-MM-dd'T'HH:mm:ss").format(DateTime.now());
 
   String openDayRequest = jsonEncode({
-    "fiscalDayNo": 30,
+    "fiscalDayNo": 4,
     "fiscalDayOpened": iso8601,
     "taxID": taxIDSetting,
   });
@@ -129,8 +132,25 @@ class _FiscalPageState extends State<FiscalPage> {
   print("Open Day Request JSON: $openDayRequest");
 
   try {
-    final response = await http.post(
-      Uri.parse("https://fdmsapitest.zimra.co.zw/Device/v1/$deviceID/OpenDay"), // Update this URL
+    // final response = await http.post(
+    //   Uri.parse("https://fdmsapitest.zimra.co.zw/Device/v1/$deviceID/OpenDay"), // Update this URL
+    //   headers: {
+    //     "Content-Type": "application/json",
+    //     "DeviceModelName": "Server",
+    //     "DeviceModelVersion": "v1"
+    //   },
+    //   body: openDayRequest,
+    // );
+    final uri = Uri.parse(openDayEndPoint);
+    SSLContextProvider sslContextProvider = SSLContextProvider();
+    SecurityContext securityContext = await sslContextProvider.createSSLContext();
+    final httpClient = HttpClient(context: securityContext)
+    ..badCertificateCallback = (X509Certificate cert ,  String host , int port) => true;
+
+    final ioClient = IOClient(httpClient);
+
+    final response = await ioClient.post(
+      uri,
       headers: {
         "Content-Type": "application/json",
         "DeviceModelName": "Server",
@@ -138,9 +158,10 @@ class _FiscalPageState extends State<FiscalPage> {
       },
       body: openDayRequest,
     );
+
     if (response.statusCode == 200) {
       print("Open Day posted successfully!");
-      await dbHelper.insertOpenDay(30, "unprocessed", iso8601);
+      await dbHelper.insertOpenDay(4, "unprocessed", iso8601);
       return "Open Day Successfully Recorded!";
     } else {
       print("Failed to post Open Day: ${response.body}");
@@ -566,16 +587,6 @@ Future<int> getlatestFiscalDay() async {
                     color2: Colors.blue,
                     onTap: (){
                       ping();
-                    },
-                    height: 50,
-                  ),
-                  const SizedBox(height: 10,),
-                  CustomOutlineBtn(
-                    text: "Manual Close Day",
-                    color: Colors.blue,
-                    color2: Colors.blue,
-                    onTap: (){
-            
                     },
                     height: 50,
                   ),

@@ -8,6 +8,7 @@ import 'package:pulsepay/SQLite/database_helper.dart';
 import 'package:pulsepay/common/app_bar.dart';
 import 'package:pulsepay/common/constants.dart';
 import 'package:pulsepay/common/custom_button.dart';
+import 'package:pulsepay/common/heading.dart';
 import 'package:pulsepay/common/reusable_text.dart';
 import 'package:pulsepay/forms/my_taxes.dart';
 import 'package:pulsepay/home/home_page.dart';
@@ -16,6 +17,7 @@ import 'package:pulsepay/reports/customerPurchases.dart';
 import 'package:pulsepay/reports/customerslist.dart';
 import 'package:pulsepay/reports/end_of_daySlip.dart';
 import 'package:pulsepay/reports/fiscalizedCustomer.dart';
+import 'package:pulsepay/reports/periodicTax.dart';
 import 'package:pulsepay/reports/salesForProduct.dart';
 import 'package:pulsepay/reports/sales_report.dart';
 import 'package:sunmi_printer_plus/core/enums/enums.dart';
@@ -406,6 +408,7 @@ class _reportsState extends State<Reports>{
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisAlignment: MainAxisAlignment.start,
                 children: [
+                  const SizedBox(height: 20,),
                   Center(
                   child: Container(
                     height: 200,
@@ -416,15 +419,7 @@ class _reportsState extends State<Reports>{
                   ),
                 ),
                   const SizedBox(height: 20,),
-                  const ReusableText(text: "Sales Reports", style: TextStyle(fontWeight: FontWeight.bold , fontSize: 16)),
-                  Container(
-                    height: 5,
-                    width: 110,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(20),
-                      color: Colors.orange
-                    ),
-                  ),
+                  const Heading(text: "Sales Reports"),
                   const SizedBox(height: 20,),
                   CustomOutlineBtn(
                     height: 50,
@@ -469,96 +464,7 @@ class _reportsState extends State<Reports>{
                     },
                   ),
                   const SizedBox(height: 20,),
-                  // const ReusableText(text: "Stock Reports", style: TextStyle(fontWeight: FontWeight.bold , fontSize: 16)),
-                  // Container(
-                  //   height: 5,
-                  //   width: 110,
-                  //   decoration: BoxDecoration(
-                  //     borderRadius: BorderRadius.circular(20),
-                  //     color: Colors.orange
-                  //   ),
-                  // ),
-                  // const SizedBox(height: 20,),
-                  // CustomOutlineBtn(
-                  //   height: 50,
-                  //   text: "Stock Balance For Branch",
-                  //   color: Colors.blue ,
-                  //   color2: Colors.blue,
-                  //   onTap: (){
-      
-                  //   },
-                  // ),
-                  
-                  // const SizedBox(height: 10,),
-                  // CustomOutlineBtn(
-                  //   height: 50,
-                  //   text: "View Stock Purchses",
-                  //   color: Colors.blue ,
-                  //   color2: Colors.blue,
-                  //   onTap: (){
-      
-                  //   },
-                  // ),
-                  // const SizedBox(height: 10,),
-                  // CustomOutlineBtn(
-                  //   height: 50,
-                  //   text: "Individual Product Movement",
-                  //   color: Colors.blue ,
-                  //   color2: Colors.blue,
-                  //   onTap: (){
-      
-                  //   },
-                  // ),
-                  // const SizedBox(height: 10,),
-                  // CustomOutlineBtn(
-                  //   height: 50,
-                  //   text: "Highest Movers",
-                  //   color: Colors.blue ,
-                  //   color2: Colors.blue,
-                  //   onTap: (){
-      
-                  //   },
-                  // ),
-                  // const SizedBox(height: 10,),
-                  // CustomOutlineBtn(
-                  //   height: 50,
-                  //   text: "Stock Expiry",
-                  //   color: Colors.blue ,
-                  //   color2: Colors.blue,
-                  //   onTap: (){
-      
-                  //   },
-                  // ),
-                  // const SizedBox(height: 10,),
-                  // CustomOutlineBtn(
-                  //   height: 50,
-                  //   text: "Price List",
-                  //   color: Colors.blue ,
-                  //   color2: Colors.blue,
-                  //   onTap: (){
-      
-                  //   },
-                  // ),
-                  // const SizedBox(height: 10,),
-                  // CustomOutlineBtn(
-                  //   height: 50,
-                  //   text: "Perfomance Report",
-                  //   color: Colors.blue ,
-                  //   color2: Colors.blue,
-                  //   onTap: (){
-      
-                  //   },
-                  // ),
-                  //const SizedBox(height: 20,),
-                  const ReusableText(text: "Customer Reports", style: TextStyle(fontWeight: FontWeight.bold , fontSize: 16)),
-                  Container(
-                    height: 5,
-                    width: 140,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(20),
-                      color: Colors.orange
-                    ),
-                  ),
+                  const Heading(text: 'Customer Reports'),
                   const SizedBox(height: 20,),
                   CustomOutlineBtn(
                     height: 50,
@@ -590,15 +496,7 @@ class _reportsState extends State<Reports>{
                     },
                   ),
                   const SizedBox(height: 20,),
-                  const ReusableText(text: "Tax", style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 16)),
-                  Container(
-                    height: 5,
-                    width: 40,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(20),
-                      color: Colors.orange
-                    ),
-                  ),
+                  const Heading(text: 'Tax'),
                   const SizedBox(height: 20,),
                   CustomOutlineBtn(
                     height: 50,
@@ -609,16 +507,18 @@ class _reportsState extends State<Reports>{
                       Get.to(()=> const MyTaxes());
                     },
                   ),
-                  const SizedBox(height: 20,),
-                  const ReusableText(text: "Fiscal Reports", style: TextStyle(fontWeight: FontWeight.w500 , fontSize: 16)),
-                  Container(
-                    height: 5,
-                    width: 110,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(20),
-                      color:Colors.orange
-                    ),
+                  const SizedBox(height: 10,),
+                  CustomOutlineBtn(
+                    height: 50,
+                    text: "Periodic Tax Returns",
+                    color: Colors.blue ,
+                    color2: Colors.blue,
+                    onTap: (){
+                      Get.to(()=> const Periodictax());
+                    },
                   ),
+                  const SizedBox(height: 20,),
+                  const Heading(text: 'Fiscal Reports'),
                   const SizedBox(height: 10,),
                   CustomOutlineBtn(
                     height: 50,

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
+import 'package:lottie/lottie.dart';
 import 'package:pulsepay/JsonModels/json_models.dart';
 import 'package:pulsepay/SQLite/database_helper.dart';
 //import 'package:pulsepay/authentication/login.dart';
@@ -23,6 +25,9 @@ class _AddproductState extends State<AddProduct>{
   final initStockController = TextEditingController();
 
   bool isVisible = false;
+  bool vat15 = false;
+  bool vat0 = false;
+  bool vatEx  = false;
 
   void clearFields(){
     productname.clear();
@@ -81,10 +86,7 @@ class _AddproductState extends State<AddProduct>{
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Center(
-                          child: Image.asset(
-                            'assets/Pay.png',
-                            height: 50,
-                          ),
+                          child: Lottie.asset("assets/cart.json", width: 100, height: 100),
                         ),
                         const SizedBox(height: 15),
                         const SizedBox(height: 8,),
@@ -103,11 +105,8 @@ class _AddproductState extends State<AddProduct>{
                               labelText: 'Product Name',
                               labelStyle: TextStyle(color:Colors.grey.shade600 ),
                               filled: true,
-                              fillColor: Colors.grey.shade300,
-                              border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(12.0),
-                                  borderSide: BorderSide.none
-                              )
+                              fillColor: Colors.white,
+                              border:const OutlineInputBorder()
                           ),
                           style: const TextStyle(color: Colors.black),
                           validator: (value){
@@ -120,14 +119,15 @@ class _AddproductState extends State<AddProduct>{
                         // Password Field
                         TextFormField(
                           controller: barcode,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly
+                          ],
                           decoration: InputDecoration(
                             labelText: 'BarCode',
                             labelStyle:  TextStyle(color: Colors.grey.shade600),
                             filled: true,
-                            fillColor: Colors.grey.shade300,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12.0),
-                              borderSide: BorderSide.none,
+                            fillColor: Colors.white,
+                            border:const OutlineInputBorder(
                             ),
                           ),
                           style: const TextStyle(color: Colors.black),
@@ -140,14 +140,15 @@ class _AddproductState extends State<AddProduct>{
                         const SizedBox(height: 16),
                         TextFormField(
                           controller: hsCodeController,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly
+                          ],
                           decoration: InputDecoration(
                             labelText: 'HsCode',
                             labelStyle:  TextStyle(color: Colors.grey.shade600),
                             filled: true,
-                            fillColor: Colors.grey.shade300,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12.0),
-                              borderSide: BorderSide.none,
+                            fillColor: Colors.white,
+                            border:const OutlineInputBorder(
                             ),
                           ),
                           style: const TextStyle(color: Colors.black),
@@ -160,14 +161,17 @@ class _AddproductState extends State<AddProduct>{
                         const SizedBox(height: 16),
                         TextFormField(
                           controller: costprice,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(
+                              RegExp(r'^\d+\.?\d{0,2}$'), // allows whole numbers and decimals, up to 2 decimal places
+                            ),
+                          ],
                           decoration: InputDecoration(
                             labelText: 'Cost Price',
                             labelStyle:  TextStyle(color: Colors.grey.shade600),
                             filled: true,
-                            fillColor: Colors.grey.shade300,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12.0),
-                              borderSide: BorderSide.none,
+                            fillColor: Colors.white,
+                            border: const OutlineInputBorder(
                             ),
                           ),
                           style: const TextStyle(color: Colors.black),
@@ -180,14 +184,17 @@ class _AddproductState extends State<AddProduct>{
                         const SizedBox(height: 16),
                         TextFormField(
                           controller: sellingprice,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.allow(
+                              RegExp(r'^\d+\.?\d{0,2}$'), // allows whole numbers and decimals, up to 2 decimal places
+                            ),
+                          ],
                           decoration: InputDecoration(
                             labelText: 'Selling Price',
                             labelStyle:  TextStyle(color: Colors.grey.shade600),
                             filled: true,
-                            fillColor: Colors.grey.shade300,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12.0),
-                              borderSide: BorderSide.none,
+                            fillColor: Colors.white,
+                            border:const OutlineInputBorder(
                             ),
                           ),
                           style: const TextStyle(color: Colors.black),
@@ -198,36 +205,74 @@ class _AddproductState extends State<AddProduct>{
                           },
                         ),
                         const SizedBox(height: 16),
-                        TextFormField(
-                          controller: vatBracket,
-                          decoration: InputDecoration(
-                            labelText: 'VAT Bracket',
-                            labelStyle:  TextStyle(color: Colors.grey.shade600),
-                            filled: true,
-                            fillColor: Colors.grey.shade300,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12.0),
-                              borderSide: BorderSide.none,
+                        // TextFormField(
+                        //   controller: vatBracket,
+                        //   decoration: InputDecoration(
+                        //     labelText: 'VAT Bracket',
+                        //     labelStyle:  TextStyle(color: Colors.grey.shade600),
+                        //     filled: true,
+                        //     fillColor: Colors.white,
+                        //     border: const OutlineInputBorder(
+                        //     ),
+                        //   ),
+                        //   style: const TextStyle(color: Colors.black),
+                        //   validator: (value){
+                        //     if(value!.isEmpty){
+                        //       return "VAT Bracket Required";
+                        //     }return null;
+                        //   },
+                        // ),
+                            CheckboxListTile(
+                              title: const Text("15% Vat"),
+                              value: vat15,
+                              onChanged: (bool? value){
+                                setState(() {
+                                  vat15 = value!;
+                                  if(vat15){
+                                    vat0 = false;
+                                    vatEx = false;
+                                  }
+                                });
+                              }
                             ),
-                          ),
-                          style: const TextStyle(color: Colors.black),
-                          validator: (value){
-                            if(value!.isEmpty){
-                              return "VAT Bracket Required";
-                            }return null;
-                          },
-                        ),
+                            CheckboxListTile(
+                              title: const Text("Zero% Vat"),
+                              value: vat0,
+                              onChanged: (bool? value){
+                                setState(() {
+                                  vat0 = value!;
+                                  if(vat0){
+                                    vat15 = false;
+                                    vatEx = false;
+                                  }
+                                });
+                              }
+                            ),
+                            CheckboxListTile(
+                              title: const Text("Exempted"),
+                              value: vatEx,
+                              onChanged: (bool? value){
+                                setState(() {
+                                  vatEx = value!;
+                                  if(vatEx){
+                                    vat15 = false;
+                                    vatEx = false;
+                                  }
+                                });
+                              }
+                            ),
                         const SizedBox(height: 16),
                         TextFormField(
+                          inputFormatters: [
+                            FilteringTextInputFormatter.digitsOnly
+                          ],
                           controller: initStockController,
                           decoration: InputDecoration(
                             labelText: 'Stock Quantity',
                             labelStyle:  TextStyle(color: Colors.grey.shade600),
                             filled: true,
-                            fillColor: Colors.grey.shade300,
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12.0),
-                              borderSide: BorderSide.none,
+                            fillColor: Colors.white,
+                            border:const OutlineInputBorder(
                             ),
                           ),
                           style: const TextStyle(color: Colors.black),
@@ -252,7 +297,7 @@ class _AddproductState extends State<AddProduct>{
                                     barcode: barcode.text,
                                     sellingPrice: double.parse(sellingprice.text),
                                     costPrice: double.parse(costprice.text),
-                                    tax: vatBracket.text,
+                                    tax: vat0 ? "zero" : vat15 ? "vat" : "ex" ,
                                     stockQty: int.parse(initStockController.text)
                                   ));
                                   // Navigate to the HomePage after successful product addition

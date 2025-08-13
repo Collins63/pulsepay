@@ -64,6 +64,8 @@ dependencies:
   csv: ^6.0.0
   flutter_launcher_icons: ^0.14.4
   asn1lib: ^1.6.5
+  mobile_scanner: ^7.0.1
+  audioplayers: ^6.5.0
 
 dev_dependencies:
   flutter_test:
@@ -114,6 +116,9 @@ flutter:
     - assets\backup.png
     - assets/certificate.pem
     - assets/private_key.pem
+    - assets/beep.mp3
+    - assets\print.gif
+    - assets\estimate.gif
 
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg

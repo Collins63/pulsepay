@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:pulsepay/SQLite/database_helper.dart';
+import 'package:pulsepay/common/appStyle.dart';
+import 'package:pulsepay/common/heading.dart';
 
 class Companysales extends StatefulWidget {
   const Companysales({super.key});
@@ -20,6 +22,11 @@ class _CompanysalesState extends State<Companysales> {
   List<String> currencies = [];
   double? periodTotal;
   int? totalSales;
+
+  List<Map<String, dynamic>> topProducts = [];
+  List<Map<String, dynamic>> topCustomers = [];
+  List<Map<String, dynamic>> topCashiers = [];
+
   @override
   void initState(){
     dbHelper.getTopSellingProducts().then((value){
@@ -27,13 +34,24 @@ class _CompanysalesState extends State<Companysales> {
         topProducts = value;
       });
     });
+    dbHelper.getTopCustomers().then((value){
+      setState(() {
+        topCustomers = value;
+      });
+    });
+    dbHelper.getTopSellingCashiers().then((value){
+      setState(() {
+        topCashiers = value;
+      });
+    });
+
     loadCurrencies();
     getZWGTotalSales();
     getUSDTotalSales();
     getAllReceipts();
   }
 
-  List<Map<String, dynamic>> topProducts = [];
+  
 
     Future<List<String>> fetchCurrencies() async{
     final List<Map<String, dynamic>> currencies = await dbHelper.getAllCurrencies();
@@ -87,9 +105,10 @@ Future<void> selectEndDate(BuildContext context) async {
     final zwgRate = await dbHelper.getzwgcurrency();
     double rate = zwgRate[0]['rate'];
     final zwg = await dbHelper.getZWGTotalSales();
+    double ZWGtotalcalcu =  zwg[0]['totalSales'] ?? 0 ;
     print("zwg = $zwg");
     setState(() {
-       ZWGtotal = zwg[0]['totalSales'] * rate ;
+       ZWGtotal = ZWGtotalcalcu * rate ;
     });
   }
 
@@ -129,18 +148,18 @@ Future<void> selectEndDate(BuildContext context) async {
             children: [
               SizedBox(height: 20,),
               Container(
-                height: 100,
+                height: 70,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(20),
-                  color: Colors.blue
+                  color: Colors.grey.shade400
                 ),
                 child: Center(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text("Transactions", style: TextStyle(color: Colors.white, fontSize: 18), textAlign: TextAlign.center,),
-                      SizedBox(height: 15,),
-                      Text("$totalSales", style: TextStyle(color: Colors.white, fontSize: 25), textAlign: TextAlign.center,)
+                      Center(child: Text("Transactions", style: appStyle(16, Colors.white, FontWeight.bold) )),
+                      SizedBox(height: 5,),
+                      Center(child: Text("$totalSales", style: TextStyle(color: Colors.white, fontSize: 25), textAlign: TextAlign.center,))
                     ],
                   ),
                 ),
@@ -151,7 +170,7 @@ Future<void> selectEndDate(BuildContext context) async {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Container(
-                    height: 100,
+                    height: 75,
                     width: 165,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.only(
@@ -165,16 +184,16 @@ Future<void> selectEndDate(BuildContext context) async {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Center(child: Text("ZWG Sales", style: TextStyle(color: Colors.white, fontSize: 18), textAlign: TextAlign.center,)),
-                          SizedBox(height: 15,),
-                          Center(child: Text(ZWGtotal.toString(), style: TextStyle(color: Colors.white, fontSize: 18), textAlign: TextAlign.center,))
+                          Center(child: Text("ZWG Sales", style: appStyle(18, Colors.white, FontWeight.normal), textAlign: TextAlign.center,)),
+                          SizedBox(height: 5,),
+                          Center(child: Text(ZWGtotal.toString(), style: appStyle(18, Colors.white, FontWeight.normal), textAlign: TextAlign.center,))
                         ],
                       ),
                     ),
                   ),
                   Container(
                     width: 165,
-                    height: 100,
+                    height: 75,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.only(
                         topRight: Radius.circular(10),
@@ -186,62 +205,18 @@ Future<void> selectEndDate(BuildContext context) async {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Center(child: Text("USD Sales", style: TextStyle(color: Colors.white, fontSize: 18), textAlign: TextAlign.center,)),
-                          SizedBox(height: 15,),
-                          Center(child: Text(USDtotal.toString(), style: TextStyle(color: Colors.white, fontSize: 18), textAlign: TextAlign.center,))
+                          Center(child: Text("USD Sales", style: appStyle(18, Colors.white, FontWeight.normal), textAlign: TextAlign.center,)),
+                          SizedBox(height: 5,),
+                          Center(child: Text(USDtotal.toString(), style: appStyle(18, Colors.white, FontWeight.normal), textAlign: TextAlign.center,))
                         ],
                       ),
                     ),
                   ),  
                 ],
               ),
-              const SizedBox(height: 20,),
-              Container(
-                height: 250,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(10),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.3),
-                      blurRadius: 10,
-                      spreadRadius: 4,
-                      offset: const Offset(0, 6)
-                    )
-                  ]
-                ),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  children: [
-                    Center(child: Text("Top selling products", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),)),
-                    const SizedBox(height: 20,),
-                    Expanded(
-                      child: ListView.builder(
-                        itemCount: topProducts.length,
-                        itemBuilder: (context, index){
-                          final product = topProducts[index];
-                          return Container(
-                            margin: const EdgeInsets.symmetric(vertical: 5.0 , horizontal: 5.0),
-                            decoration: BoxDecoration(
-                              border: Border.all(color: Colors.grey, width: 1.0),
-                              borderRadius: BorderRadius.circular(10.0),
-                              color: Colors.white
-                            ),
-                            child: ListTile(
-                              title: Text(product['productName']),
-                              subtitle: Text("Quantity: ${product['totalQuantity']}"),
-                              trailing: Text("\$${product['totalSales']}"),
-                            ),
-                          );
-                        }
-                      ),
-                    )
-                  ],
-                ),
-              ),
               const SizedBox(height: 40,),
               Container(
-                height: 250,
+                height: 260,
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(10),
@@ -258,7 +233,8 @@ Future<void> selectEndDate(BuildContext context) async {
                   mainAxisAlignment: MainAxisAlignment.start,
                   children: [
                     const SizedBox(height: 10,),
-                    const Text("Get Periodic Sales", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),),
+                    const Heading(text: "Get Periodic Sales"),
+                    const SizedBox(height: 10,),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                       children: [
@@ -267,7 +243,7 @@ Future<void> selectEndDate(BuildContext context) async {
                           children: [
                             ElevatedButton(
                               onPressed: ()=> selectedStartDate(context),
-                              child: const Text("Selcted Start Date")
+                              child: const Text("Selected Start Date")
                             )   ,
                             Text(_startDate != null
                               ? _startDate!.toLocal().toString().split('T').first
@@ -335,7 +311,140 @@ Future<void> selectEndDate(BuildContext context) async {
                   ],
                 ),
               ),
-              const SizedBox(height: 10,)
+              const SizedBox(height: 10,),
+              const SizedBox(height: 20,),
+              Container(
+                height: 250,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.3),
+                      blurRadius: 10,
+                      spreadRadius: 4,
+                      offset: const Offset(0, 6)
+                    )
+                  ]
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    const Heading(text: 'Top Selling Products'),
+                    const SizedBox(height: 20,),
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: topProducts.length,
+                        itemBuilder: (context, index){
+                          final product = topProducts[index];
+                          return Container(
+                            margin: const EdgeInsets.symmetric(vertical: 5.0 , horizontal: 5.0),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey, width: 1.0),
+                              borderRadius: BorderRadius.circular(10.0),
+                              color: Colors.white
+                            ),
+                            child: ListTile(
+                              title: Text(product['productName']),
+                              subtitle: Text("Quantity: ${product['totalQuantity']}"),
+                              trailing: Text("\$${product['totalSales']}"),
+                            ),
+                          );
+                        }
+                      ),
+                    )
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20,),
+              Container(
+                height: 250,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.3),
+                      blurRadius: 10,
+                      spreadRadius: 4,
+                      offset: const Offset(0, 6)
+                    )
+                  ]
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    const Heading(text: 'Top Selling Cashiers'),
+                    const SizedBox(height: 20,),
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: topCashiers.length,
+                        itemBuilder: (context, index){
+                          final cashier = topCashiers[index];
+                          return Container(
+                            margin: const EdgeInsets.symmetric(vertical: 5.0 , horizontal: 5.0),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey, width: 1.0),
+                              borderRadius: BorderRadius.circular(10.0),
+                              color: Colors.white
+                            ),
+                            child: ListTile(
+                              title: Text(cashier['doneBY']),
+                              subtitle: Text("Quantity: ${cashier['totalInvoices']}"),
+                              trailing: Text("\$${cashier['totalSales']}"),
+                            ),
+                          );
+                        }
+                      ),
+                    )
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20,),
+              Container(
+                height: 250,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.3),
+                      blurRadius: 10,
+                      spreadRadius: 4,
+                      offset: const Offset(0, 6)
+                    )
+                  ]
+                ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    const Heading(text: 'Top Customers'),
+                    const SizedBox(height: 20,),
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: topCustomers.length,
+                        itemBuilder: (context, index){
+                          final customers = topCustomers[index];
+                          return Container(
+                            margin: const EdgeInsets.symmetric(vertical: 5.0 , horizontal: 5.0),
+                            decoration: BoxDecoration(
+                              border: Border.all(color: Colors.grey, width: 1.0),
+                              borderRadius: BorderRadius.circular(10.0),
+                              color: Colors.white
+                            ),
+                            child: ListTile(
+                              title: Text(customers['customerName']),
+                              subtitle: Text("Quantity: ${customers['totalInvoices']}"),
+                              trailing: Text("\$${customers['totalSpent']}"),
+                            ),
+                          );
+                        }
+                      ),
+                    )
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20,),
             ],
           ),
         ),

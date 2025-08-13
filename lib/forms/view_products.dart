@@ -86,66 +86,69 @@ class _viewProductsState extends State<ViewProducts> {
       builder: (BuildContext context){
         return AlertDialog(
           title: const Text("Update Product"),
-          content:Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text("Type In Fields To Update Product"),
-              const SizedBox(height: 10,),
-              TextField(
-                controller: nameController,
-                obscureText: false,
-                decoration: const InputDecoration(
-                  labelText: 'Product Name',
-                  border: OutlineInputBorder(),
+          content:SingleChildScrollView(
+            scrollDirection: Axis.vertical,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text("Type In Fields To Update Product"),
+                const SizedBox(height: 10,),
+                TextField(
+                  controller: nameController,
+                  obscureText: false,
+                  decoration: const InputDecoration(
+                    labelText: 'Product Name',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 10,),
-              TextField(
-                controller: barcodeController,
-                obscureText: false,
-                decoration: const InputDecoration(
-                  labelText: 'Bar Code',
-                  border: OutlineInputBorder(),
+                const SizedBox(height: 10,),
+                TextField(
+                  controller: barcodeController,
+                  obscureText: false,
+                  decoration: const InputDecoration(
+                    labelText: 'Bar Code',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 10,),
-              TextField(
-                controller: hcodeController,
-                obscureText: false,
-                decoration: const InputDecoration(
-                  labelText: 'HS Code',
-                  border: OutlineInputBorder(),
+                const SizedBox(height: 10,),
+                TextField(
+                  controller: hcodeController,
+                  obscureText: false,
+                  decoration: const InputDecoration(
+                    labelText: 'HS Code',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 10,),
-              TextField(
-                controller: costPriceController,
-                obscureText: false,
-                decoration: const InputDecoration(
-                  labelText: 'Cost Price',
-                  border: OutlineInputBorder(),
+                const SizedBox(height: 10,),
+                TextField(
+                  controller: costPriceController,
+                  obscureText: false,
+                  decoration: const InputDecoration(
+                    labelText: 'Cost Price',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 10,),
-              TextField(
-                controller: sellingController,
-                obscureText: false,
-                decoration: const InputDecoration(
-                  labelText: 'Selling Price',
-                  border: OutlineInputBorder(),
+                const SizedBox(height: 10,),
+                TextField(
+                  controller: sellingController,
+                  obscureText: false,
+                  decoration: const InputDecoration(
+                    labelText: 'Selling Price',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 10,),
-              TextField(
-                controller: taxController,
-                obscureText: false,
-                decoration: const InputDecoration(
-                  labelText: 'Tax',
-                  border: OutlineInputBorder(),
+                const SizedBox(height: 10,),
+                TextField(
+                  controller: taxController,
+                  obscureText: false,
+                  decoration: const InputDecoration(
+                    labelText: 'Tax',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 10,),
-            ],
+                const SizedBox(height: 10,),
+              ],
+            ),
           ) ,
           actions: [
             TextButton(

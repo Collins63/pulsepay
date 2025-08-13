@@ -188,130 +188,133 @@ class _MyTaxesState extends State<MyTaxes> {
       builder: (BuildContext context){
         return AlertDialog(
           title:  const Text("Monthly Tax Calculations" , style: TextStyle(fontSize: 12),),
-          content:Column(
-            mainAxisSize: MainAxisSize.min ,
-            children: [
-              Container(
-                height: 43,
-                width: 300,
-                //child: Text("Total Tax Amount: ${monthlyTaxDetails['totalTaxAmount']}"),
-                child: Column(
-                  
-                  children: [
-                    const Text("Month" , style: TextStyle(fontSize: 14, color: Colors.white,fontWeight:  FontWeight.w500),),
-                    //const SizedBox(height: 10,),
-                    Text("${monthlyTaxDetails['month']}", style: TextStyle(fontSize: 16  , fontWeight: FontWeight.bold , color: Colors.white),)
-                  ],
+          content:SingleChildScrollView(
+            scrollDirection: Axis.vertical,
+            child: Column(
+              mainAxisSize: MainAxisSize.min ,
+              children: [
+                Container(
+                  height: 43,
+                  width: 300,
+                  //child: Text("Total Tax Amount: ${monthlyTaxDetails['totalTaxAmount']}"),
+                  child: Column(
+                    
+                    children: [
+                      const Text("Month" , style: TextStyle(fontSize: 14, color: Colors.white,fontWeight:  FontWeight.w500),),
+                      //const SizedBox(height: 10,),
+                      Text("${monthlyTaxDetails['month']}", style: TextStyle(fontSize: 16  , fontWeight: FontWeight.bold , color: Colors.white),)
+                    ],
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.blue,
+                    borderRadius: BorderRadius.circular(10)
+                  ),
                 ),
-                decoration: BoxDecoration(
-                  color: Colors.blue,
-                  borderRadius: BorderRadius.circular(10)
+                const SizedBox(height: 15),
+                Container(
+                  height: 43,
+                  width: 300,
+                  //child: Text("Total Tax Amount: ${monthlyTaxDetails['totalTaxAmount']}"),
+                  child: Column(
+                    
+                    children: [
+                      const Text("Receipt Count ZWG" , style: TextStyle(fontSize: 14, color: Colors.white,fontWeight:  FontWeight.w500),),
+                      //const SizedBox(height: 10,),
+                      Text("${monthlyTaxDetails['receiptCount']}", style: TextStyle(fontSize: 16  , fontWeight: FontWeight.bold , color: Colors.white),)
+                    ],
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.green,
+                    borderRadius: BorderRadius.circular(10)
+                  ),
                 ),
-              ),
-              const SizedBox(height: 15),
-              Container(
-                height: 43,
-                width: 300,
-                //child: Text("Total Tax Amount: ${monthlyTaxDetails['totalTaxAmount']}"),
-                child: Column(
-                  
-                  children: [
-                    const Text("Receipt Count ZWG" , style: TextStyle(fontSize: 14, color: Colors.white,fontWeight:  FontWeight.w500),),
-                    //const SizedBox(height: 10,),
-                    Text("${monthlyTaxDetails['receiptCount']}", style: TextStyle(fontSize: 16  , fontWeight: FontWeight.bold , color: Colors.white),)
-                  ],
+                const SizedBox(height: 15),
+                Container(
+                  height: 43,
+                  width: 300,
+                  //child: Text("Total Tax Amount: ${monthlyTaxDetails['totalTaxAmount']}"),
+                  child: Column(
+                    children: [
+                      const Text("Total Tax Amount ZWG" , style: TextStyle(fontSize: 14, color: Colors.white,fontWeight:  FontWeight.w500),),
+                      //const SizedBox(height: 10,),
+                      Text("\$${(monthlyTaxDetails['totalTaxAmount'] as double).toStringAsFixed(2)}", style: TextStyle(fontSize: 16  , fontWeight: FontWeight.bold , color: Colors.white),)
+                    ],
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.green,
+                    borderRadius: BorderRadius.circular(10)
+                  ),
                 ),
-                decoration: BoxDecoration(
-                  color: Colors.green,
-                  borderRadius: BorderRadius.circular(10)
+                const SizedBox(height: 15),
+                Container(
+                  height: 43,
+                  width: 300,
+                  //child: Text("Total Tax Amount: ${monthlyTaxDetails['totalTaxAmount']}"),
+                  child: Column(
+                    children: [
+                      const Text("Sales With Tax ZWG" , style: TextStyle(fontSize: 14, color: Colors.white,fontWeight:  FontWeight.w500),),
+                      //const SizedBox(height: 10,),
+                      Text("\$${monthlyTaxDetails['totalSalesWithTax']}", style: TextStyle(fontSize: 16  , fontWeight: FontWeight.bold , color: Colors.white),)
+                    ],
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.green,
+                    borderRadius: BorderRadius.circular(10)
+                  ),
                 ),
-              ),
-              const SizedBox(height: 15),
-              Container(
-                height: 43,
-                width: 300,
-                //child: Text("Total Tax Amount: ${monthlyTaxDetails['totalTaxAmount']}"),
-                child: Column(
-                  children: [
-                    const Text("Total Tax Amount ZWG" , style: TextStyle(fontSize: 14, color: Colors.white,fontWeight:  FontWeight.w500),),
-                    //const SizedBox(height: 10,),
-                    Text("\$${(monthlyTaxDetails['totalTaxAmount'] as double).toStringAsFixed(2)}", style: TextStyle(fontSize: 16  , fontWeight: FontWeight.bold , color: Colors.white),)
-                  ],
+                const SizedBox(height: 15,),
+                 Container(
+                  height: 43,
+                  width: 300,
+                  //child: Text("Total Tax Amount: ${monthlyTaxDetails['totalTaxAmount']}"),
+                  child: Column(
+                    children: [
+                      const Text("Receipt Count USD" , style: TextStyle(fontSize: 14, color: Colors.white,fontWeight:  FontWeight.w500),),
+                      //const SizedBox(height: 10,),
+                      Text("${monthlyTaxDetailsUSD['receiptCount']}", style: TextStyle(fontSize: 16  , fontWeight: FontWeight.bold , color: Colors.white),)
+                    ],
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.green,
+                    borderRadius: BorderRadius.circular(10)
+                  ),
                 ),
-                decoration: BoxDecoration(
-                  color: Colors.green,
-                  borderRadius: BorderRadius.circular(10)
+                const SizedBox(height: 15),
+                Container(
+                  height: 43,
+                  width: 300,
+                  //child: Text("Total Tax Amount: ${monthlyTaxDetails['totalTaxAmount']}"),
+                  child: Column(
+                    children: [
+                      const Text("Total Tax Amount USD" , style: TextStyle(fontSize: 14, color: Colors.white,fontWeight:  FontWeight.w500),),
+                      //const SizedBox(height: 10,),
+                      Text("\$${(monthlyTaxDetailsUSD['totalTaxAmount'] as double).toStringAsFixed(2)}", style: TextStyle(fontSize: 16  , fontWeight: FontWeight.bold , color: Colors.white),)
+                    ],
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.green,
+                    borderRadius: BorderRadius.circular(10)
+                  ),
                 ),
-              ),
-              const SizedBox(height: 15),
-              Container(
-                height: 43,
-                width: 300,
-                //child: Text("Total Tax Amount: ${monthlyTaxDetails['totalTaxAmount']}"),
-                child: Column(
-                  children: [
-                    const Text("Sales With Tax ZWG" , style: TextStyle(fontSize: 14, color: Colors.white,fontWeight:  FontWeight.w500),),
-                    //const SizedBox(height: 10,),
-                    Text("\$${monthlyTaxDetails['totalSalesWithTax']}", style: TextStyle(fontSize: 16  , fontWeight: FontWeight.bold , color: Colors.white),)
-                  ],
+                const SizedBox(height: 15),
+                Container(
+                  height: 43,
+                  width: 300,
+                  //child: Text("Total Tax Amount: ${monthlyTaxDetails['totalTaxAmount']}"),
+                  child: Column(
+                    children: [
+                      const Text("Sales With Tax USD" , style: TextStyle(fontSize: 14, color: Colors.white,fontWeight:  FontWeight.w500),),
+                      //const SizedBox(height: 10,),
+                      Text("\$${monthlyTaxDetailsUSD['totalSalesWithTax']}", style: TextStyle(fontSize: 16  , fontWeight: FontWeight.bold , color: Colors.white),)
+                    ],
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.green,
+                    borderRadius: BorderRadius.circular(10)
+                  ),
                 ),
-                decoration: BoxDecoration(
-                  color: Colors.green,
-                  borderRadius: BorderRadius.circular(10)
-                ),
-              ),
-              const SizedBox(height: 15,),
-               Container(
-                height: 43,
-                width: 300,
-                //child: Text("Total Tax Amount: ${monthlyTaxDetails['totalTaxAmount']}"),
-                child: Column(
-                  children: [
-                    const Text("Receipt Count USD" , style: TextStyle(fontSize: 14, color: Colors.white,fontWeight:  FontWeight.w500),),
-                    //const SizedBox(height: 10,),
-                    Text("${monthlyTaxDetailsUSD['receiptCount']}", style: TextStyle(fontSize: 16  , fontWeight: FontWeight.bold , color: Colors.white),)
-                  ],
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.green,
-                  borderRadius: BorderRadius.circular(10)
-                ),
-              ),
-              const SizedBox(height: 15),
-              Container(
-                height: 43,
-                width: 300,
-                //child: Text("Total Tax Amount: ${monthlyTaxDetails['totalTaxAmount']}"),
-                child: Column(
-                  children: [
-                    const Text("Total Tax Amount USD" , style: TextStyle(fontSize: 14, color: Colors.white,fontWeight:  FontWeight.w500),),
-                    //const SizedBox(height: 10,),
-                    Text("\$${(monthlyTaxDetailsUSD['totalTaxAmount'] as double).toStringAsFixed(2)}", style: TextStyle(fontSize: 16  , fontWeight: FontWeight.bold , color: Colors.white),)
-                  ],
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.green,
-                  borderRadius: BorderRadius.circular(10)
-                ),
-              ),
-              const SizedBox(height: 15),
-              Container(
-                height: 43,
-                width: 300,
-                //child: Text("Total Tax Amount: ${monthlyTaxDetails['totalTaxAmount']}"),
-                child: Column(
-                  children: [
-                    const Text("Sales With Tax USD" , style: TextStyle(fontSize: 14, color: Colors.white,fontWeight:  FontWeight.w500),),
-                    //const SizedBox(height: 10,),
-                    Text("\$${monthlyTaxDetailsUSD['totalSalesWithTax']}", style: TextStyle(fontSize: 16  , fontWeight: FontWeight.bold , color: Colors.white),)
-                  ],
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.green,
-                  borderRadius: BorderRadius.circular(10)
-                ),
-              ),
-            ],
+              ],
+            ),
           ),
           actions: [
             ElevatedButton(
