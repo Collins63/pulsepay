@@ -41,7 +41,7 @@ class _ViewInvoicesState extends State<ViewInvoices> {
   String? receiptDeviceSignature_signature_hex ;
   String? first16Chars;
   String? receiptDeviceSignature_signature;
-  String genericzimraqrurl = "https://fdmstest.zimra.co.zw/";
+  String genericzimraqrurl = "https://fdms.zimra.co.zw/";
   int deviceID = 25395;
   String? generatedJson;
   String? fiscalResponse;
@@ -140,10 +140,11 @@ class _ViewInvoicesState extends State<ViewInvoices> {
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async{
               final enteredPassword = passwordController.text.trim();
               final eneteredReason = reasonController.text;
-              validatePassword(enteredPassword , eneteredReason);
+              await validatePassword(enteredPassword , eneteredReason);
+              Navigator.of(context).pop();
             },
             child: const Text('Submit'),
           ),
@@ -153,17 +154,15 @@ class _ViewInvoicesState extends State<ViewInvoices> {
     );
   }
 
-  void validatePassword(String enteredPassword , String enteredReason) async {
+  Future<void> validatePassword(String enteredPassword , String enteredReason) async {
     const String correctPassword = 'admin123'; // Replace with your password logic
 
     if (enteredPassword == correctPassword && enteredReason != "") {
       // Password is correct, proceed to cancel the invoice
       creditReason = enteredReason;
-      generateCreditFiscalJSON();
-      Navigator.of(context).pop(); // Close the dialog 
+      await generateCreditFiscalJSON();
       
     } else {
-      Navigator.of(context).pop();
       Get.snackbar(
         'Denied!',
         'Wrong password/Reason not found',
@@ -238,7 +237,7 @@ final BlueThermalPrinter bluetooth  = BlueThermalPrinter.instance;
       await _printCustomerInfo(receipt);
       await _printInvoiceDetails(receipt , ogInvoice);
       await _printItems(receipt['receiptLines']);
-      await _printTotal(receipt['receiptTotal'] , receipt);
+      await _printTotal(receipt['receiptTotal'].toString() , receipt);
       //await _printSignature(receipt['receiptDeviceSignature']);
       await _printVerification(receipt['receiptGlobalNo'] , verificationCode);
       await _printQRCode(qrUrl);
@@ -299,7 +298,7 @@ final BlueThermalPrinter bluetooth  = BlueThermalPrinter.instance;
       await SunmiPrinter.printText(itemLine , style: SunmiTextStyle(bold: true));
       
       // Format price line with proper spacing
-      String priceLine = "@\$${item['receiptLinePrice']} = \$${item['receiptLineTotal']}";
+      String priceLine = "@\$${item['receiptLinePrice']} = \$${item['receiptLineTotal'].toString()}";
       await SunmiPrinter.setAlignment(SunmiPrintAlign.RIGHT);
       await SunmiPrinter.printText(priceLine, style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
       await SunmiPrinter.setAlignment(SunmiPrintAlign.LEFT);
@@ -311,7 +310,7 @@ final BlueThermalPrinter bluetooth  = BlueThermalPrinter.instance;
     double totalTax = 0;
     final receiptTaxes = receipt['receiptTaxes'];
     for(var tax in receiptTaxes){
-      double taxesTax = double.tryParse(tax['taxAmount'])!;
+      double taxesTax = double.tryParse(tax['taxAmount'].toString())!;
       totalTax += taxesTax;
     }
     await SunmiPrinter.printText("================================");
@@ -402,7 +401,7 @@ Future<String> createCreditNote(String receiptJsonString,
     return {
       ...tax,
       "salesAmountWithTax": -1 * tax["salesAmountWithTax"],
-      "taxAmount": tax["taxAmount"] != "0" && tax["taxAmount"] !="0.00" ? (-1 * double.parse(tax["taxAmount"])).toStringAsFixed(2) : tax["taxAmount"].toString(),
+      "taxAmount": tax["taxAmount"] != "0" && tax["taxAmount"] !="0.00" ? (-1 * double.parse(tax["taxAmount"].toString())).toStringAsFixed(2) : tax["taxAmount"].toString(),
     };
   }).toList();
 
@@ -412,7 +411,7 @@ Future<String> createCreditNote(String receiptJsonString,
     return {
       ...payment,
       "paymentAmount":
-          (-1 * double.parse(payment["paymentAmount"])).toStringAsFixed(2),
+          (-1 * double.parse(payment["paymentAmount"].toString())).toStringAsFixed(2),
       
     };
   }).toList();
@@ -422,14 +421,14 @@ Future<String> createCreditNote(String receiptJsonString,
     return {
       ...line,
       "receiptLineTotal":
-          (-1 * double.parse(line["receiptLineTotal"])).toStringAsFixed(2),
-      "receiptLinePrice": (-1 * double.parse(line["receiptLinePrice"])).toStringAsFixed(2) ,
+          (-1 * double.parse(line["receiptLineTotal"].toString())).toStringAsFixed(2),
+      "receiptLinePrice": (-1 * double.parse(line["receiptLinePrice"].toString())).toStringAsFixed(2) ,
     };
   }).toList();
 
   // 3. Negate receiptTotal
   creditNoteBody["receiptTotal"] =
-      (-1 * double.parse(creditNoteBody["receiptTotal"])).toStringAsFixed(2);
+      (-1 * double.parse(creditNoteBody["receiptTotal"].toString())).toStringAsFixed(2);
 
   // Update receiptGlobalNo, receiptCounter, receiptDate, and add receiptNotes
   creditNoteBody["receiptGlobalNo"] = int.parse(newReceiptGlobalNo);
@@ -667,7 +666,7 @@ Future<void> generateCreditFiscalJSON() async{
       String creditNoteNumber = await dbHelper.getNextCreditNoteNumber();
       if(pingResponse=="200"){
         String apiEndpointSubmitReceipt =
-          "https://fdmsapitest.zimra.co.zw/Device/v1/$deviceID/SubmitReceipt";
+          "https://fdmsapi.zimra.co.zw/Device/v1/$deviceID/SubmitReceipt";
         const String deviceModelName = "Server";
         const String deviceModelVersion = "v1";  
 
@@ -869,6 +868,7 @@ void cancelSelectedInvoice() async {
   if (selectedInvoices.isNotEmpty) {
     final int invoiceId = selectedInvoices.first;
     dbHelper.cancelInvoice(invoiceId);
+    if (!mounted) return;
     setState(() {
       //searchResults.removeWhere((invoice) => invoice['invoiceId'] == invoiceId);
       searchResults = List<Map<String, dynamic>>.from(searchResults);

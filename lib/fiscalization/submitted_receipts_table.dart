@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pulsepay/SQLite/database_helper.dart';
 import 'package:pulsepay/common/app_bar.dart';
 import 'package:pulsepay/common/custom_button.dart';
@@ -102,6 +103,7 @@ class _submittedReceiptsTableState extends State<SubmittedReceiptsTable> {
                           DataColumn(label:Text('totalNonVat')),
                           DataColumn(label:Text('totalExempt')),
                           DataColumn(label:Text('totalWT')),
+                          DataColumn(label: Text('Actions'))
                         ],
                         rows: submittedReceipts
                             .map(
@@ -140,6 +142,85 @@ class _submittedReceiptsTableState extends State<SubmittedReceiptsTable> {
                                   DataCell(Text(receipt['TotalNonVAT'].toString())),
                                   DataCell(Text(receipt['TotalExempt'].toString())),
                                   DataCell(Text(receipt['TotalWT'].toString())),
+                                  DataCell(
+                                    Row(children: [
+                                      IconButton(
+                                        onPressed: (){
+                                          int receiptGlobalNumber = receipt['receiptGlobalNo'];
+                                          TextEditingController receiptController = TextEditingController();
+                                          receiptController.text = receipt['receiptJsonbody'];
+                                          final formKey = GlobalKey<FormState>();
+                                          showDialog(
+                                            context: context,
+                                            barrierDismissible: false,
+                                            builder: (BuildContext context){
+                                              return AlertDialog(
+                                                title: const Text("Edit Receipt"),
+                                                content: Form(
+                                                  key: formKey,
+                                                  child: Column(
+                                                    mainAxisSize: MainAxisSize.min,
+                                                    children: [
+                                                      Text("Receipt", style: TextStyle(fontSize: 12),),
+                                                      TextFormField(
+                                                        controller: receiptController,
+                                                        decoration: InputDecoration(
+                                                            labelText: 'Product Name',
+                                                            labelStyle: TextStyle(color:Colors.grey.shade600 ),
+                                                            filled: true,
+                                                            fillColor: Colors.white,
+                                                            border:const OutlineInputBorder()
+                                                        ),
+                                                        style: const TextStyle(color: Colors.black),
+                                                        validator: (value){
+                                                          if(value!.isEmpty){
+                                                            return "Product name is required";
+                                                          }return null;
+                                                        },
+                                                      ),
+                                                    ],
+                                                  ),
+                                                ),
+                                                actions: [
+                                                  TextButton(
+                                                    onPressed: (){
+                                                      Navigator.of(context).pop();
+                                                    },
+                                                    child: const Text("Cancel")
+                                                  ),
+                                                  ElevatedButton(
+                                                    onPressed: ()async {
+                                                      String receipt = receiptController.text;
+                                                      try {
+                                                        await dbHelper.updateReceipt(receiptGlobalNumber, receipt);
+                                                        Get.snackbar("Success","Receipt updated",
+                                                          backgroundColor: Colors.green,
+                                                          colorText: Colors.white,
+                                                          snackPosition: SnackPosition.TOP
+                                                        );
+                                                         Navigator.of(context).pop();
+                                                      } catch (e) {
+                                                        Get.snackbar(
+                                                          "Error Updating", "$e",
+                                                          snackPosition: SnackPosition.TOP,
+                                                          backgroundColor: Colors.red,
+                                                          colorText: Colors.white
+                                                        );
+                                                         Navigator.of(context).pop();
+                                                      }
+
+                                                    },
+                                                    child: const Text("Update")
+                                                  )
+                                                ],
+                                              );
+                                            }
+                                          );
+                                        },
+                                        icon: const Icon(Icons.edit, color: Colors.blue,)
+                                      )
+                                    ],)
+                                  )
                                 ],
                               );
                             })

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:pulsepay/SQLite/database_helper.dart';
 import 'package:pulsepay/common/app_bar.dart';
 import 'package:pulsepay/common/custom_button.dart';
@@ -64,6 +65,15 @@ class _openDayTableState extends State<OpenDayTable> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                const SizedBox(height: 20),
+                CustomOutlineBtn(text: "Add day", color: Colors.white,
+                  color2: Colors.blueAccent,
+                  height: 40,
+                  onTap: () async{
+                    String iso8601 = DateFormat("yyyy-MM-dd'T'HH:mm:ss").format(DateTime.now());
+                    await dbHelper.insertOpenDay(1, "unprocessed", iso8601);
+                  },
+                ),
                 const SizedBox(height: 20),
                 SingleChildScrollView(
                     scrollDirection: Axis.vertical,

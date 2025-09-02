@@ -187,7 +187,7 @@ class _PeriodictaxState extends State<Periodictax> {
                             borderRadius: BorderRadius.circular(10.0),
                           ),
                           child: Center(
-                            child: Text("${periodTotal!.toStringAsFixed(2)}" , style: const TextStyle(color: Colors.white,fontWeight: FontWeight.bold, fontSize: 20),),
+                            child: Text( periodTotal != null ? "${periodTotal!.toStringAsFixed(2)}" : "0.00" , style: const TextStyle(color: Colors.white,fontWeight: FontWeight.bold, fontSize: 20),),
                           ),
                         ),
                       )

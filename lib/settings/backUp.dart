@@ -34,8 +34,7 @@ class _DatabaseBackupState extends State<DatabaseBackup> {
   Future<void> loadBackupSQLFileWithPicker(Database db) async {
   try {
     final result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['sql'],
+      type: FileType.any
     );
 
     if (result == null || result.files.single.path == null) {
@@ -53,8 +52,14 @@ class _DatabaseBackupState extends State<DatabaseBackup> {
 
     final sqlContent = await file.readAsString();
 
+    // 🔍 Remove comment and empty lines before splitting
+    final cleanedContent = sqlContent
+        .split('\n')
+        .where((line) => !line.trim().startsWith('--') && line.trim().isNotEmpty)
+        .join('\n');
+
     // 🔍 Split and clean the SQL file
-    final rawStatements = sqlContent
+    final rawStatements = cleanedContent
         .split(';')
         .map((s) => s.trim())
         .where((s) => s.isNotEmpty)
@@ -66,34 +71,27 @@ class _DatabaseBackupState extends State<DatabaseBackup> {
       final stmtTrimmed = stmt.trimLeft();
       final stmtLower = stmtTrimmed.toLowerCase();
 
-      // Skip schema/control statements
-      if (stmtTrimmed.startsWith('--') ||
-          stmtLower.startsWith('begin') ||
-          stmtLower.startsWith('commit') ||
-          stmtLower.startsWith('create table') ||
-          stmtLower.startsWith('drop table')) {
-        print("⚠️ Skipping schema/control statement: $stmtTrimmed");
-        continue;
-      }
-
       try {
         // Force 'INSERT INTO' to become 'INSERT OR REPLACE INTO'
         String cleanStmt;
         if (stmtLower.startsWith('insert into')) {
-          // Slice after "insert into" (length = 11)
           cleanStmt = 'INSERT OR REPLACE INTO' + stmtTrimmed.substring(11);
         } else {
           cleanStmt = stmtTrimmed;
         }
-
         await db.execute(cleanStmt);
       } catch (e) {
-        print("🧨 Error executing: $stmt");
+        print("🧨 Error executing: $stmtTrimmed");
         print("   👉 $e");
       }
     }
 
-    print("✅ Backup loaded successfully.");
+    Get.snackbar("Success", 
+      "Backup loaded successfully",
+      snackPosition: SnackPosition.TOP,
+      backgroundColor: Colors.green,
+      colorText: Colors.white
+    );
   } catch (e) {
     print("❌ Exception during backup restore: $e");
   }

@@ -4,6 +4,7 @@ import 'package:audioplayers/audioplayers.dart';
 import 'package:basic_utils/basic_utils.dart';
 import 'package:blue_thermal_printer/blue_thermal_printer.dart';
 import 'package:crypto/crypto.dart';
+import 'package:decimal/decimal.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -191,7 +192,7 @@ Future<void> print58mmAdvanced(Map<String, dynamic> receiptJson, String qrUrl , 
     await _printCustomerInfo(receipt);
     await _printInvoiceDetails(receipt);
     await _printItems(receipt['receiptLines']);
-    await _printTotal(receipt['receiptTotal'] , receipt);
+    await _printTotal(receipt['receiptTotal'].toString() , receipt);
     //await _printSignature(receipt['receiptDeviceSignature']);
     await _printVerification(receipt['receiptGlobalNo'] , verificationCode);
     await _printQRCode(qrUrl);
@@ -252,7 +253,7 @@ Future<void> _printItems(List receiptLines) async {
     await SunmiPrinter.printText(itemLine , style: SunmiTextStyle(bold: true));
     
     // Format price line with proper spacing
-    String priceLine = "@\$${item['receiptLinePrice']} = \$${item['receiptLineTotal']}";
+    String priceLine = "@\$${item['receiptLinePrice']} = \$${item['receiptLineTotal'].toString()}";
     await SunmiPrinter.setAlignment(SunmiPrintAlign.RIGHT);
     await SunmiPrinter.printText(priceLine, style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
     await SunmiPrinter.setAlignment(SunmiPrintAlign.LEFT);
@@ -264,7 +265,7 @@ Future<void> _printTotal(dynamic receiptTotal , Map<String, dynamic> receipt) as
   double totalTax = 0;
   final receiptTaxes = receipt['receiptTaxes'];
   for(var tax in receiptTaxes){
-    double taxesTax = double.tryParse(tax['taxAmount'])!;
+    double taxesTax = double.tryParse(tax['taxAmount'].toString())!;
     totalTax += taxesTax;
   }
   await SunmiPrinter.printText("================================");
@@ -479,15 +480,15 @@ Future<void> _finishPrint() async {
       taxCode = "B";
       itemTax = totalPrice * double.parse(taxPercent);
     } else if (productTax == "vat") {
-      taxID = 3;
-      taxPercent = "15.00"; // Convert 15% to decimal
-      taxCode = "C";
+      taxID = 1;
+      taxPercent = "0"; // Convert 15% to decimal
+      taxCode = "A";
       itemTax = totalPrice * 0.15;
       salesAmountwithTax += totalPrice;
     } else {
-      taxID = 1;
-      taxPercent = "0";
-      taxCode = "A";
+      taxID = 3;
+      taxPercent = "15.00";
+      taxCode = "C";
       itemTax = totalPrice * 0;
     }
 
@@ -592,12 +593,6 @@ Future<void> _finishPrint() async {
         data: data,
         privateKeyPath: pemFile.path,
       );
-      
-      //List<String>? signature = await getSignatureSignature(data);
-      //receiptDeviceSignature_signature_hex = signature?[0];
-      //receiptDeviceSignature_signature  = signature?[1];
-      //final Map<String, String> signedDataMap  = await signData(filePath, password, data);
-      //final Map<String, dynamic> signedDataMap = jsonDecode(signedDataString);
       receiptDeviceSignature_signature_hex = signedDataMap["receiptDeviceSignature_signature_hex"] ?? "";
       receiptDeviceSignature_signature = signedDataMap["receiptDeviceSignature_signature"] ?? "";
       first16Chars = signedDataMap["receiptDeviceSignature_signature_md5_first16"] ?? "";
@@ -716,14 +711,6 @@ Future<void> _finishPrint() async {
       Get.snackbar("JSON Encoding Error", "$e", snackPosition: SnackPosition.TOP);
       return "{}";
     }
-    // String getLatestReceiptHash = await dbHelper.getLatestReceiptHash();
-
-    // String verifyString =  buildZimraCanonicalString(receipt: jsonData, deviceID: "25395", previousReceiptHash: getLatestReceiptHash);
-    // verifyString.trim();
-    // var bytes = utf8.encode(verifyString);
-    // var digest = sha256.convert(bytes);
-    // final hashVerify = base64.encode(digest.bytes);
-    // verifySignatureAndShowResult2(context, filePath, password, hashVerify, receiptDeviceSignature_signature.toString());
     File file = File("/storage/emulated/0/Pulse/Configurations/jsonFile.txt");
     await file.writeAsString(jsonString);
     print("Generated JSON: $jsonString");
@@ -741,6 +728,12 @@ Future<void> _finishPrint() async {
     );
     return "{}"; // Ensure the function always returns something
   }
+}
+
+double roundTo2(double value) {
+  final Decimal decimalValue = Decimal.parse(value.toString());
+  final Decimal rounded = decimalValue.round(scale: 2);
+  return double.parse(rounded.toString());
 }
 
 List<Map<String, dynamic>> generateReceiptTaxes(List<dynamic> receiptItems) {
@@ -777,14 +770,18 @@ List<Map<String, dynamic>> generateReceiptTaxes(List<dynamic> receiptItems) {
   return taxGroups.values.map((tax) {
     final taxID = tax["taxID"];
     final taxCode = tax["taxCode"];
-    final isGroupC = (taxCode == "A" || taxID == 1);
+    final isGroupC = (taxCode == "C" || taxID == 3);
+
+    double tax1 = (tax["salesAmountWithTax"] is String)
+      ? double.tryParse(tax["salesAmountWithTax"]) ?? 0
+      : (tax["salesAmountWithTax"] ?? 0).toDouble();
 
     return {
       "taxID": taxID.toString(),
       if (!isGroupC) "taxPercent": tax["taxPercent"], // Omit if group C
       "taxCode": taxCode,
-      "taxAmount": isGroupC ? "0" : tax["taxAmount"].toStringAsFixed(2),
-      "salesAmountWithTax": tax["salesAmountWithTax"],
+      "taxAmount": isGroupC ? "0" : roundTo2(tax["taxAmount"]),
+      "salesAmountWithTax": roundTo2(tax1),
     };
   }).toList();
 }
@@ -832,13 +829,15 @@ String generateTaxSummary(List<dynamic> receiptItems) {
   //   return "${tax["taxCode"]}${tax["taxPercent"]}${(tax["taxAmount"] * 100).round().toString()}${(tax["salesAmountWithTax"] * 100).round().toString()}";
   // }).join("");
   return sortedTaxes.map((tax) {
+    double taxAmountcents = roundTo2(tax["taxAmount"]);
+    double salesAmountcents = roundTo2(tax["salesAmountWithTax"]);
     final taxCode = tax["taxCode"];
     final taxPercent = tax["taxPercent"];
-    final taxAmount = (tax["taxAmount"] * 100).round().toString();
-    final salesAmount = (tax["salesAmountWithTax"] * 100).round().toString();
+    final taxAmount = (taxAmountcents * 100).round().toString();
+    final salesAmount = (salesAmountcents * 100).round().toString();
 
     // Omit taxPercent for taxCode A
-    if (taxCode == "A") {
+    if (taxCode == "C") {
       return "$taxCode$taxAmount$salesAmount";
     }
 
@@ -976,7 +975,7 @@ String generateTaxSummary(List<dynamic> receiptItems) {
   
   Future<String> ping() async {
     String apiEndpointPing =
-        "https://fdmsapitest.zimra.co.zw/Device/v1/$deviceID/Ping";
+        "https://fdmsapi.zimra.co.zw/Device/v1/$deviceID/Ping";
     const String deviceModelName = "Server";
     const String deviceModelVersion = "v1"; 
 
@@ -1070,7 +1069,7 @@ String generateTaxSummary(List<dynamic> receiptItems) {
       
     if(pingResponse=="200"){
       String apiEndpointSubmitReceipt =
-      "https://fdmsapitest.zimra.co.zw/Device/v1/$deviceID/SubmitReceipt";
+      "https://fdmsapi.zimra.co.zw/Device/v1/$deviceID/SubmitReceipt";
       const String deviceModelName = "Server";
       const String deviceModelVersion = "v1";  
 
@@ -1577,18 +1576,6 @@ String generateTaxSummary(List<dynamic> receiptItems) {
   }
 
   double calculateTotalPrice() {
-    // return cartItems.fold(0.0, (total, item) {
-    //   final double sellingPrice = item['sellingPrice'] ?? 0.0; // Default to 0.0 if null
-    // final int sellQty = item['sellqty'] is int
-    //     ? item['sellqty'] // already an int
-    //     : int.tryParse(item['sellqty'].toString()) ?? 1; // Default to 1.0 if null
-    //   if(selectedPayMethod.isEmpty){
-    //     return total + (sellingPrice * sellQty);
-    //   }else{
-    //     double rate  = selectedPayMethod[0]['rate'];
-    //     return total + (sellingPrice * sellQty * rate);
-    //   }
-    // });
     return cartItems.fold(0.0, (total, item) {
       final double sellingPrice = (item['sellingPrice'] ?? 0.0) as double;
       final double sellQty = (item['sellqty'] is num)

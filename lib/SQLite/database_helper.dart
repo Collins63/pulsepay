@@ -804,6 +804,20 @@ Future<void> saveQuotation(List<Map<String, dynamic>> cartItems, double totalAmo
       );
     }
 
+    //update receipt json body
+    Future<void> updateReceipt(int id, String receipt) async{
+      final db = await initDB();
+      await db.update(
+        'submittedReceipts',
+        {
+          'receiptJsonbody': receipt,
+        },
+        where: 'receiptGlobalNo = ?',
+        whereArgs: [id]
+      );
+    }
+
+
     //update payment Method
     Future<void> updatePaymentMethod(int payMEthodId, String description ,double rate , String fiscGroup , String currency) async{
       final db = await initDB();

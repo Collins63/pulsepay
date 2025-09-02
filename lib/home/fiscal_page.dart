@@ -112,7 +112,7 @@ class _FiscalPageState extends State<FiscalPage> {
   final previousData = await dbHelper.getPreviousReceiptData();
   final previousFiscalDayNo = await dbHelper.getPreviousFiscalDayNo();
   final taxIDSetting = await getConfig();
-  String openDayEndPoint = "https://fdmsapitest.zimra.co.zw/Device/v1/$deviceID/OpenDay";
+  String openDayEndPoint = "https://fdmsapi.zimra.co.zw/Device/v1/$deviceID/OpenDay";
   const String deviceModelName = "Server";
   const String deviceModelVersion = "v1";  
 
@@ -174,7 +174,7 @@ class _FiscalPageState extends State<FiscalPage> {
 }
 
 Future<String> getConfig() async {
-  String apiEndpointGetConfig = "https://fdmsapitest.zimra.co.zw/Device/v1/$deviceID/GetConfig"; // Replace with actual API endpoint
+  String apiEndpointGetConfig = "https://fdmsapi.zimra.co.zw/Device/v1/$deviceID/GetConfig"; // Replace with actual API endpoint
   String responseMessage = "There was no response from the server. Check your connection !!";
 
   try {
@@ -305,7 +305,7 @@ Future<String> getConfig() async {
   
   Future<void> getStatus() async {
     String apiEndpointGetStatus =
-      "https://fdmsapitest.zimra.co.zw/Device/v1/$deviceID/GetStatus";
+      "https://fdmsapi.zimra.co.zw/Device/v1/$deviceID/GetStatus";
     const String deviceModelName = "Server";
     const String deviceModelVersion = "v1";
 
@@ -332,7 +332,7 @@ Future<String> getConfig() async {
 
   Future<String> ping() async {
   String apiEndpointPing =
-      "https://fdmsapitest.zimra.co.zw/Device/v1/$deviceID/Ping";
+      "https://fdmsapi.zimra.co.zw/Device/v1/$deviceID/Ping";
   const String deviceModelName = "Server";
   const String deviceModelVersion = "v1"; 
 
@@ -370,7 +370,7 @@ Future<String> getConfig() async {
     // Get the database instance
     final db = await dbHelper.initDB();
     String apiEndpointSubmitReceipt =
-      "https://fdmsapitest.zimra.co.zw/Device/v1/$deviceID/SubmitReceipt";
+      "https://fdmsapi.zimra.co.zw/Device/v1/$deviceID/SubmitReceipt";
     const String deviceModelName = "Server";
     const String deviceModelVersion = "v1"; 
     SSLContextProvider sslContextProvider = SSLContextProvider();
@@ -649,7 +649,7 @@ Future<int> getlatestFiscalDay() async {
                       }
       
                       String apiEndpointCloseDay =
-                        "https://fdmsapitest.zimra.co.zw/Device/v1/$deviceID/CloseDay";
+                        "https://fdmsapi.zimra.co.zw/Device/v1/$deviceID/CloseDay";
                       const String deviceModelName = "Server";
                       const String deviceModelVersion = "v1";  
       
@@ -845,7 +845,7 @@ class FiscalDayCounter {
     if (type == 'BalanceByMoneyType') {
       if(value == 0.0) return ''; // skip zero balances
       buf.write(moneyType!.toUpperCase());
-    } else if (taxID != 1 && percent != null) {
+    } else if (taxID != 3 && percent != null) {
       buf.write(percent!.toStringAsFixed(2));
     }
 
