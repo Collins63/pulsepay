@@ -472,19 +472,19 @@ class _CompanydetailsState extends State<Companydetails> {
   updateCompanyDetails(){
     int compID = companyDetails[0]['companyID'];
 
-    company.text = companyDetails.isNotEmpty ? companyDetails[0]['company'] : '';
-    address.text = companyDetails.isNotEmpty ? companyDetails[0]['address'] : '';
-    tel.text = companyDetails.isNotEmpty ? companyDetails[0]['tel'] : '';
-    branchName.text = companyDetails.isNotEmpty ? companyDetails[0]['branchName'] : '';
-    tel2.text = companyDetails.isNotEmpty ? companyDetails[0]['tel2'] : '';
-    email.text = companyDetails.isNotEmpty ? companyDetails[0]['email'] : '';
-    tinNumber.text = companyDetails.isNotEmpty ? companyDetails[0]['tinNumber'] : '';
-    vatNumber.text = companyDetails.isNotEmpty ? companyDetails[0]['vatNumber'] : '';
-    vendorNumber.text = companyDetails.isNotEmpty ? companyDetails[0]['vendorNumber'] : '';
-    website.text = companyDetails.isNotEmpty ? companyDetails[0]['website'] : '';
-    baseCurreny.text = companyDetails.isNotEmpty ? companyDetails[0]['baseCurrency'] : '';
-    backUpLocation.text = companyDetails.isNotEmpty ? companyDetails[0]['backUpLocation'] : '';
-    baseTaxPercentage.text  = companyDetails.isNotEmpty? companyDetails[0]['baseTaxPercentage'] : '';
+    company.text = companyDetails.isNotEmpty ? companyDetails[0]['company'] ?? '' : '';
+    address.text = companyDetails.isNotEmpty ? companyDetails[0]['address'] ?? '' : '';
+    tel.text = companyDetails.isNotEmpty ? companyDetails[0]['tel']?? '' : '';
+    branchName.text = companyDetails.isNotEmpty ? companyDetails[0]['branchName'] ?? '' : '';
+    tel2.text = companyDetails.isNotEmpty ? companyDetails[0]['tel2'] ?? '' : '';
+    email.text = companyDetails.isNotEmpty ? companyDetails[0]['email'] ?? '' : '';
+    tinNumber.text = companyDetails.isNotEmpty ? companyDetails[0]['tinNumber'] ?? '' : '';
+    vatNumber.text = companyDetails.isNotEmpty ? companyDetails[0]['vatNumber'] ?? '' : '';
+    vendorNumber.text = companyDetails.isNotEmpty ? companyDetails[0]['vendorNumber'] ?? '' : '';
+    website.text = companyDetails.isNotEmpty ? companyDetails[0]['website'] ?? '' : '';
+    baseCurreny.text = companyDetails.isNotEmpty ? companyDetails[0]['baseCurrency'] ?? '' : '';
+    backUpLocation.text = companyDetails.isNotEmpty ? companyDetails[0]['backUpLocation'] ?? '' : '';
+    baseTaxPercentage.text  = companyDetails.isNotEmpty? companyDetails[0]['baseTaxPercentage'].toString() ?? '' : '';
 
     return showModalBottomSheet(
       isScrollControlled: true,
@@ -1104,7 +1104,7 @@ class _CompanydetailsState extends State<Companydetails> {
   updateTaxpayerDetails(){
     int taxPayerId = taxPayerDetails[0]['taxPayerId'];
     //taxPayerTin.text = taxPayerDetails.isNotEmpty ? taxPayerDetails[0]['taxPayerTin'].toString() : '';
-    taxpayerName.text = taxPayerDetails.isNotEmpty ? taxPayerDetails[0]['taxPayerName'].toString() : '';
+    taxpayerName.text = taxPayerDetails.isNotEmpty ? taxPayerDetails[0]['taxPayerName'].toString()  : '';
     taxPayerTin.text = taxPayerDetails.isNotEmpty ? taxPayerDetails[0]['taxPayerTin'].toString() : '';
     taxPayerVat.text = taxPayerDetails.isNotEmpty ? taxPayerDetails[0]['taxPayerVatNumber'].toString() : '' ;
     deviceID.text = taxPayerDetails.isNotEmpty ? taxPayerDetails[0]['deviceID'].toString() : '' ;
@@ -1152,7 +1152,7 @@ class _CompanydetailsState extends State<Companydetails> {
                       ],
                     ),           
                     SizedBox(height: 10,),
-                                          const SizedBox(height: 24,),
+                    const SizedBox(height: 24,),
                       //email address field
                       TextFormField(
                         controller: taxpayerName,

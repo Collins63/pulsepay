@@ -1,3 +1,4 @@
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:pulsepay/SQLite/database_helper.dart';
@@ -13,6 +14,7 @@ class Companysales extends StatefulWidget {
 
 class _CompanysalesState extends State<Companysales> {
 
+
   DatabaseHelper dbHelper = DatabaseHelper();
   double? ZWGtotal;
   double? USDtotal;
@@ -22,6 +24,7 @@ class _CompanysalesState extends State<Companysales> {
   List<String> currencies = [];
   double? periodTotal;
   int? totalSales;
+  Map<int, int>? salesCounts;
 
   List<Map<String, dynamic>> topProducts = [];
   List<Map<String, dynamic>> topCustomers = [];
@@ -44,16 +47,21 @@ class _CompanysalesState extends State<Companysales> {
         topCashiers = value;
       });
     });
-
+    loadData();
     loadCurrencies();
     getZWGTotalSales();
     getUSDTotalSales();
     getAllReceipts();
   }
 
-  
+  Future<void> loadData() async {
+    var data = await dbHelper.getMonthlySalesCounts();
+    setState(() {
+      salesCounts = data;
+    });
+  }
 
-    Future<List<String>> fetchCurrencies() async{
+  Future<List<String>> fetchCurrencies() async{
     final List<Map<String, dynamic>> currencies = await dbHelper.getAllCurrencies();
     print(currencies);
     return currencies.map((row) => row['currency'] as String).toList();
@@ -167,48 +175,51 @@ Future<void> selectEndDate(BuildContext context) async {
               const SizedBox(height: 10,),
               const SizedBox(height: 20,),
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                mainAxisAlignment: MainAxisAlignment.start,
                 children: [
-                  Container(
-                    height: 75,
-                    width: 165,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.only(
-                        topLeft: Radius.circular(10),
-                        bottomLeft: Radius.circular(10),
-
+                  Expanded(
+                    child: Container(
+                      height: 75,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.only(
+                          topLeft: Radius.circular(10),
+                          bottomLeft: Radius.circular(10),
+                    
+                        ),
+                        color: Colors.green
                       ),
-                      color: Colors.green
-                    ),
-                    child: Center(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Center(child: Text("ZWG Sales", style: appStyle(18, Colors.white, FontWeight.normal), textAlign: TextAlign.center,)),
-                          SizedBox(height: 5,),
-                          Center(child: Text(ZWGtotal.toString(), style: appStyle(18, Colors.white, FontWeight.normal), textAlign: TextAlign.center,))
-                        ],
+                      child: Center(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Center(child: Text("ZWG Sales", style: appStyle(18, Colors.white, FontWeight.normal), textAlign: TextAlign.center,)),
+                            SizedBox(height: 5,),
+                            Center(child: Text(ZWGtotal.toString(), style: appStyle(18, Colors.white, FontWeight.normal), textAlign: TextAlign.center,))
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                  Container(
-                    width: 165,
-                    height: 75,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.only(
-                        topRight: Radius.circular(10),
-                        bottomRight: Radius.circular(10) 
+                  const SizedBox(width: 15,),
+                  Expanded(
+                    child: Container(
+                      height: 75,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.only(
+                          topRight: Radius.circular(10),
+                          bottomRight: Radius.circular(10) 
+                        ),
+                        color: Colors.green
                       ),
-                      color: Colors.green
-                    ),
-                    child: Center(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Center(child: Text("USD Sales", style: appStyle(18, Colors.white, FontWeight.normal), textAlign: TextAlign.center,)),
-                          SizedBox(height: 5,),
-                          Center(child: Text(USDtotal.toString(), style: appStyle(18, Colors.white, FontWeight.normal), textAlign: TextAlign.center,))
-                        ],
+                      child: Center(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Center(child: Text("USD Sales", style: appStyle(18, Colors.white, FontWeight.normal), textAlign: TextAlign.center,)),
+                            SizedBox(height: 5,),
+                            Center(child: Text((USDtotal ?? 0).toStringAsFixed(2), style: appStyle(18, Colors.white, FontWeight.normal), textAlign: TextAlign.center,))
+                          ],
+                        ),
                       ),
                     ),
                   ),  
@@ -337,6 +348,7 @@ Future<void> selectEndDate(BuildContext context) async {
                         itemCount: topProducts.length,
                         itemBuilder: (context, index){
                           final product = topProducts[index];
+                          double totalSales = product['totalSales'];
                           return Container(
                             margin: const EdgeInsets.symmetric(vertical: 5.0 , horizontal: 5.0),
                             decoration: BoxDecoration(
@@ -347,7 +359,7 @@ Future<void> selectEndDate(BuildContext context) async {
                             child: ListTile(
                               title: Text(product['productName']),
                               subtitle: Text("Quantity: ${product['totalQuantity']}"),
-                              trailing: Text("\$${product['totalSales']}"),
+                              trailing: Text("\$${totalSales.toStringAsFixed(2)}"),
                             ),
                           );
                         }
@@ -381,6 +393,7 @@ Future<void> selectEndDate(BuildContext context) async {
                         itemCount: topCashiers.length,
                         itemBuilder: (context, index){
                           final cashier = topCashiers[index];
+                          double totalAmount = cashier['totalSales'];
                           return Container(
                             margin: const EdgeInsets.symmetric(vertical: 5.0 , horizontal: 5.0),
                             decoration: BoxDecoration(
@@ -391,7 +404,7 @@ Future<void> selectEndDate(BuildContext context) async {
                             child: ListTile(
                               title: Text(cashier['doneBY']),
                               subtitle: Text("Quantity: ${cashier['totalInvoices']}"),
-                              trailing: Text("\$${cashier['totalSales']}"),
+                              trailing: Text("\$${totalAmount.toStringAsFixed(2)}"),
                             ),
                           );
                         }
@@ -444,10 +457,80 @@ Future<void> selectEndDate(BuildContext context) async {
                   ],
                 ),
               ),
-              const SizedBox(height: 20,),
+              const SizedBox(height: 30,),
+              const Heading(text: 'Sales Charts'),
+              Container(
+                height: 250,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.3),
+                      blurRadius: 10,
+                      spreadRadius: 4,
+                      offset: const Offset(0, 6)
+                    )
+                  ]
+                ),
+                child: Padding(
+                  padding:const EdgeInsets.all(10),
+                  child: salesCounts == null
+                  ? const Center(child: CircularProgressIndicator(),) :
+                  MonthlySalesChart(salesCounts: salesCounts!)
+                )
+              ),
+              const SizedBox(height: 20,)
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class MonthlySalesChart extends StatelessWidget {
+  final Map<int, int> salesCounts; // month -> sales count
+
+  MonthlySalesChart({required this.salesCounts});
+
+  @override
+  Widget build(BuildContext context) {
+    return BarChart(
+      BarChartData(
+        alignment: BarChartAlignment.spaceAround,
+        maxY: (salesCounts.values.isEmpty ? 1 : salesCounts.values.reduce((a, b) => a > b ? a : b)).toDouble() + 2,
+        titlesData: FlTitlesData(
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              getTitlesWidget: (value, meta) {
+                const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+                if (value.toInt() >= 0 && value.toInt() < months.length) {
+                  return Text(months[value.toInt()]);
+                }
+                return Text('');
+              },
+            ),
+          ),
+          leftTitles: const AxisTitles(
+            sideTitles: SideTitles(showTitles: false, reservedSize: 28),
+          ),
+        ),
+        gridData: const FlGridData(show: true),
+        borderData: FlBorderData(show: false),
+        barGroups: List.generate(12, (i) {
+          return BarChartGroupData(
+            x: i,
+            barRods: [
+              BarChartRodData(
+                toY: salesCounts[i + 1]!.toDouble(),
+                color: Colors.amber,
+                width: 16,
+              )
+            ],
+          );
+        }),
       ),
     );
   }

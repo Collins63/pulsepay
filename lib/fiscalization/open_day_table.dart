@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import 'package:pulsepay/SQLite/database_helper.dart';
 import 'package:pulsepay/common/app_bar.dart';
@@ -19,10 +20,10 @@ class _openDayTableState extends State<OpenDayTable> {
   @override
   void initState() {
     super.initState();
-    fetchUsers();
+    fetchOpenDayData();
   }
 
-  Future<void> fetchUsers() async {
+  Future<void> fetchOpenDayData() async {
     List<Map<String, dynamic>> data = await dbHelper.getOpenDay();
     setState(() {
       days = data;
@@ -71,7 +72,14 @@ class _openDayTableState extends State<OpenDayTable> {
                   height: 40,
                   onTap: () async{
                     String iso8601 = DateFormat("yyyy-MM-dd'T'HH:mm:ss").format(DateTime.now());
-                    await dbHelper.insertOpenDay(1, "unprocessed", iso8601);
+                    await dbHelper.insertOpenDay(days.length + 1, "unprocessed", iso8601);
+                    fetchOpenDayData();
+                    Get.snackbar("Day added", "Fiscal day data was addes successfully",
+                      snackPosition: SnackPosition.TOP,
+                      backgroundColor: Colors.green,
+                      colorText: Colors.white,
+                      icon: const Icon(Icons.message, color: Colors.white,)
+                    );
                   },
                 ),
                 const SizedBox(height: 20),

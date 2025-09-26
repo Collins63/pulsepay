@@ -124,7 +124,7 @@ class _FiscalPageState extends State<FiscalPage> {
   String iso8601 = DateFormat("yyyy-MM-dd'T'HH:mm:ss").format(DateTime.now());
 
   String openDayRequest = jsonEncode({
-    "fiscalDayNo": 4,
+    "fiscalDayNo": fiscalDayNo,
     "fiscalDayOpened": iso8601,
     "taxID": taxIDSetting,
   });
@@ -161,7 +161,7 @@ class _FiscalPageState extends State<FiscalPage> {
 
     if (response.statusCode == 200) {
       print("Open Day posted successfully!");
-      await dbHelper.insertOpenDay(4, "unprocessed", iso8601);
+      await dbHelper.insertOpenDay(fiscalDayNo, "unprocessed", iso8601);
       return "Open Day Successfully Recorded!";
     } else {
       print("Failed to post Open Day: ${response.body}");

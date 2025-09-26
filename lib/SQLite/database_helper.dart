@@ -417,14 +417,14 @@ Future<void> saveQuotation(List<Map<String, dynamic>> cartItems, double totalAmo
           final productId = sale['productId'] as int;
           final quantitySold = sale['quantity'] as int;
 
-          await db.rawUpdate('''
+          await txn.rawUpdate('''
             UPDATE products
             SET stockQty = stockQty + ?
             WHERE productid = ?
           ''', [quantitySold, productId]);
         }
         // Step 4: Delete the sales records
-        await db.delete(
+        await txn.delete(
           'sales',
           where: 'invoiceId = ?',
           whereArgs: [invoiceId],
@@ -1622,4 +1622,26 @@ Future<void> saveQuotation(List<Map<String, dynamic>> cartItems, double totalAmo
     return null; // no product found
   }
 
+  Future<Map<int, int>> getMonthlySalesCounts() async {
+    final db = await initDB();
+
+    // Group by month and count invoices
+    final result = await db.rawQuery('''
+      SELECT strftime('%m', date) as month, COUNT(*) as salesCount
+      FROM invoices
+      WHERE cancelled = 0
+      GROUP BY month
+    ''');
+
+    // Map months (1-12) to sales counts
+    Map<int, int> salesCounts = {for (var i = 1; i <= 12; i++) i: 0};
+
+    for (var row in result) {
+      int month = int.parse(row['month'] as String);
+      int count = row['salesCount'] as int;
+      salesCounts[month] = count;
+    }
+
+    return salesCounts;
+  }
 }

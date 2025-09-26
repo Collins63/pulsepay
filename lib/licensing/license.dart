@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:pulsepay/authentication/login.dart';
 import 'package:pulsepay/licensing/license_manager.dart';
 
@@ -27,7 +28,14 @@ class _LicenseRenewalScreenState extends State<LicenseRenewalScreen> {
     final valid = await LicenseManager.validateLicense();
     if (valid) {
       widget.onRenewed();
-      print('valid lice');
+      Get.snackbar(
+        "Success",
+        "License is valid",
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+        icon: const Icon(Icons.message, color: Colors.white,)
+      );
     } else {
       setState(() => _error = "Invalid or expired license");
     }

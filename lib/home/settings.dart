@@ -13,6 +13,7 @@ import 'package:pulsepay/pointOfSale/pos.dart';
 import 'package:get/get.dart';
 import 'package:pulsepay/settings/backUp.dart';
 import 'package:pulsepay/settings/baking%20details.dart';
+import 'package:pulsepay/settings/general_settings.dart';
 import 'package:pulsepay/settings/printer_settings.dart';
 
 class Settings extends StatefulWidget{
@@ -112,6 +113,7 @@ class _SettingsState extends State<Settings>{
                           borderRadius: BorderRadius.circular(15.0)
                         ),
                         child: TextButton(onPressed: (){
+                          Get.to(()=> const GeneralSettings());
                           // Navigator.push(context,
                           // MaterialPageRoute(builder: (context) => const AddProduct()  ));
                         },
@@ -325,7 +327,7 @@ class _SettingsState extends State<Settings>{
                       padding: const EdgeInsets.all(10.0),
                       child: Container(
                         height: 200,
-                        width: 390,
+                        width: MediaQuery.of(context).size.width,
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(10),
                           border: Border.all(color: Colors.grey, width: 5),

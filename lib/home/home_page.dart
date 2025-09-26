@@ -181,7 +181,7 @@ class _HomePageState extends State<HomePage>{
                   padding: const EdgeInsets.all(10.0),
                   child: Container(
                     height: 100,
-                    width: 390,
+                    width: MediaQuery.of(context).size.width,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(10),
                       color: Colors.blue
@@ -447,7 +447,7 @@ class _HomePageState extends State<HomePage>{
                   padding: const EdgeInsets.all(10.0),
                   child: Container(
                     height: 200,
-                    width: 390,
+                    width: MediaQuery.of(context).size.width,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(10),
                       border: Border.all(color: Colors.grey, width: 5),

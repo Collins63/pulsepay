@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:audioplayers/audioplayers.dart';
@@ -67,6 +68,13 @@ class _PosState extends State<Pos>{
     //initializePrivateKey();
     fetchTaxPayerDetails();
     fetchCompanyDetails();
+    getGeneralSettings();
+  }
+
+  @override
+  void dispose(){
+    _debounceTimer?.cancel();
+    super.dispose();
   }
 
   late String privateKey;
@@ -124,7 +132,7 @@ class _PosState extends State<Pos>{
   String? first16Chars;
   // ignore: non_constant_identifier_names
   String? receiptDeviceSignature_signature;
-  String genericzimraqrurl = "https://fdmstest.zimra.co.zw/";
+  String genericzimraqrurl = "https://fdms.zimra.co.zw/";
   int deviceID = 0;
   int? nextCustomerID;
   final BlueThermalPrinter bluetooth = BlueThermalPrinter.instance;
@@ -136,8 +144,33 @@ class _PosState extends State<Pos>{
   bool isFiscaltag1 = false;
   bool isNonFiscal = false;
 
+  bool isFiscal = false;
+  bool barcodeOption = false;
+  bool freePricingMode = false;
+  bool allowNegativeSale = false;
+  bool accountSale = false;
+  bool priceDiscount = false;
+  bool multiCurrencySale = false;
+  bool a4Invoice = false;
+
+
 
 ///====================PRINTER CODE===================================================
+///
+
+Future<void> getGeneralSettings() async {
+  final prefs = await SharedPreferences.getInstance();
+  setState(() {
+    isFiscal = prefs.getBool('isFiscal') ?? false; // default = false
+    barcodeOption = prefs.getBool('hasBarcode') ?? false;
+    freePricingMode = prefs.getBool('hasFreePrice') ?? false;
+    allowNegativeSale = prefs.getBool('hasNegativeSales') ?? false;
+    accountSale = prefs.getBool('hasAccountSales') ?? false;
+    priceDiscount = prefs.getBool('hasInvoiceDiscount') ?? false;
+    multiCurrencySale = prefs.getBool('hasMultiCurrencySale') ?? false;
+    a4Invoice = prefs.getBool('hasA4Invoice') ?? false;
+  });
+}
 
 String formatString(String input) {
     final buffer = StringBuffer();
@@ -481,13 +514,13 @@ Future<void> _finishPrint() async {
       itemTax = totalPrice * double.parse(taxPercent);
     } else if (productTax == "vat") {
       taxID = 1;
-      taxPercent = "0"; // Convert 15% to decimal
+      taxPercent = "15.00"; // Convert 15% to decimal
       taxCode = "A";
       itemTax = totalPrice * 0.15;
       salesAmountwithTax += totalPrice;
     } else {
       taxID = 3;
-      taxPercent = "15.00";
+      taxPercent = "0";
       taxCode = "C";
       itemTax = totalPrice * 0;
     }
@@ -508,7 +541,6 @@ Future<void> _finishPrint() async {
     taxAmount += itemTax;
   }
 }
-
 
   String buildZimraCanonicalString({
   required Map<String, dynamic> receipt,
@@ -568,6 +600,68 @@ Future<void> _finishPrint() async {
   }
 
 
+  Future<Map<String, String>> generateHash(String date) async {
+    String saleCurrency = transactionCurrency.toString();
+    int latestFiscDay = await dbHelper.getlatestFiscalDay();
+    String receiptString;
+
+    setState(() {
+      currentFiscal = latestFiscDay;
+    });
+
+    List<Map<String, dynamic>> data = await dbHelper.getReceiptsSubmittedToday(currentFiscal);
+
+    setState(() {
+      dayReceiptCounter = data;
+    });
+
+    int latestReceiptGlobalNo = await dbHelper.getLatestReceiptGlobalNo();
+    int currentGlobalNo = latestReceiptGlobalNo + 1;
+
+    // setState(() {
+    //   currentReceiptGlobalNo = currentGlobalNo.toString();
+    // });
+
+    String getLatestReceiptHash = await dbHelper.getLatestReceiptHash();
+
+    if (dayReceiptCounter.isEmpty) {
+      receiptString = generateReceiptString(
+        deviceID: deviceID,
+        receiptType: "FISCALINVOICE",
+        receiptCurrency: saleCurrency,
+        receiptGlobalNo: currentGlobalNo,
+        receiptDate: date,
+        receiptTotal: totalAmount,
+        receiptItems: receiptItems,
+        getPreviousReceiptHash: "",
+      );
+    } else {
+      receiptString = generateReceiptString(
+        deviceID: deviceID,
+        receiptType: "FISCALINVOICE",
+        receiptCurrency: saleCurrency,
+        receiptGlobalNo: currentGlobalNo,
+        receiptDate: date,
+        receiptTotal: totalAmount,
+        receiptItems: receiptItems,
+        getPreviousReceiptHash: getLatestReceiptHash,
+      );
+    }
+
+    print("Concatenated Receipt String: $receiptString");
+    var bytes = utf8.encode(receiptString.trim());
+    var digest = sha256.convert(bytes);
+    final hash = base64.encode(digest.bytes);
+
+    print(hash);
+    // ✅ Return both
+    return {
+      "receiptString": receiptString,
+      "hash": hash,
+    };
+  }
+
+
   Future<String> generateFiscalJSON() async {
     String encodedreceiptDeviceSignature_signature;
   try {
@@ -575,12 +669,13 @@ Future<void> _finishPrint() async {
 
     String filePath = "/storage/emulated/0/Pulse/Configurations/hotash_P_certificate.p12";
     String password = "hotash123";
-    
     // Ensure signing does not fail
     DateTime now = DateTime.now();
     String formattedDate = DateFormat("yyyy-MM-ddTHH:mm:ss").format(now);
+    final hashData = await generateHash(formattedDate);
     try {
-      String data = await useRawString(formattedDate);
+      //String data = await useRawString(formattedDate);
+      String data = hashData['receiptString'].toString();
       final byteData = await rootBundle.load('assets/private_key.pem');
       final buffer = byteData.buffer;
       // Write to a temp file
@@ -626,9 +721,7 @@ Future<void> _finishPrint() async {
       return "{}";
     }
 
-
-
-    String hash = await generateHash(formattedDate);
+    String hash = hashData['hash'].toString();
     print("Hash generated successfully");
 
     Map<String, dynamic> jsonData = {
@@ -699,7 +792,7 @@ Future<void> _finishPrint() async {
         },
         "receiptTotal": totalAmount.toStringAsFixed(2),
         "receiptLinesTaxInclusive": true,
-        "invoiceNo": nextInvoice.toString() ,
+        "invoiceNo": "T$nextInvoice" ,
       }
     };
 
@@ -920,57 +1013,6 @@ String generateTaxSummary(List<dynamic> receiptItems) {
       print("Concatenated Receipt String: $receiptString");
       return receiptString;
     }
-    
-  
-  }
-
-  generateHash(String date) async {
-    String saleCurrency = selectedPayMethod.isEmpty ? defaultCurrency.toString() : returnCurrency();
-    int latestFiscDay = await dbHelper.getlatestFiscalDay();
-    String receiptString;
-    setState(() {
-      currentFiscal = latestFiscDay;
-    });
-    List<Map<String, dynamic>> data = await dbHelper.getReceiptsSubmittedToday(currentFiscal);
-    setState(() {
-      dayReceiptCounter = data;
-    });
-    int latestReceiptGlobalNo = await dbHelper.getLatestReceiptGlobalNo();
-    int currentGlobalNo = latestReceiptGlobalNo + 1;
-    String getLatestReceiptHash = await dbHelper.getLatestReceiptHash();
-    if(dayReceiptCounter.isEmpty){
-      receiptString = generateReceiptString(
-        deviceID: deviceID,
-        receiptType: "FISCALINVOICE",
-        receiptCurrency: saleCurrency,
-        receiptGlobalNo: currentGlobalNo,
-        receiptDate: date,
-        receiptTotal: totalAmount,
-        receiptItems: receiptItems,
-        getPreviousReceiptHash:"",
-      );
-      print("Concatenated Receipt String:$receiptString");
-      receiptString.trim();
-    }
-    else{
-      receiptString = generateReceiptString(
-        deviceID: deviceID,
-        receiptType: "FISCALINVOICE",
-        receiptCurrency: saleCurrency,
-        receiptGlobalNo: currentGlobalNo,
-        receiptDate: date,
-        receiptTotal: totalAmount,
-        receiptItems: receiptItems,
-        getPreviousReceiptHash: getLatestReceiptHash,
-      );
-    }
-  print("Concatenated Receipt String:$receiptString");
-  receiptString.trim();
-    var bytes = utf8.encode(receiptString);
-    var digest = sha256.convert(bytes);
-    final hash = base64.encode(digest.bytes);
-    print(hash);
-    return hash;
   }
   
   Future<String> ping() async {
@@ -1135,7 +1177,8 @@ String generateTaxSummary(List<dynamic> receiptItems) {
             conflictAlgorithm: ConflictAlgorithm.replace,
           );
           //print("Data inserted successfully!");
-          //generateInvoiceFromJson(jsonData, qrurl);
+          a4Invoice ?
+          generateInvoiceFromJson(jsonData, qrurl) : null;
           print58mmAdvanced(jsonData, qrurl, receiptQrData);
         } catch (e) {
           Get.snackbar(" Db Error",
@@ -1180,7 +1223,8 @@ String generateTaxSummary(List<dynamic> receiptItems) {
               conflictAlgorithm: ConflictAlgorithm.replace,
             );
             print("Data inserted successfully!");
-            //generateInvoiceFromJson(jsonData, qrurl);
+            a4Invoice ?
+             generateInvoiceFromJson(jsonData, qrurl) : null;
             print58mmAdvanced(jsonData, qrurl, receiptQrData);
           } catch (e) {
             Get.snackbar("Db Error",
@@ -1226,7 +1270,8 @@ String generateTaxSummary(List<dynamic> receiptItems) {
           conflictAlgorithm: ConflictAlgorithm.replace,
         );
          print("Data inserted successfully!");
-         //generateInvoiceFromJson(jsonData, qrurl);
+         a4Invoice ?
+          generateInvoiceFromJson(jsonData, qrurl) : null;
          print58mmAdvanced(jsonData, qrurl , receiptQrData);
       } catch (e) {
         Get.snackbar("DB error Error",
@@ -1313,10 +1358,27 @@ String generateTaxSummary(List<dynamic> receiptItems) {
   }
 
   ///=============================FETCH CODE========================================================
+  Timer? _debounceTimer;
+  
   void searchProducts(String query) async{
+    if (_debounceTimer?.isActive ?? false) _debounceTimer!.cancel();
+
+    // final results = await dbHelper.searchProducts(query);
+    // setState(() {
+    //   searchResults = results;
+    // });
+    _debounceTimer = Timer(const Duration(milliseconds: 300), () async {
+    if (query.isEmpty) {
+      setState(() {
+        searchResults = [];
+      });
+      return;
+    }
+    
     final results = await dbHelper.searchProducts(query);
-    setState(() {
-      searchResults = results;
+      setState(() {
+        searchResults = results;
+      });
     });
   }
 
@@ -1403,8 +1465,6 @@ String generateTaxSummary(List<dynamic> receiptItems) {
     String vatNumber = customer['vatNumber'].toString();
     String email = customer['email'];
     int customerId = customer['customerID'];
-
-
     List<String> parts = address.split(',').map((e) => e.trim()).toList();
     String houseNumber ='';
     String street ='';
@@ -1458,11 +1518,9 @@ String generateTaxSummary(List<dynamic> receiptItems) {
         selectedPayMethod.add(payMethod);
       });
     }
-    
-
     Get.snackbar(
       "Success",
-      "Customer Added",
+      "Payment Method Changed",
       colorText: Colors.white,
       backgroundColor: Colors.green,
       snackPosition: SnackPosition.TOP
@@ -1499,32 +1557,54 @@ String generateTaxSummary(List<dynamic> receiptItems) {
   }
 
   void addToCart(Map<String, dynamic> product) {
-    //double qty = 1;
     int stockQty = product['stockQty'];
-    if (stockQty > 0){
-      setState(() {
-
-      int index = cartItems.indexWhere((item) => item['productid']==product['productid']);
-      if(index != -1){
-        cartItems[index]['sellqty'] +=1;
-      }else{
-        Map<String, dynamic> updatedProduct = {...product};
-        updatedProduct['sellqty'] = 1;
-        cartItems.add(updatedProduct);
-      }
-    });
-    }
-    else{
+    double sellingPrice = product['sellingPrice'];
+    if(sellingPrice == null || sellingPrice == 0.0){
       Get.snackbar(
-        "No Stock",
-        "Product is now out of stock",
+        "No Selling Price",
+        "Set selling price for this product or use free price option",
         colorText: Colors.black,
         backgroundColor: Colors.amber,
-        icon:const Icon(Icons.error)
+        icon: const Icon(Icons.error),
       );
+    }else{
+      // Find if product is already in cart
+      int index = cartItems.indexWhere((item) => item['productid'] == product['productid']);
+      if (index != -1) {
+        // Check if adding one more exceeds stock
+        if (cartItems[index]['sellqty'] < stockQty) {
+          setState(() {
+            cartItems[index]['sellqty'] += 1;
+          });
+        } else {
+          Get.snackbar(
+            "No Stock",
+            "Cannot add more, stock limit reached",
+            colorText: Colors.black,
+            backgroundColor: Colors.amber,
+            icon: const Icon(Icons.error),
+          );
+        }
+      } else {
+        if (stockQty > 0) {
+          setState(() {
+            Map<String, dynamic> updatedProduct = {...product};
+            updatedProduct['sellqty'] = 1;
+            cartItems.add(updatedProduct);
+          });
+        } else {
+          Get.snackbar(
+            "No Stock",
+            "Product is now out of stock",
+            colorText: Colors.black,
+            backgroundColor: Colors.amber,
+            icon: const Icon(Icons.error),
+          );
+        }
+      }
     }
-    
   }
+
 
   double calculateTotalTax() {
     double totalTax = 0.0;
@@ -1560,7 +1640,6 @@ String generateTaxSummary(List<dynamic> receiptItems) {
       final taxType = item['tax']; // e.g., 'vat', 'zero', 'ex'
       final sellingPrice = item['sellingPrice'];
       final quantity = item['sellqty'];
-
       // Determine the applicable tax rate
       double taxRate = 0.0;
       if (taxType == 'vat') {
@@ -1568,7 +1647,6 @@ String generateTaxSummary(List<dynamic> receiptItems) {
       } else if (taxType == 'zero' || taxType == 'ex') {
         taxRate = 0.0; // Zero-rated or exempted
       }
-
       // Calculate the tax for this item
       indiTax = sellingPrice * quantity * taxRate;
     }
@@ -1600,6 +1678,21 @@ String generateTaxSummary(List<dynamic> receiptItems) {
 
   ///=====CUSTOMER DETAILS=====//////////
   //////////////////////////////////////
+  ///
+  void clearCustomer(){
+    setState(() {
+      customerNameController.clear();
+      tinController.clear();
+      vatController.clear();
+      searchCustomer.clear();
+      houseNoController.clear();
+      streetNameController.clear();
+      cityController.clear();
+      provinceController.clear();
+      emailController.clear();
+    });
+  }
+
   addCustomerDetails(){
     return showModalBottomSheet(
       isScrollControlled: true,
@@ -1635,7 +1728,8 @@ String generateTaxSummary(List<dynamic> receiptItems) {
                       const SizedBox(height: 10,),
                       Row(
                         children: [
-                          IconButton(onPressed: (){
+                          IconButton(onPressed: () async{
+                            clearCustomer();
                             Navigator.pop(context);
                           }, icon:const Icon(Icons.arrow_circle_left_sharp, size: 40, color: kDark,)),
                           const Center(child: const Text("Customer Details" , style: TextStyle(color: Colors.black,fontSize: 18, fontWeight: FontWeight.w500),)),
@@ -1718,10 +1812,19 @@ String generateTaxSummary(List<dynamic> receiptItems) {
                                 borderSide: BorderSide.none
                             )
                         ),
+                        validator: (value){
+                          if (value == null || value.isEmpty) {
+                            return "Tradename is required";
+                          }
+                        }
                       ),
                       const SizedBox(height: 10,),
                       TextFormField(
                         controller: tinController,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(10),
+                        ],
                         decoration: InputDecoration(
                             labelText: 'TIN Number',
                             labelStyle: TextStyle(color:Colors.grey.shade600 ),
@@ -1736,12 +1839,20 @@ String generateTaxSummary(List<dynamic> receiptItems) {
                         validator: (value){
                             if(value!.isEmpty){
                               return "TIN Required";
-                            }return null;
+                            }
+                            if (value.length != 10){
+                              return "TIN Must be 10 digits";
+                            }
+                            return null;
                           },
                       ),
                       const SizedBox(height: 10,),
                       TextFormField(
                         controller: vatController,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(9),
+                        ],
                         decoration: InputDecoration(
                             labelText: 'VAT Number',
                             enabled: true,
@@ -1756,7 +1867,14 @@ String generateTaxSummary(List<dynamic> receiptItems) {
                         validator: (value){
                             if(value!.isEmpty){
                               return "VAT Required";
-                            }return null;
+                            }
+                            if(value.length != 9){
+                              return "VAT Must be 9 digits";
+                            }
+                            if (!value.startsWith("22")) {
+                              return "VAT must start with 22";
+                            }
+                            return null;
                           },
                       ),
                       const SizedBox(height: 10,),
@@ -1773,6 +1891,11 @@ String generateTaxSummary(List<dynamic> receiptItems) {
                                 borderSide: BorderSide.none
                             )
                         ),
+                        validator: (value){
+                          if (value == null || value.isEmpty) {
+                            return "House Number is required";
+                          }
+                        }
                       ),
                       const SizedBox(height: 10,),
                       TextFormField(
@@ -1788,6 +1911,11 @@ String generateTaxSummary(List<dynamic> receiptItems) {
                                 borderSide: BorderSide.none
                             )
                         ),
+                        validator: (value){
+                          if (value == null || value.isEmpty) {
+                            return "Street is required";
+                          }
+                        }
                       ),
                       const SizedBox(height: 10,),
                       TextFormField(
@@ -1801,8 +1929,13 @@ String generateTaxSummary(List<dynamic> receiptItems) {
                             border: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(12.0),
                                 borderSide: BorderSide.none
-                            )
+                            ),
                         ),
+                        validator: (value){
+                          if (value == null || value.isEmpty) {
+                            return "City is required";
+                          }
+                        }
                       ),
                       const SizedBox(height: 10,),
                       TextFormField(
@@ -1818,10 +1951,16 @@ String generateTaxSummary(List<dynamic> receiptItems) {
                                 borderSide: BorderSide.none
                             )
                         ),
+                        validator: (value){
+                          if (value == null || value.isEmpty) {
+                            return "Province is required";
+                          }
+                        },
                       ),
                       const SizedBox(height: 10,),
                       TextFormField(
                         controller: emailController,
+                        keyboardType: TextInputType.emailAddress,
                         decoration: InputDecoration(
                             labelText: 'Email',
                             labelStyle: TextStyle(color:Colors.grey.shade600 ),
@@ -1833,6 +1972,19 @@ String generateTaxSummary(List<dynamic> receiptItems) {
                                 borderSide: BorderSide.none
                             )
                         ),
+                        validator: (value) {
+                          if (value == null || value.isEmpty) {
+                            return "Email is required";
+                          }
+                          // Basic email regex
+                          String pattern =
+                              r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$';
+                          RegExp regex = RegExp(pattern);
+                          if (!regex.hasMatch(value)) {
+                            return "Enter a valid email";
+                          }
+                          return null;
+                        },
                       ),
                       const SizedBox(height: 10),
                       CheckboxListTile(
@@ -2283,16 +2435,29 @@ String generateTaxSummary(List<dynamic> receiptItems) {
             ),
             ElevatedButton(
               onPressed: () {
-                addToCartFreePrice(product['productid'], product['productName'], product['barcode'], product['hsCode'], product['costPrice'], double.tryParse(price.text)!, double.tryParse(quantity.text)!, product['tax'], product['sellTax'] ?? 0.0, product['stockQty']);
-                Navigator.of(context).pop();
-                Get.snackbar("Free price",
-                  "${product['productName']} added on free price",
-                  snackPosition: SnackPosition.TOP,
-                  backgroundColor: Colors.green,
-                  colorText: Colors.white,
-                  icon: const Icon(Icons.check)
-                );
-                print(cartItems);
+                if(freePriceFormKey.currentState!.validate()){
+                  int stockQty = product['stockQty'];
+                  var parsedQty = int.tryParse(quantity.text);
+                  if (parsedQty! > stockQty){
+                    Get.snackbar("Low Stock",
+                      "Quantity exceeds stock available",
+                      snackPosition: SnackPosition.TOP,
+                      backgroundColor: Colors.amber,
+                      colorText: Colors.black,
+                      icon: const Icon(Icons.message)
+                    );
+                  }else{
+                    addToCartFreePrice(product['productid'], product['productName'], product['barcode'], product['hsCode'], product['costPrice'], double.tryParse(price.text)!, double.tryParse(quantity.text)!, product['tax'], product['sellTax'] ?? 0.0, product['stockQty']);
+                    Navigator.of(context).pop();
+                    Get.snackbar("Free price",
+                      "${product['productName']} added on free price",
+                      snackPosition: SnackPosition.TOP,
+                      backgroundColor: Colors.green,
+                      colorText: Colors.white,
+                      icon: const Icon(Icons.check)
+                    );
+                  }
+                }
               },
               child: const Text('Submit'),
             ),
@@ -2453,14 +2618,15 @@ String generateTaxSummary(List<dynamic> receiptItems) {
                         ),
                         child: ListTile(
                           title: Text(product['productName']),
-                          subtitle: Text("Price: \$${product['sellingPrice']}"),
+                          subtitle: Text("Price: \$${product['sellingPrice']} Stock: ${product['stockQty']}"),
                           trailing: SizedBox(
                             width: 100,
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.start,
                               children: [
                                 IconButton(onPressed: ()=>addToCart(product), icon:const Icon(Icons.add_circle_outline_sharp)),
-                                IconButton(onPressed: ()=>freePriceDialog(product), icon:const Icon(Icons.accessibility_sharp)),
+                                freePricingMode ? IconButton(onPressed: ()=>freePriceDialog(product), icon:const Icon(Icons.accessibility_sharp)) :
+                                const Icon(Icons.accessibility_sharp , color: Colors.red,),
                               ],
                             ),
                           ),
@@ -2473,6 +2639,7 @@ String generateTaxSummary(List<dynamic> receiptItems) {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
+                    barcodeOption ?
                     Container(
                       height: 50 ,
                       width: 50,
@@ -2503,6 +2670,23 @@ String generateTaxSummary(List<dynamic> receiptItems) {
                       child: Center(
                         child: isBarcodeEnabled? const Icon(Icons.barcode_reader , size: 25, color: Colors.white) : const Icon(Icons.barcode_reader , size: 25, color: Color.fromARGB(255, 14, 19, 29),) ,
                       )),
+                    ): Container(
+                      height: 50,
+                      width: 50,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(15.0),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withOpacity(0.2),
+                            spreadRadius: 3,
+                            blurRadius: 7,
+                          )
+                        ] 
+                      ),
+                      child: const Center(
+                        child: Icon(Icons.barcode_reader , size: 25, color: Colors.red,),
+                      ),
                     ),
                     //////////Button
                     Container(
@@ -2604,6 +2788,7 @@ String generateTaxSummary(List<dynamic> receiptItems) {
                       )),
                     ),
                     //////////Button
+                    accountSale ?
                     Container(
                       height: 50 ,
                       width: 50,
@@ -2623,10 +2808,26 @@ String generateTaxSummary(List<dynamic> receiptItems) {
                         
                       },
                       child: const Center(
-                        child: Icon(Icons.scale , size: 25, color: Color.fromARGB(255, 14, 19, 29),),
+                        child: Icon(Icons.account_balance , size: 25, color: Color.fromARGB(255, 14, 19, 29),),
                       )),
+                    ): Container(
+                      height: 50,
+                      width: 50,
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(15.0),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.withOpacity(0.2),
+                            spreadRadius: 3,
+                            blurRadius: 7,
+                          )
+                        ] 
+                      ),
+                      child: const Center(
+                        child: Icon(Icons.account_balance , size: 25, color: Colors.red,),
+                      ),  
                     ),
-                    
                   ],
                 ),
                 const SizedBox(height: 10,),
@@ -2636,7 +2837,7 @@ String generateTaxSummary(List<dynamic> receiptItems) {
                 ),
                 Container(
                   height: 250,
-                  width: 390,
+                  width: MediaQuery.of(context).size.width,
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(10.0),
                     border: Border.all(width: 1 , color: Colors.grey.shade400),
@@ -2746,7 +2947,7 @@ String generateTaxSummary(List<dynamic> receiptItems) {
                 const SizedBox(height: 10,),
                 Container(
                   height: 100,
-                  width: 600,
+                  width: MediaQuery.of(context).size.width,
                   decoration: BoxDecoration(
                     color: Colors.blue,
                     borderRadius: BorderRadius.circular(10.0)

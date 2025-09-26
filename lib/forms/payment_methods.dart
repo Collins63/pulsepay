@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:pulsepay/JsonModels/json_models.dart';
 import 'package:pulsepay/SQLite/database_helper.dart';
@@ -197,6 +198,10 @@ class _PaymentMethodsState extends State<PaymentMethods> {
                     const SizedBox(height: 10,),
                     TextFormField(
                       controller: vatNumberController ,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.digitsOnly,
+                        LengthLimitingTextInputFormatter(9),
+                      ],
                       decoration: InputDecoration(
                           labelText: 'Vat Number',
                           labelStyle: TextStyle(color:Colors.grey.shade600 ),
@@ -207,11 +212,26 @@ class _PaymentMethodsState extends State<PaymentMethods> {
                               borderSide: BorderSide.none
                           )
                       ),
+                      validator: (value){
+                        if(value!.isEmpty){
+                          return "VAT Required";
+                        }
+                        if(value.length != 9){
+                          return "VAT Must be 9 digits";
+                        }
+                        if (!value.startsWith("22")) {
+                          return "VAT must start with 22";
+                        }
+                        return null;
+                      }
                     ),
                     const SizedBox(height: 10,),
-                    
                     TextFormField(
-                      controller: tinController ,
+                      controller: tinController,
+                      inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(10),
+                      ],
                       decoration: InputDecoration(
                           labelText: 'Tin Number',
                           labelStyle: TextStyle(color:Colors.grey.shade600 ),
@@ -222,6 +242,15 @@ class _PaymentMethodsState extends State<PaymentMethods> {
                               borderSide: BorderSide.none
                           )
                       ),
+                      validator: (value){
+                        if(value!.isEmpty){
+                          return "TIN Required";
+                        }
+                        if (value.length != 10){
+                          return "TIN Must be 10 digits";
+                        }
+                        return null;
+                      },
                     ),
                     const SizedBox(height: 10,),
                     SizedBox(

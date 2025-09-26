@@ -42,7 +42,7 @@ class _ViewInvoicesState extends State<ViewInvoices> {
   String? first16Chars;
   String? receiptDeviceSignature_signature;
   String genericzimraqrurl = "https://fdms.zimra.co.zw/";
-  int deviceID = 25395;
+  int deviceID = 0;
   String? generatedJson;
   String? fiscalResponse;
   String? creditReason;
@@ -461,7 +461,7 @@ Future<String> createCreditNote(String receiptJsonString,
 
 Future<String> ping() async {
   String apiEndpointPing =
-      "https://fdmsapitest.zimra.co.zw/Device/v1/25395/Ping";
+      "https://fdmsapi.zimra.co.zw/Device/v1/$deviceID/Ping";
   const String deviceModelName = "Server";
   const String deviceModelVersion = "v1"; 
 
@@ -507,8 +507,7 @@ Future<void> generateCreditFiscalJSON() async{
     DateTime now = DateTime.now();
     String formattedDate = DateFormat("yyyy-MM-ddTHH:mm:ss").format(now);
 
-    List<Map<String, dynamic>> getSubmittedReceipt =  await dbHelper.getReceiptSubmittedById(invoiceId);
-    int deviceId = 25395; // Replace with your actual device ID
+    List<Map<String, dynamic>> getSubmittedReceipt =  await dbHelper.getReceiptSubmittedById(invoiceId); // Replace with your actual device ID
     String receiptJsonbody = getSubmittedReceipt[0]['receiptJsonbody'].toString();
     String receiptID = getSubmittedReceipt[0]['receiptID'].toString();
     String receiptGlobalNo = getSubmittedReceipt[0]['receiptGlobalNo'].toString();
@@ -543,7 +542,7 @@ Future<void> generateCreditFiscalJSON() async{
         ? double.parse(tax['salesAmountWithTax'])
         : tax['salesAmountWithTax'].toDouble();
       int salesAmountInCents = (SalesAmountwithTax * 100 *-1).round();
-      if(taxcode == "A"){
+      if(taxcode == "C"){
         taxesConcat += "$taxcode$taxAmountInCents$salesAmountInCents";
       }else{
         taxesConcat += "$taxcode$taxPercent$taxAmountInCents$salesAmountInCents";
@@ -551,7 +550,7 @@ Future<void> generateCreditFiscalJSON() async{
       
     }
     print(" after taxes concat");
-    String finalString = "$deviceId$receiptType$currency$nextReceiptGlobalNo$formattedDate$totalAmountInCents$taxesConcat$previousReceiptHash";
+    String finalString = "$deviceID$receiptType$currency$nextReceiptGlobalNo$formattedDate$totalAmountInCents$taxesConcat$previousReceiptHash";
     //CODE BELOW TO FOLLOW AFTER RECEIPT SUBMITTI
     // Update the invoice status in the database (add your implementation here)f
     finalString.trim();
