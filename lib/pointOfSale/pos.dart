@@ -88,6 +88,7 @@ class _PosState extends State<Pos>{
   final TextEditingController cityController = TextEditingController();
   final TextEditingController provinceController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
+  final TextEditingController phoneNumberController = TextEditingController();
   final TextEditingController isFiscaltag = TextEditingController();
   final TextEditingController paidController = TextEditingController();
   final TextEditingController searchCustomer = TextEditingController();
@@ -1051,7 +1052,7 @@ String generateTaxSummary(List<dynamic> receiptItems) {
       : receiptDeviceSignatureSignatureHexsent;
   }
   
-  Future<void> submitReceipt() async {
+  Future<bool> submitReceipt() async {
     String jsonString  = await generateFiscalJSON();
     final receiptJson = jsonEncode(jsonString);
     Get.snackbar(
@@ -1089,7 +1090,7 @@ String generateTaxSummary(List<dynamic> receiptItems) {
       for(var items in totals){
         double sum = items['salesAmountWithTax'];
         int? taxId = int.tryParse(items['taxID']);
-        if(taxId == 3){
+        if(taxId == 1){
           totalVAT15 += sum;
         }else if(taxId == 2){
           totalNonVAT += sum;
@@ -1118,7 +1119,7 @@ String generateTaxSummary(List<dynamic> receiptItems) {
       SSLContextProvider sslContextProvider = SSLContextProvider();
       SecurityContext securityContext = await sslContextProvider.createSSLContext();
       
-      print(receiptJsonbody);
+      //print(receiptJsonbody);
       // Call the Ping function
       Map<String, dynamic> response = await SubmitReceipts.submitReceipts(
         apiEndpointSubmitReceipt: apiEndpointSubmitReceipt,
@@ -1127,7 +1128,6 @@ String generateTaxSummary(List<dynamic> receiptItems) {
         securityContext: securityContext,
         receiptjsonBody:receiptJsonbody,
       );
-      print(response);
       Get.snackbar(
         "Zimra Response", "$response",
         snackPosition: SnackPosition.TOP,
@@ -1135,16 +1135,14 @@ String generateTaxSummary(List<dynamic> receiptItems) {
         backgroundColor: Colors.green,
         icon: const Icon(Icons.message, color: Colors.white),
       );
+      //print("Response: \n$response");
       Map<String, dynamic> responseBody = jsonDecode(response["responseBody"]);
       int statusCode = response["statusCode"];
       String submitReceiptServerresponseJson = responseBody.toString();
-      print("your server server response is $submitReceiptServerresponseJson");
-
+      //print("your server server response is $submitReceiptServerresponseJson");
       if (statusCode == 200) {
         print("Code is 200, saving receipt...");
-
         // Check if 'receiptPayments' is non-empty before accessing index 0
-        
         try {
           final Database dbinit = await dbHelper.initDB();
           await dbinit.insert('submittedReceipts',
@@ -1188,53 +1186,55 @@ String generateTaxSummary(List<dynamic> receiptItems) {
             backgroundColor: Colors.red,
             icon: const Icon(Icons.error),
           );
-        } 
+        }
+        return true; 
       }
       else{
-        try {
-            final Database dbinit = await dbHelper.initDB();
-            await dbinit.insert('submittedReceipts',
-              {
-                'receiptCounter': jsonData['receipt']?['receiptCounter'] ?? 0,
-                'FiscalDayNo' : fiscalDayNo,
-                'InvoiceNo': int.tryParse(jsonData['receipt']?['invoiceNo']?.toString() ?? "0") ?? 0,
-                'receiptID': 0,
-                'receiptType': jsonData['receipt']['receiptType']?.toString() ?? "",
-                'receiptCurrency': jsonData['receipt']?['receiptCurrency']?.toString() ?? "",
-                'moneyType': moneyType,
-                'receiptDate': jsonData['receipt']?['receiptDate']?.toString() ?? "",
-                'receiptTime': jsonData['receipt']?['receiptDate']?.toString() ?? "",
-                'receiptTotal': receiptTotal,
-                'taxCode': "C",
-                'taxPercent': "15.00",
-                'taxAmount': taxAmount ?? 0,
-                'SalesAmountwithTax': salesAmountwithTax ?? 0,
-                'receiptHash': jsonData['receipt']?['receiptDeviceSignature']?['hash']?.toString() ?? "",
-                'receiptJsonbody': receiptJsonbody?.toString() ?? "",
-                'StatustoFDMS': "NOTSubmitted".toString(),
-                'qrurl': qrurl,
-                'receiptServerSignature':"",
-                'submitReceiptServerresponseJSON':"noresponse",
-                'Total15VAT': totalVAT15.toString(),
-                'TotalNonVAT': totalNonVAT,
-                'TotalExempt': totalExempt,
-                'TotalWT': 0.0,
-              },
-              conflictAlgorithm: ConflictAlgorithm.replace,
-            );
-            print("Data inserted successfully!");
-            a4Invoice ?
-             generateInvoiceFromJson(jsonData, qrurl) : null;
-            print58mmAdvanced(jsonData, qrurl, receiptQrData);
-          } catch (e) {
-            Get.snackbar("Db Error",
-              "$e",
-              snackPosition: SnackPosition.TOP,
-              colorText: Colors.white,
-              backgroundColor: Colors.red,
-              icon: const Icon(Icons.error),
-            );
-        }
+        return false;
+        // try {
+        //     final Database dbinit = await dbHelper.initDB();
+        //     await dbinit.insert('submittedReceipts',
+        //       {
+        //         'receiptCounter': jsonData['receipt']?['receiptCounter'] ?? 0,
+        //         'FiscalDayNo' : fiscalDayNo,
+        //         'InvoiceNo': int.tryParse(jsonData['receipt']?['invoiceNo']?.toString() ?? "0") ?? 0,
+        //         'receiptID': 0,
+        //         'receiptType': jsonData['receipt']['receiptType']?.toString() ?? "",
+        //         'receiptCurrency': jsonData['receipt']?['receiptCurrency']?.toString() ?? "",
+        //         'moneyType': moneyType,
+        //         'receiptDate': jsonData['receipt']?['receiptDate']?.toString() ?? "",
+        //         'receiptTime': jsonData['receipt']?['receiptDate']?.toString() ?? "",
+        //         'receiptTotal': receiptTotal,
+        //         'taxCode': "C",
+        //         'taxPercent': "15.00",
+        //         'taxAmount': taxAmount ?? 0,
+        //         'SalesAmountwithTax': salesAmountwithTax ?? 0,
+        //         'receiptHash': jsonData['receipt']?['receiptDeviceSignature']?['hash']?.toString() ?? "",
+        //         'receiptJsonbody': receiptJsonbody?.toString() ?? "",
+        //         'StatustoFDMS': "NOTSubmitted".toString(),
+        //         'qrurl': qrurl,
+        //         'receiptServerSignature':"",
+        //         'submitReceiptServerresponseJSON':"noresponse",
+        //         'Total15VAT': totalVAT15.toString(),
+        //         'TotalNonVAT': totalNonVAT,
+        //         'TotalExempt': totalExempt,
+        //         'TotalWT': 0.0,
+        //       },
+        //       conflictAlgorithm: ConflictAlgorithm.replace,
+        //     );
+        //     print("Data inserted successfully!");
+        //     a4Invoice ?
+        //      generateInvoiceFromJson(jsonData, qrurl) : null;
+        //     print58mmAdvanced(jsonData, qrurl, receiptQrData);
+        //   } catch (e) {
+        //     Get.snackbar("Db Error",
+        //       "$e",
+        //       snackPosition: SnackPosition.TOP,
+        //       colorText: Colors.white,
+        //       backgroundColor: Colors.red,
+        //       icon: const Icon(Icons.error),
+        //     );
+        // }
       }
     }
     else{
@@ -1274,14 +1274,15 @@ String generateTaxSummary(List<dynamic> receiptItems) {
           generateInvoiceFromJson(jsonData, qrurl) : null;
          print58mmAdvanced(jsonData, qrurl , receiptQrData);
       } catch (e) {
-        Get.snackbar("DB error Error",
-          "$e",
-          snackPosition: SnackPosition.TOP,
-          colorText: Colors.white,
-          backgroundColor: Colors.red,
-          icon: const Icon(Icons.error),
-        );
-    }
+          Get.snackbar("DB error Error",
+            "$e",
+            snackPosition: SnackPosition.TOP,
+            colorText: Colors.white,
+            backgroundColor: Colors.red,
+            icon: const Icon(Icons.error),
+          );
+      }
+      return true;
     }
   }
 
@@ -1564,7 +1565,7 @@ String generateTaxSummary(List<dynamic> receiptItems) {
         "No Selling Price",
         "Set selling price for this product or use free price option",
         colorText: Colors.black,
-        backgroundColor: Colors.amber,
+        backgroundColor: Colors.amber, 
         icon: const Icon(Icons.error),
       );
     }else{
@@ -1690,6 +1691,7 @@ String generateTaxSummary(List<dynamic> receiptItems) {
       cityController.clear();
       provinceController.clear();
       emailController.clear();
+      phoneNumberController.clear();
     });
   }
 
@@ -1865,17 +1867,17 @@ String generateTaxSummary(List<dynamic> receiptItems) {
                             )
                         ),
                         validator: (value){
-                            if(value!.isEmpty){
-                              return "VAT Required";
-                            }
-                            if(value.length != 9){
-                              return "VAT Must be 9 digits";
-                            }
-                            if (!value.startsWith("22")) {
-                              return "VAT must start with 22";
-                            }
-                            return null;
-                          },
+                          if(value!.isEmpty){
+                            return "VAT Required";
+                          }
+                          if(value.length != 9){
+                            return "VAT Must be 9 digits";
+                          }
+                          if (!value.startsWith("22")) {
+                            return "VAT must start with 22";
+                          }
+                          return null;
+                        },
                       ),
                       const SizedBox(height: 10,),
                       TextFormField(
@@ -1957,6 +1959,36 @@ String generateTaxSummary(List<dynamic> receiptItems) {
                           }
                         },
                       ),
+                      TextFormField(
+                        controller: phoneNumberController,
+                        inputFormatters: [
+                          FilteringTextInputFormatter.digitsOnly,
+                          LengthLimitingTextInputFormatter(10),
+                        ],
+                        decoration: InputDecoration(
+                            labelText: 'Phone Number',
+                            labelStyle: TextStyle(color:Colors.grey.shade600 ),
+                            enabled: true,
+                            filled: true,
+                            fillColor: Colors.grey.shade300,
+                            border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12.0),
+                                borderSide: BorderSide.none
+                            )
+                        ),
+                        validator: (value){
+                          if(value!.isEmpty){
+                            return "Phone number required";
+                          }
+                          if(value.length != 10){
+                            return "Number must be 10 digits";
+                          }
+                          if (!value.startsWith("0")) {
+                            return "Number must start with 0";
+                          }
+                          return null;
+                        },
+                      ),
                       const SizedBox(height: 10,),
                       TextFormField(
                         controller: emailController,
@@ -2020,6 +2052,7 @@ String generateTaxSummary(List<dynamic> receiptItems) {
                                 tinNumber: int.parse(tinController.text),
                                 vatNumber: int.parse(vatController.text),
                                 address: '${houseNoController.text},${streetNameController.text},${cityController.text},${provinceController.text}',
+                                phoneNumber: phoneNumberController.text,
                                 email: emailController.text,
                                 isFiscal: isFiscaltag1 ? 1 : 0,
                               ));
@@ -2033,6 +2066,7 @@ String generateTaxSummary(List<dynamic> receiptItems) {
                                   'street': streetNameController.text,
                                   'city': cityController.text,
                                   'province': provinceController.text,
+                                  'phoneNumber': phoneNumberController.text,
                                   'email': emailController.text,
                                 });
                               });
@@ -3240,22 +3274,33 @@ String generateTaxSummary(List<dynamic> receiptItems) {
                                             await addItem();
                                             await generateFiscalJSON();
                                             //generateHash();
-                                            await submitReceipt();
-                                            await completeSale();
-                                            setState(() {
-                                              cartItems.clear();
-                                              selectedPayMethod.clear();
-                                              selectedCustomer.clear();
-                                              paidController.clear();
-                                            });
-                                            Navigator.pop(context);
-                                            Navigator.pushReplacement(
-                                              context,
-                                              PageRouteBuilder(
-                                              pageBuilder: (_, __, ___) => const Pos(),
-                                              transitionDuration: Duration.zero,
-                                              ),
-                                            );
+                                            bool isSubmitted = await submitReceipt();
+                                            if(isSubmitted == true){
+                                              await completeSale();
+                                              setState(() {
+                                                cartItems.clear();
+                                                selectedPayMethod.clear();
+                                                selectedCustomer.clear();
+                                                paidController.clear();
+                                              });
+                                              Navigator.pop(context);
+                                              Navigator.pushReplacement(
+                                                context,
+                                                PageRouteBuilder(
+                                                pageBuilder: (_, __, ___) => const Pos(),
+                                                transitionDuration: Duration.zero,
+                                                ),
+                                              );
+                                            }else{
+                                              Get.snackbar(
+                                                "Error",
+                                                "Failed to submit receipt. Please try again.",
+                                                icon: Icon(Icons.error),
+                                                colorText: Colors.white,
+                                                backgroundColor: Colors.red,
+                                                snackPosition: SnackPosition.TOP,
+                                              );
+                                            }
                                             } catch (e) {
                                               Get.snackbar(
                                                 "Error",

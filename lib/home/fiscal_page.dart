@@ -521,7 +521,7 @@ Future<int> getlatestFiscalDay() async {
                     ),
                     child: Padding(
                       padding: const EdgeInsets.only(left: 10.0 ,top: 10.0),
-                      child: ListView(
+                      child: Column(
                         children: [
                           Text("TAXPAYER NAME: $taxPayerName" , style:const TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16),),
                           const SizedBox(height: 6,),

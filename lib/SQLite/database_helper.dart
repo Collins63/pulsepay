@@ -38,7 +38,7 @@ class DatabaseHelper {
     "CREATE TABLE sales (saleId INTEGER PRIMARY KEY AUTOINCREMENT,invoiceId INTEGER,customerID INTEGER,productId INTEGER,quantity INTEGER,sellingPrice REAL,tax REAL , currency TEXT , rate REAL,doneBY TEXT NOT NULL DEFAULT Cashier ,FOREIGN KEY(invoiceId) REFERENCES invoices(invoiceId),FOREIGN KEY(productId) REFERENCES products(productid), FOREIGN KEY(customerID) REFERENCES customers(customerID) )";
   
   String customers =
-    "CREATE TABLE customer(customerID INTEGER PRIMARY KEY AUTOINCREMENT , tradeName TEXT , tinNumber INTEGER , vatNumber INTEGER , address TEXT , email TEXT , isFiscal INTEGER DEFAULT 0 )";
+    "CREATE TABLE customer(customerID INTEGER PRIMARY KEY AUTOINCREMENT , tradeName TEXT , tinNumber INTEGER , vatNumber INTEGER , address TEXT , email TEXT ,phoneNumber TEXT, isFiscal INTEGER DEFAULT 0 )";
   // vat zero ex
 
   String companyDetails =

@@ -243,6 +243,7 @@ class Customer {
   final int vatNumber;
   final String address;
   final String email;
+  final String phoneNumber;
   final int isFiscal;
 
   Customer({
@@ -252,6 +253,7 @@ class Customer {
     required this.vatNumber,
     required this.address,
     required this.email,
+    required this.phoneNumber,
     required this.isFiscal
   });
 
@@ -262,6 +264,7 @@ class Customer {
     vatNumber: json["vatNumber"],
     address: json["address"],
     email: json["email"],
+    phoneNumber: json["phoneNumber"],
     isFiscal: json["isFiscal"]
   );
 
@@ -272,6 +275,7 @@ class Customer {
     "vatNumber": vatNumber,
     "address": address,
     "email": email,
+    "phoneNumber": phoneNumber,
     "isFiscal": isFiscal
   };
 }
