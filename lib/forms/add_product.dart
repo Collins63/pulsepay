@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:lottie/lottie.dart';
+import 'package:path/path.dart';
 import 'package:pulsepay/JsonModels/json_models.dart';
 import 'package:pulsepay/SQLite/database_helper.dart';
+import 'package:pulsepay/common/appStyle.dart';
+import 'package:pulsepay/common/reusable_text.dart';
 //import 'package:pulsepay/authentication/login.dart';
 import 'package:pulsepay/forms/view_products.dart';
 import 'package:pulsepay/home/home_page.dart';
@@ -37,6 +40,9 @@ class _AddproductState extends State<AddProduct>{
     sellingprice.clear();
     vatBracket.clear();
     initStockController.clear();
+    vat15 = false;
+    vat0 = false;
+    vatEx = false;
   }
 
   final db = DatabaseHelper();
@@ -86,17 +92,11 @@ class _AddproductState extends State<AddProduct>{
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Center(
-                          child: Lottie.asset("assets/cart.json", width: 100, height: 100),
+                          child: Image.asset('assets/addProducts.jpg'),
                         ),
                         const SizedBox(height: 15),
                         const SizedBox(height: 8,),
-                        Text(
-                          "Enter Details Below To Register Product",
-                          style: TextStyle(
-                            color: Colors.grey.shade800,
-                            fontSize: 16,
-                          ),
-                        ),
+                        ReusableText(text: "Enter details below", style: appStyle(16, Colors.black,FontWeight.w500)),
                         const SizedBox(height: 24,),
                         //email address field
                         TextFormField(
@@ -223,7 +223,7 @@ class _AddproductState extends State<AddProduct>{
                         //   },
                         // ),
                             CheckboxListTile(
-                              title: const Text("15% Vat"),
+                              title: ReusableText(text:"15% Vat" , style: appStyle(14, Colors.black,FontWeight.normal),),
                               value: vat15,
                               onChanged: (bool? value){
                                 setState(() {
@@ -236,7 +236,7 @@ class _AddproductState extends State<AddProduct>{
                               }
                             ),
                             CheckboxListTile(
-                              title: const Text("Zero% Vat"),
+                              title: ReusableText(text:"Zero% Vat" , style: appStyle(14, Colors.black,FontWeight.normal),),
                               value: vat0,
                               onChanged: (bool? value){
                                 setState(() {
@@ -249,14 +249,14 @@ class _AddproductState extends State<AddProduct>{
                               }
                             ),
                             CheckboxListTile(
-                              title: const Text("Exempted"),
+                              title: ReusableText(text:"Exempted" , style: appStyle(14, Colors.black,FontWeight.normal),),
                               value: vatEx,
                               onChanged: (bool? value){
                                 setState(() {
                                   vatEx = value!;
                                   if(vatEx){
                                     vat15 = false;
-                                    vatEx = false;
+                                    vat0 = false;
                                   }
                                 });
                               }
@@ -290,22 +290,42 @@ class _AddproductState extends State<AddProduct>{
                             onPressed: () async {
                               if (formKey.currentState!.validate()) {
                                 try {
-                                  final db = DatabaseHelper();
-                                  await db.addProduct(Products(
-                                    productName: productname.text,
-                                    hsCode:int.parse(hsCodeController.text),
-                                    barcode: barcode.text,
-                                    sellingPrice: double.parse(sellingprice.text),
-                                    costPrice: double.parse(costprice.text),
-                                    tax: vat0 ? "zero" : vat15 ? "vat" : "ex" ,
-                                    stockQty: int.parse(initStockController.text)
-                                  ));
-                                  // Navigate to the HomePage after successful product addition
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(builder: (context) => const ViewProducts()),
-                                  );
-                                  clearFields();
+                                  if(vat15 == false && vat0 == false && vatEx == false) {
+                                    Get.snackbar(
+                                      "Error",
+                                      "Please select a VAT bracket",
+                                      icon: const Icon(Icons.error),
+                                      colorText: Colors.white,
+                                      backgroundColor: Colors.red,
+                                      snackPosition: SnackPosition.TOP
+                                    );
+                                    return;
+                                   }else{
+                                    final db = DatabaseHelper();
+                                    await db.addProduct(Products(
+                                      productName: productname.text,
+                                      hsCode:int.parse(hsCodeController.text),
+                                      barcode: barcode.text,
+                                      sellingPrice: double.parse(sellingprice.text),
+                                      costPrice: double.parse(costprice.text),
+                                      tax: vat0 ? "zero" : vat15 ? "vat" : "ex" ,
+                                      stockQty: int.parse(initStockController.text)
+                                    ));
+                                    Get.snackbar(
+                                      "Success",
+                                      "${productname.text} Added Successfully",
+                                      icon: const Icon(Icons.check_circle),
+                                      colorText: Colors.white,
+                                      backgroundColor: Colors.green,
+                                      snackPosition: SnackPosition.TOP
+                                    );
+                                    clearFields();
+                                    setState(() {
+                                      vat0 = false;
+                                      vat15 = false;
+                                      vatEx = false;
+                                    });
+                                   } 
                                   } catch (e) {
                                     Get.snackbar(
                                       "Error",

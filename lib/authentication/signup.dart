@@ -205,20 +205,29 @@ class _SignupState extends State<Signup>{
                               snackPosition: SnackPosition.TOP
                             );
                           }else{
-                            db.signup(Users(
-                            realName: realname.text ,
-                            userName: username.text,
-                            userPassword: password.text,
-                            DateCreated: date,
-                            isAdmin: isAdmin? 1 : 0,
-                            isCashier: isCashier? 1 :0,
-                            )
-                            )
-                            .whenComplete((){
-                              Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (context) => const Login()));
-                            });
+                            try {
+                                db.signup(Users(
+                                  realName: realname.text ,
+                                  userName: username.text,
+                                  userPassword: password.text,
+                                  DateCreated: date,
+                                  isAdmin: isAdmin? 1 : 0,
+                                  isCashier: isCashier? 1 :0,
+                                )
+                              )
+                              .whenComplete((){
+                                Navigator.push(
+                                context,
+                                MaterialPageRoute(builder: (context) => const Login()));
+                              });
+                            } catch (e) {
+                              Get.snackbar("Error saving profile","$e",
+                                backgroundColor: Colors.red,
+                                icon: const Icon(Icons.error),
+                                colorText: Colors.white
+                              );
+                            }
+                            
                           }
                           
                         }

@@ -268,41 +268,61 @@ class _EndOfDayslipState extends State<EndOfDayslip> {
               const Heading(text: 'Print for user',),
               const SizedBox(height: 20,),
               Container(
-                    height: 70,
-                    width: 390,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(10),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.3), // shadow color
-                          spreadRadius: 4, // how much the shadow spreads
-                          blurRadius: 10,  // how soft the shadow is
-                          offset: Offset(0, 6), // horizontal and vertical offset
-                        ),
-                      ],
+                height: 70,
+                width: 390,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.3), // shadow color
+                      spreadRadius: 4, // how much the shadow spreads
+                      blurRadius: 10,  // how soft the shadow is
+                      offset: Offset(0, 6), // horizontal and vertical offset
                     ),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                      child: DropdownButton<String>(
-                        menuWidth: 200,
-                        hint: Text("Select User"),
-                        value: selectedUser,
-                        onChanged: (value)async{
-                          setState(() {
-                            selectedUser= value;
-                          });
-                          await loadUserTotals();
-                        },
-                        items: users.map((user) {
-                          return DropdownMenuItem<String>(
-                            value: user,
-                            child: Text(user),
-                          );
-                        }).toList(),
-                      ),
-                    ),
+                  ],
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                  child: DropdownButton<String>(
+                    menuWidth: 200,
+                    hint: Text("Select User"),
+                    value: selectedUser,
+                    onChanged: (value)async{
+                      setState(() {
+                        selectedUser= value;
+                      });
+                      await loadUserTotals();
+                    },
+                    items: users.map((user) {
+                      return DropdownMenuItem<String>(
+                        value: user,
+                        child: Text(user),
+                      );
+                    }).toList(),
                   ),
+                ),
+              ),
+              const SizedBox(height: 20,),
+              const Heading(text: "Products Sold"),
+              const SizedBox(height: 10,),
+              Container(
+                width: MediaQuery.of(context).size.width,
+                height: 400,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.3), // shadow color
+                      spreadRadius: 4, // how much the shadow spreads
+                      blurRadius: 10,  // how soft the shadow is
+                      offset: const Offset(0, 6), // horizontal and vertical offset
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20,),
             ],
           ),
         ),

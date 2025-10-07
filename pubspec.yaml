@@ -120,6 +120,7 @@ flutter:
     - assets/beep.mp3
     - assets\print.gif
     - assets\estimate.gif
+    - assets/addProducts.jpg
 
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg

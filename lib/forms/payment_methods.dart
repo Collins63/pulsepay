@@ -141,6 +141,11 @@ class _PaymentMethodsState extends State<PaymentMethods> {
                     const SizedBox(height: 10,),
                     TextFormField(
                       controller: rateController,
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(
+                          RegExp(r'^\d+\.?\d{0,2}$'), // allows whole numbers and decimals, up to 2 decimal places
+                        ),
+                      ],
                       decoration: InputDecoration(
                           labelText: 'Rate',
                           labelStyle: TextStyle(color:Colors.grey.shade600 ),
@@ -179,6 +184,7 @@ class _PaymentMethodsState extends State<PaymentMethods> {
                     const SizedBox(height: 10,),
                     TextFormField(
                       controller: currencyController,
+                      
                       decoration: InputDecoration(
                           labelText: 'Currency',
                           labelStyle: TextStyle(color:Colors.grey.shade600 ),

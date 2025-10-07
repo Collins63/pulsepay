@@ -133,7 +133,7 @@ class _PosState extends State<Pos>{
   String? first16Chars;
   // ignore: non_constant_identifier_names
   String? receiptDeviceSignature_signature;
-  String genericzimraqrurl = "https://fdms.zimra.co.zw/";
+  String genericzimraqrurl = "https://fdmstest.zimra.co.zw/";
   int deviceID = 0;
   int? nextCustomerID;
   final BlueThermalPrinter bluetooth = BlueThermalPrinter.instance;
@@ -514,15 +514,15 @@ Future<void> _finishPrint() async {
       taxCode = "B";
       itemTax = totalPrice * double.parse(taxPercent);
     } else if (productTax == "vat") {
-      taxID = 1;
+      taxID = 3;
       taxPercent = "15.00"; // Convert 15% to decimal
-      taxCode = "A";
+      taxCode = "C";
       itemTax = totalPrice * 0.15;
       salesAmountwithTax += totalPrice;
     } else {
-      taxID = 3;
+      taxID = 1;
       taxPercent = "0";
-      taxCode = "C";
+      taxCode = "A";
       itemTax = totalPrice * 0;
     }
 
@@ -864,7 +864,7 @@ List<Map<String, dynamic>> generateReceiptTaxes(List<dynamic> receiptItems) {
   return taxGroups.values.map((tax) {
     final taxID = tax["taxID"];
     final taxCode = tax["taxCode"];
-    final isGroupC = (taxCode == "C" || taxID == 3);
+    final isGroupC = (taxCode == "A" || taxID == 1);
 
     double tax1 = (tax["salesAmountWithTax"] is String)
       ? double.tryParse(tax["salesAmountWithTax"]) ?? 0
@@ -931,7 +931,7 @@ String generateTaxSummary(List<dynamic> receiptItems) {
     final salesAmount = (salesAmountcents * 100).round().toString();
 
     // Omit taxPercent for taxCode A
-    if (taxCode == "C") {
+    if (taxCode == "A") {
       return "$taxCode$taxAmount$salesAmount";
     }
 
@@ -1018,7 +1018,7 @@ String generateTaxSummary(List<dynamic> receiptItems) {
   
   Future<String> ping() async {
     String apiEndpointPing =
-        "https://fdmsapi.zimra.co.zw/Device/v1/$deviceID/Ping";
+        "https://fdmsapitest.zimra.co.zw/Device/v1/$deviceID/Ping";
     const String deviceModelName = "Server";
     const String deviceModelVersion = "v1"; 
 
@@ -1112,7 +1112,7 @@ String generateTaxSummary(List<dynamic> receiptItems) {
       
     if(pingResponse=="200"){
       String apiEndpointSubmitReceipt =
-      "https://fdmsapi.zimra.co.zw/Device/v1/$deviceID/SubmitReceipt";
+      "https://fdmsapitest.zimra.co.zw/Device/v1/$deviceID/SubmitReceipt";
       const String deviceModelName = "Server";
       const String deviceModelVersion = "v1";  
 
@@ -1177,7 +1177,7 @@ String generateTaxSummary(List<dynamic> receiptItems) {
           //print("Data inserted successfully!");
           a4Invoice ?
           generateInvoiceFromJson(jsonData, qrurl) : null;
-          print58mmAdvanced(jsonData, qrurl, receiptQrData);
+          //print58mmAdvanced(jsonData, qrurl, receiptQrData);
         } catch (e) {
           Get.snackbar(" Db Error",
             "$e",
@@ -1271,8 +1271,8 @@ String generateTaxSummary(List<dynamic> receiptItems) {
         );
          print("Data inserted successfully!");
          a4Invoice ?
-          generateInvoiceFromJson(jsonData, qrurl) : null;
-         print58mmAdvanced(jsonData, qrurl , receiptQrData);
+        generateInvoiceFromJson(jsonData, qrurl) : null;
+         //print58mmAdvanced(jsonData, qrurl , receiptQrData);
       } catch (e) {
           Get.snackbar("DB error Error",
             "$e",
@@ -1507,7 +1507,7 @@ String generateTaxSummary(List<dynamic> receiptItems) {
     Navigator.pop(context);
   }
 
-  void addToPayments(Map<String , dynamic> payMethod) async{
+  Future<void> addToPayments(Map<String , dynamic> payMethod) async{
     if(selectedPayMethod.isEmpty){
       setState(() {
         selectedPayMethod.add(payMethod);
@@ -2170,9 +2170,12 @@ String generateTaxSummary(List<dynamic> receiptItems) {
                             child: ListTile(
                               title: Text(payMethod['description']),
                               subtitle: Text("Rate: ${payMethod['rate']}"),
-                              trailing: IconButton(onPressed: (){
-                                addToPayments(payMethod);
-                                returnCurrency();
+                              trailing: IconButton(onPressed: () async{
+                                await addToPayments(payMethod);
+                                String transactionCurrencyReturned = returnCurrency();
+                                setState(() {
+                                  transactionCurrency = transactionCurrencyReturned;
+                                });
                               }, icon:const Icon(Icons.add_circle_outline_sharp)),
                             ),
                           );

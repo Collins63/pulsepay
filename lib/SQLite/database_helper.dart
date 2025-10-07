@@ -1290,6 +1290,26 @@ Future<void> saveQuotation(List<Map<String, dynamic>> cartItems, double totalAmo
     ''');
   }
 
+  Future<List<Map<String , dynamic>>> getSoldProducts() async{
+    final db = await initDB();
+    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    return await db.rawQuery('''
+      SELECT 
+          DATE(invoices.date) AS sale_date,
+          products.productName,
+          SUM(sales.quantity) AS total_quantity_sold,
+          SUM((sales.sellingPrice * sales.quantity) / sales.rate) AS total_sales_base,
+          SUM(sales.tax / sales.rate) AS total_tax_base
+        FROM sales
+        JOIN invoices ON sales.invoiceId = invoices.invoiceId
+        JOIN products ON sales.productId = products.productid
+        WHERE invoices.cancelled = 0
+          AND DATE(invoices.date) = ?
+        GROUP BY products.productName
+        ORDER BY products.productName
+    ''', [today]);
+  }
+
 
   Future<List<Map<String , dynamic>>> getTopSellingProducts() async{
     final database = await initDB();
@@ -1644,4 +1664,6 @@ Future<void> saveQuotation(List<Map<String, dynamic>> cartItems, double totalAmo
 
     return salesCounts;
   }
+
+
 }

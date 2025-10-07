@@ -112,7 +112,7 @@ class _FiscalPageState extends State<FiscalPage> {
   final previousData = await dbHelper.getPreviousReceiptData();
   final previousFiscalDayNo = await dbHelper.getPreviousFiscalDayNo();
   final taxIDSetting = await getConfig();
-  String openDayEndPoint = "https://fdmsapi.zimra.co.zw/Device/v1/$deviceID/OpenDay";
+  String openDayEndPoint = "https://fdmsapitest.zimra.co.zw/Device/v1/$deviceID/OpenDay";
   const String deviceModelName = "Server";
   const String deviceModelVersion = "v1";  
 
@@ -174,7 +174,7 @@ class _FiscalPageState extends State<FiscalPage> {
 }
 
 Future<String> getConfig() async {
-  String apiEndpointGetConfig = "https://fdmsapi.zimra.co.zw/Device/v1/$deviceID/GetConfig"; // Replace with actual API endpoint
+  String apiEndpointGetConfig = "https://fdmsapitest.zimra.co.zw/Device/v1/$deviceID/GetConfig"; // Replace with actual API endpoint
   String responseMessage = "There was no response from the server. Check your connection !!";
 
   try {
@@ -305,7 +305,7 @@ Future<String> getConfig() async {
   
   Future<void> getStatus() async {
     String apiEndpointGetStatus =
-      "https://fdmsapi.zimra.co.zw/Device/v1/$deviceID/GetStatus";
+      "https://fdmsapitest.zimra.co.zw/Device/v1/$deviceID/GetStatus";
     const String deviceModelName = "Server";
     const String deviceModelVersion = "v1";
 
@@ -332,7 +332,7 @@ Future<String> getConfig() async {
 
   Future<String> ping() async {
   String apiEndpointPing =
-      "https://fdmsapi.zimra.co.zw/Device/v1/$deviceID/Ping";
+      "https://fdmsapitest.zimra.co.zw/Device/v1/$deviceID/Ping";
   const String deviceModelName = "Server";
   const String deviceModelVersion = "v1"; 
 
@@ -370,7 +370,7 @@ Future<String> getConfig() async {
     // Get the database instance
     final db = await dbHelper.initDB();
     String apiEndpointSubmitReceipt =
-      "https://fdmsapi.zimra.co.zw/Device/v1/$deviceID/SubmitReceipt";
+      "https://fdmsapitest.zimra.co.zw/Device/v1/$deviceID/SubmitReceipt";
     const String deviceModelName = "Server";
     const String deviceModelVersion = "v1"; 
     SSLContextProvider sslContextProvider = SSLContextProvider();
@@ -515,6 +515,7 @@ Future<int> getlatestFiscalDay() async {
                   const SizedBox(height: 15,),
                   Container(
                     height:350,
+                    width: MediaQuery.of(context).size.width,
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(10),
                       color: Colors.blue,
@@ -522,6 +523,7 @@ Future<int> getlatestFiscalDay() async {
                     child: Padding(
                       padding: const EdgeInsets.only(left: 10.0 ,top: 10.0),
                       child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text("TAXPAYER NAME: $taxPayerName" , style:const TextStyle(color: Colors.white , fontWeight: FontWeight.w500 , fontSize: 16),),
                           const SizedBox(height: 6,),
@@ -649,7 +651,7 @@ Future<int> getlatestFiscalDay() async {
                       }
       
                       String apiEndpointCloseDay =
-                        "https://fdmsapi.zimra.co.zw/Device/v1/$deviceID/CloseDay";
+                        "https://fdmsapitest.zimra.co.zw/Device/v1/$deviceID/CloseDay";
                       const String deviceModelName = "Server";
                       const String deviceModelVersion = "v1";  
       
@@ -892,11 +894,11 @@ Future<(
       final taxAmt = rawTaxAmt is num ? rawTaxAmt.toDouble() : double.tryParse(rawTaxAmt.toString()) ?? 0;
       final salesAmt = rawSales is num ? rawSales.toDouble() : double.tryParse(rawSales.toString()) ?? 0;
       final taxCode = t['taxCode'];
-      final perc = (taxCode == "C") ? 0.0 : double.parse(t['taxPercent'] as String);
+      final perc = (taxCode == "A") ? 0.0 : double.parse(t['taxPercent'] as String);
       final taxId = int.parse(t['taxID'].toString());
 
       if (!isCredit) {
-        if (taxCode == "C") {
+        if (taxCode == "A") {
           final sbtKey = 'SaleByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
           invMap.putIfAbsent(sbtKey, () => FiscalDayCounter(
             type: 'SaleByTax', currency: curr, taxID: taxId))
@@ -918,7 +920,7 @@ Future<(
             .accumulate(taxAmt);
         }
       } else {
-        if (taxCode == "C") {
+        if (taxCode == "A") {
           final cbtKey = 'CreditNoteByTax|$curr|${perc.toStringAsFixed(2)}|$taxId';
           crdMap.putIfAbsent(cbtKey, () => FiscalDayCounter(
             type: 'CreditNoteByTax', currency: curr, taxID: taxId))
