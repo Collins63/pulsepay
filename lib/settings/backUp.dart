@@ -156,13 +156,6 @@ class _DatabaseBackupState extends State<DatabaseBackup> {
                   onTap: () async{
                     try {
                       DatabaseBackupService backupService = DatabaseBackupService();
-    
-                      // Request permissions first
-                      bool hasPermission = await backupService.requestStoragePermission();
-                      if (!hasPermission) {
-                        print('Storage permission denied');
-                        return;
-                      }
                       Database db = await openDatabase('pulse.db');
                       //createDatabaseFileBackup();
                       String? fileCopyPath = await backupService.createDatabaseFileBackup();

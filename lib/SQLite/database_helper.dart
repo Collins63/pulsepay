@@ -1235,6 +1235,32 @@ Future<void> saveQuotation(List<Map<String, dynamic>> cartItems, double totalAmo
     );
   }
 
+  Future<List<Map<String, dynamic>>> getAllFiscalInvoiceByDate(String? currency, String startDate, String endDate) async{
+    final db = await initDB();
+    return await db.rawQuery(
+      '''
+        SELECT submittedReceipts.*
+        FROM submittedReceipts
+        WHERE 
+          receiptCurrency = ?
+          AND submittedReceipts.receiptDate BETWEEN ? AND ?
+      ''' , [currency , startDate , endDate]
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getAllFiscalInvoiceByDateAllCurrencies(String startDate, String endDate) async{
+    final db = await initDB();
+    return await db.rawQuery(
+      '''
+        SELECT submittedReceipts.*
+        FROM submittedReceipts
+        WHERE 
+          submittedReceipts.receiptDate BETWEEN ? AND ?
+      ''' , [ startDate , endDate]
+    );
+  }
+
+
   Future<List<Map<String, dynamic>>> getAllUserSales(String? user) async{
     String today = DateFormat('yyyy-MM-dd').format(DateTime.now());
     final db = await initDB();
@@ -1298,8 +1324,8 @@ Future<void> saveQuotation(List<Map<String, dynamic>> cartItems, double totalAmo
           DATE(invoices.date) AS sale_date,
           products.productName,
           SUM(sales.quantity) AS total_quantity_sold,
-          SUM((sales.sellingPrice * sales.quantity) / sales.rate) AS total_sales_base,
-          SUM(sales.tax / sales.rate) AS total_tax_base
+          SUM(sales.sellingPrice * sales.quantity) AS total_sales_base,
+          SUM(sales.tax) AS total_tax_base
         FROM sales
         JOIN invoices ON sales.invoiceId = invoices.invoiceId
         JOIN products ON sales.productId = products.productid
@@ -1535,6 +1561,26 @@ Future<void> saveQuotation(List<Map<String, dynamic>> cartItems, double totalAmo
     return result.isNotEmpty ? (result[0]['totalSales'] as double) : 0.0;
   }
 
+  // Future<double> getTotalTaxWithinDateRange({
+  //   required String currency,
+  //   required String startDate,
+  //   required String endDate,
+  // }) async {
+  // final db = await initDB();
+
+  // final result = await db.rawQuery('''
+  //     SELECT 
+  //       IFNULL(SUM(invoices.totalTax), 0) AS totalTax
+  //     FROM 
+  //       invoices
+  //     WHERE 
+  //       invoices.currency = ? AND cancelled = 0
+  //       AND invoices.date BETWEEN ? AND ?
+  //   ''', [currency, startDate, endDate]);
+
+  //   return result.isNotEmpty ? (result[0]['totalTax'] as num).toDouble() : 0.0;
+  // }
+
   Future<double> getTotalTaxWithinDateRange({
     required String currency,
     required String startDate,
@@ -1544,16 +1590,17 @@ Future<void> saveQuotation(List<Map<String, dynamic>> cartItems, double totalAmo
 
   final result = await db.rawQuery('''
       SELECT 
-        IFNULL(SUM(invoices.totalTax), 0) AS totalTax
+        IFNULL(SUM(submittedReceipts.taxAmount), 0) AS totalTax
       FROM 
-        invoices
+        submittedReceipts
       WHERE 
-        invoices.currency = ? AND cancelled = 0
-        AND invoices.date BETWEEN ? AND ?
+        submittedReceipts.receiptCurrency = ?
+        AND submittedReceipts.receiptDate BETWEEN ? AND ?
     ''', [currency, startDate, endDate]);
 
     return result.isNotEmpty ? (result[0]['totalTax'] as num).toDouble() : 0.0;
   }
+
 
 
   //get daily sales summmary
@@ -1600,6 +1647,20 @@ Future<void> saveQuotation(List<Map<String, dynamic>> cartItems, double totalAmo
       ''' , [dayNo , currency]);
   }
 
+  Future<List<Map<String, dynamic>>> getZReportTotalsByDate(String currency , String startDate, String endDatae) async{
+    final db = await initDB();
+    return await db.rawQuery('''
+      SELECT
+        SUM(receiptTotal) sumZWGReceiptTotal,
+        SUM(taxAmount) as sumZWGTaxAmount,
+        SUM(Total15VAT) as sumZWG15VAT,
+        SUM(TotalNonVAT) as sumZWGNonVAT,
+        SUM(TotalExempt) as sumZWGExempt
+      FROM submittedReceipts
+      WHERE receiptCurrency = ?  AND submittedReceipts.receiptDate BETWEEN ? AND ? 
+      ''' , [currency,  startDate , endDatae]);
+  }
+
   Future<List<Map<String , dynamic>>> getZreportDocumentTotals(int dayNo , String receiptType,  String currency) async {
     final db = await initDB();
     return await db.rawQuery('''
@@ -1609,6 +1670,15 @@ Future<void> saveQuotation(List<Map<String, dynamic>> cartItems, double totalAmo
     ''' , [dayNo , currency , receiptType]);
   }
 
+  Future<List<Map<String , dynamic>>> getZreportDocumentTotalsByDate(String receiptType,  String currency , String startDate , String endDate) async {
+    final db = await initDB();
+    return await db.rawQuery('''
+      SELECT SUM(receiptTotal) as total
+      FROM submittedReceipts
+      WHERE receiptCurrency = ? AND receiptType = ? AND submittedReceipts.receiptDate BETWEEN ? AND ? 
+    ''' , [currency , receiptType, startDate , endDate]);
+  }
+
   Future<List<Map<String, dynamic>>> getDocumentsCounter(int dayNo , String currency , String receiptType) async{
     final db = await initDB();
     return await db.rawQuery('''
@@ -1616,6 +1686,16 @@ Future<void> saveQuotation(List<Map<String, dynamic>> cartItems, double totalAmo
       FROM submittedReceipts
       WHERE FiscalDayNo = ?  AND receiptCurrency = ? AND receiptType = ?
     ''', [dayNo , currency , receiptType]);
+  }
+
+
+  Future<List<Map<String, dynamic>>> getDocumentsCounterByDate(String currency , String receiptType , String startDate , String endDate) async{
+    final db = await initDB();
+    return await db.rawQuery('''
+      SELECT COUNT(*) as count
+      FROM submittedReceipts
+      WHERE receiptCurrency = ? AND receiptType = ? AND submittedReceipts.receiptDate BETWEEN ? AND ? 
+    ''', [currency , receiptType , startDate , endDate]);
   }
 
   Future<List<Map<String, dynamic>>> getSalesByCustomer(int customerId) async {

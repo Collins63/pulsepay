@@ -282,6 +282,7 @@ final BlueThermalPrinter bluetooth  = BlueThermalPrinter.instance;
     await SunmiPrinter.printText("--------------------------------");
     await SunmiPrinter.printText("Invoice No: $ogInvoice");
     await SunmiPrinter.printText("CreditNote No: ${receipt['invoiceNo']}");
+    await SunmiPrinter.printText("CreditNote Reason: ${receipt['receiptNotes']}");
     await SunmiPrinter.printText("Date: ${receipt['receiptDate']}");
     await SunmiPrinter.printText("Currency: ${receipt['receiptCurrency']}");
     await SunmiPrinter.printText("--------------------------------");

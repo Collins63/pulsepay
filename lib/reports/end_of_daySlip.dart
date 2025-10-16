@@ -26,6 +26,7 @@ class _EndOfDayslipState extends State<EndOfDayslip> {
   String todayDate = "" ;
   Map<String, dynamic> salesData = {};
   DatabaseHelper dbHelper = DatabaseHelper();
+  List<Map<String, dynamic>> soldProducts = [];
   bool _isConnected = false;
   bool _isPrinting = false;
   String _printerStatus = 'Checking...';
@@ -83,6 +84,14 @@ class _EndOfDayslipState extends State<EndOfDayslip> {
     } else {
       print("No company details found");
     }
+  }
+
+  void getSoldProducts() async{
+    final data = await dbHelper.getSoldProducts();
+    setState(() {
+      soldProducts = data;
+    });
+    print(soldProducts);
   }
 
   //print end of day slip for all users
@@ -208,6 +217,7 @@ class _EndOfDayslipState extends State<EndOfDayslip> {
     getSalesData();
     getCompanyDetails();
     loadUsers();
+    getSoldProducts();
   }
 
   @override
@@ -320,6 +330,28 @@ class _EndOfDayslipState extends State<EndOfDayslip> {
                       offset: const Offset(0, 6), // horizontal and vertical offset
                     ),
                   ],
+                ),
+                child: Padding(
+                  padding: EdgeInsets.all(10),
+                  child: ListView.builder(
+                    itemCount: soldProducts.length,
+                    itemBuilder: (context, index){
+                      final product = soldProducts[index];
+                      return Container(
+                        margin: const EdgeInsets.symmetric(vertical: 5.0 , horizontal: 5.0),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey, width: 1.0),
+                          borderRadius: BorderRadius.circular(10.0),
+                          color: Colors.white
+                        ),
+                        child: ListTile(
+                          title: Text(product['productName']),
+                          subtitle: Text("Quantity: ${product['total_quantity_sold']}"),
+                          trailing: Text("\$${product['total_sales_base']}"),
+                        ),
+                      );
+                    }
+                  ),
                 ),
               ),
               const SizedBox(height: 20,),

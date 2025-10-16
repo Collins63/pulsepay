@@ -490,6 +490,7 @@ Future<void> _finishPrint() async {
     double rate = fetchedCurrency[0]['rate'] ?? 1.0;
 
     print("sales currency is: $fetchedCurrency and rate is: $rate");
+    print("your cart is $cartItems");
 
   for (var item in cartItems) {
     double itemTotal = (item['sellingPrice'] is String) 
@@ -539,7 +540,7 @@ Future<void> _finishPrint() async {
     });
 
     totalAmount += totalPrice;
-    taxAmount += itemTax;
+    //taxAmount += itemTax;
   }
 }
 
@@ -847,17 +848,17 @@ List<Map<String, dynamic>> generateReceiptTaxes(List<dynamic> receiptItems) {
         "salesAmountWithTax": 0.0
       };
     }
-    double taxAmount;
+    double taxAmountInner;
     if(taxPercent.isEmpty){
-      taxAmount = 0.00;
+      taxAmountInner = 0.00;
     }
     else if(taxPercent=="15.00"){
-      taxAmount = total - double.parse((total / 1.15).toString());
+      taxAmountInner = total - double.parse((total / 1.15).toString());
     }
     else{
-      taxAmount = total * 0;
+      taxAmountInner = total * 0;
     }
-    taxGroups[taxID]!["taxAmount"] += taxAmount;
+    taxGroups[taxID]!["taxAmount"] += taxAmountInner;
     taxGroups[taxID]!["salesAmountWithTax"] += total;
   }
 
@@ -865,6 +866,7 @@ List<Map<String, dynamic>> generateReceiptTaxes(List<dynamic> receiptItems) {
     final taxID = tax["taxID"];
     final taxCode = tax["taxCode"];
     final isGroupC = (taxCode == "A" || taxID == 1);
+    taxAmount = roundTo2(tax["taxAmount"]);
 
     double tax1 = (tax["salesAmountWithTax"] is String)
       ? double.tryParse(tax["salesAmountWithTax"]) ?? 0
@@ -1107,8 +1109,8 @@ String generateTaxSummary(List<dynamic> receiptItems) {
       String testHash = "Lvf3obAk4W4uJclOQTcqwV4zd+59xIj5sEOv5e5UUlM=";
       String testQrData = getReceiptQrData(testHash);
       String qrurl = genericzimraqrurl + formattedDeviceID + formattedDateStr + formatedReceiptGlobalNo + receiptQrData;
-      print("QR URL: $qrurl");
-
+      print("QR URL: $qrurl");    
+      int nextInvoice = await dbHelper.getNextInvoiceId();
       
     if(pingResponse=="200"){
       String apiEndpointSubmitReceipt =
@@ -1140,6 +1142,7 @@ String generateTaxSummary(List<dynamic> receiptItems) {
       int statusCode = response["statusCode"];
       String submitReceiptServerresponseJson = responseBody.toString();
       //print("your server server response is $submitReceiptServerresponseJson");
+      
       if (statusCode == 200) {
         print("Code is 200, saving receipt...");
         // Check if 'receiptPayments' is non-empty before accessing index 0
@@ -1149,7 +1152,7 @@ String generateTaxSummary(List<dynamic> receiptItems) {
             {
               'receiptCounter': jsonData['receipt']?['receiptCounter'] ?? 0,
               'FiscalDayNo' : fiscalDayNo,
-              'InvoiceNo': int.tryParse(jsonData['receipt']?['invoiceNo']?.toString() ?? "0") ?? 0,
+              'InvoiceNo': nextInvoice,
               'receiptID': responseBody['receiptID'] ?? 0,
               'receiptType': jsonData['receipt']['receiptType']?.toString() ?? "",
               'receiptCurrency': jsonData['receipt']?['receiptCurrency']?.toString() ?? "",
@@ -1177,7 +1180,7 @@ String generateTaxSummary(List<dynamic> receiptItems) {
           //print("Data inserted successfully!");
           a4Invoice ?
           generateInvoiceFromJson(jsonData, qrurl) : null;
-          //print58mmAdvanced(jsonData, qrurl, receiptQrData);
+          print58mmAdvanced(jsonData, qrurl, receiptQrData);
         } catch (e) {
           Get.snackbar(" Db Error",
             "$e",
@@ -1244,7 +1247,7 @@ String generateTaxSummary(List<dynamic> receiptItems) {
           {
             'receiptCounter': jsonData['receipt']?['receiptCounter'] ?? 0,
             'FiscalDayNo' : fiscalDayNo,
-            'InvoiceNo': int.tryParse(jsonData['receipt']?['invoiceNo']?.toString() ?? "0") ?? 0,
+            'InvoiceNo': nextInvoice,
             'receiptID': 0,
             'receiptType': jsonData['receipt']['receiptType']?.toString() ?? "",
             'receiptCurrency': jsonData['receipt']?['receiptCurrency']?.toString() ?? "",
@@ -1272,7 +1275,7 @@ String generateTaxSummary(List<dynamic> receiptItems) {
          print("Data inserted successfully!");
          a4Invoice ?
         generateInvoiceFromJson(jsonData, qrurl) : null;
-         //print58mmAdvanced(jsonData, qrurl , receiptQrData);
+        print58mmAdvanced(jsonData, qrurl , receiptQrData);
       } catch (e) {
           Get.snackbar("DB error Error",
             "$e",

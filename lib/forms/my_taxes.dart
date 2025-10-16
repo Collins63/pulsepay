@@ -401,7 +401,7 @@ class _MyTaxesState extends State<MyTaxes> {
                   ),
                 ) :
                 Container(
-                  width: 300,
+                  width: MediaQuery.of(context).size.width,
                   height: 50,
                   decoration: BoxDecoration(
                     color: Colors.red,
