@@ -92,7 +92,7 @@ class _AddproductState extends State<AddProduct>{
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Center(
-                          child: Image.asset('assets/addProducts.jpg'),
+                          child: Image.asset('assets/add-product.png'),
                         ),
                         const SizedBox(height: 15),
                         const SizedBox(height: 8,),

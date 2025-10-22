@@ -1601,8 +1601,6 @@ Future<void> saveQuotation(List<Map<String, dynamic>> cartItems, double totalAmo
     return result.isNotEmpty ? (result[0]['totalTax'] as num).toDouble() : 0.0;
   }
 
-
-
   //get daily sales summmary
 
   Future<Map<String, dynamic>> getSalesSummary() async {

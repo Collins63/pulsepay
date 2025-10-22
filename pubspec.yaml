@@ -118,9 +118,10 @@ flutter:
     - assets/certificate.pem
     - assets/private_key.pem
     - assets/beep.mp3
-    - assets\print.gif
-    - assets\estimate.gif
+    - assets/print.gif
+    - assets/estimate.gif
     - assets/addProducts.jpg
+    - assets/add-product.png
 
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg

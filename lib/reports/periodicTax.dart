@@ -627,7 +627,7 @@ class _PeriodictaxState extends State<Periodictax> {
                                       child: Icon(Icons.monetization_on_rounded , color: Colors.blue, size: 30,),
                                     ),
                                   ),
-                                Text("$taxTotal3", style: TextStyle(fontSize: 20  , fontWeight: FontWeight.bold , color: Colors.black),)
+                                Text("$taxTotal1", style: TextStyle(fontSize: 20  , fontWeight: FontWeight.bold , color: Colors.black),)
                               ] 
                             ),
                           ),
@@ -687,7 +687,7 @@ class _PeriodictaxState extends State<Periodictax> {
                                       child: Icon(Icons.monetization_on_rounded , color: Colors.blue, size: 30,),
                                     ),
                                   ),
-                                Text("$taxTotal1", style: TextStyle(fontSize: 20  , fontWeight: FontWeight.bold , color: Colors.black),)
+                                Text("$taxTotal3", style: TextStyle(fontSize: 20  , fontWeight: FontWeight.bold , color: Colors.black),)
                               ] 
                             ),
                           ),

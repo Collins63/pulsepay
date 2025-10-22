@@ -133,7 +133,7 @@ class _PosState extends State<Pos>{
   String? first16Chars;
   // ignore: non_constant_identifier_names
   String? receiptDeviceSignature_signature;
-  String genericzimraqrurl = "https://fdmstest.zimra.co.zw/";
+  String genericzimraqrurl = "https://fdms.zimra.co.zw/";
   int deviceID = 0;
   int? nextCustomerID;
   final BlueThermalPrinter bluetooth = BlueThermalPrinter.instance;
@@ -211,6 +211,136 @@ String formatString(String input) {
     }
   }
 
+  Future<void> printNonFiscalReceipt() async{
+    try {
+      await _printNonFiscalHeader();
+      await _printNonFiscalCustomerInfo();
+      await _printNonFiscalInvoiceDetails();
+      await _printItemsNonFiscal();
+      await _printTotalNonFiscal();
+      await _finishPrintNonFiscal();
+    } catch (e) {
+      Get.snackbar("Printing error","$e",
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+        icon: const Icon(Icons.error , color: Colors.white,)
+      );
+      rethrow;
+    }
+  }
+
+  Future<void> _printNonFiscalHeader() async {
+  SunmiPrintAlign.CENTER;
+  //await SunmiPrinter.setFontSize(SunmiFontSize.LG);
+  await SunmiPrinter.printText("Transaction Receipt" , style: SunmiTextStyle(bold: true, align: SunmiPrintAlign.CENTER));
+  await SunmiPrinter.lineWrap(3);
+  await SunmiPrinter.printText("${companyDetails[0]['company']}", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+  await SunmiPrinter.resetFontSize();
+  await SunmiPrinter.printText("${companyDetails[0]['address']}", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+  await SunmiPrinter.printText("${companyDetails[0]['tel']}", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+  await SunmiPrinter.printText("${companyDetails[0]['branchName']}" , style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+  await SunmiPrinter.printText("================================");
+}
+
+Future<void> _printNonFiscalCustomerInfo() async {
+  await SunmiPrinter.setAlignment(SunmiPrintAlign.LEFT);
+  await SunmiPrinter.printText("CUSTOMER INFORMATION", style: SunmiTextStyle(bold: true, align: SunmiPrintAlign.CENTER));
+  await SunmiPrinter.printText("--------------------------------");
+  await SunmiPrinter.printText("Name: ${selectedCustomer[0]['tradeName'] ?? 'Walk-in Customer'}");
+  await SunmiPrinter.printText("Phone: ${selectedCustomer[0]['phoneNumber'] ?? 'N/A'}");
+  await SunmiPrinter.printText("--------------------------------");
+  await SunmiPrinter.lineWrap(1);
+}
+
+Future<void> _printNonFiscalInvoiceDetails() async {
+  int nextInvoice = await dbHelper.getNextInvoiceId();
+  DateTime now = DateTime.now();
+  String formattedDate = DateFormat("yyyy-MM-ddTHH:mm:ss").format(now);
+  String saleCurrency = selectedPayMethod.isEmpty ? defaultCurrency.toString() : returnCurrency();
+  await SunmiPrinter.printText("INVOICE DETAILS", style: SunmiTextStyle(bold: true, align: SunmiPrintAlign.CENTER));
+  await SunmiPrinter.printText("--------------------------------");
+  await SunmiPrinter.printText("Invoice No: $nextInvoice");
+  await SunmiPrinter.printText("Date: $formattedDate");
+  await SunmiPrinter.printText("Cashier: $activeUser");
+  await SunmiPrinter.printText("Currency: $saleCurrency");
+  await SunmiPrinter.printText("--------------------------------");
+  await SunmiPrinter.lineWrap(1);
+}
+
+Future<void> _printItemsNonFiscal() async {
+  String saleCurrency = selectedPayMethod.isEmpty ? defaultCurrency.toString() : returnCurrency();
+  final fetchedCurrency = await dbHelper.getSelectedCurrency(saleCurrency);
+  double rate = fetchedCurrency[0]['rate'] ?? 1.0;
+
+  await SunmiPrinter.printText("ITEMS", style: SunmiTextStyle(bold: true, align: SunmiPrintAlign.CENTER));
+  await SunmiPrinter.printText("--------------------------------");
+  
+  for (var item in cartItems) {
+    double itemTotal = (item['sellingPrice'] is String) 
+      ? double.parse(item['sellingPrice']) * rate 
+      : (item['sellingPrice'].toDouble()) * rate;
+
+    int sellQty = (item['sellqty'] is String) 
+      ? double.parse(item['sellqty']).toInt()
+      : (item['sellqty'] is num)
+      ? (item['sellqty'] as num).toInt() : 0;
+
+    double totalPrice = itemTotal * sellQty;
+    // Format item name and quantity
+    String itemLine = "${item['description']}";
+    await SunmiPrinter.printText(itemLine , style: SunmiTextStyle(bold: true));
+    
+    // Format price line with proper spacing
+    String priceLine = "@\$$itemTotal x$sellQty = \$${totalPrice.toStringAsFixed(2)}";
+    await SunmiPrinter.setAlignment(SunmiPrintAlign.RIGHT);
+    await SunmiPrinter.printText(priceLine, style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
+    await SunmiPrinter.setAlignment(SunmiPrintAlign.LEFT);
+    await SunmiPrinter.lineWrap(1);
+  }
+}
+
+Future<void> _printTotalNonFiscal() async {
+  String saleCurrency = selectedPayMethod.isEmpty ? defaultCurrency.toString() : returnCurrency();
+  final fetchedCurrency = await dbHelper.getSelectedCurrency(saleCurrency);
+  double rate = fetchedCurrency[0]['rate'] ?? 1.0;
+  double totalAmount = 0;
+  for(var item in cartItems){
+    double itemTotal = (item['sellingPrice'] is String) 
+        ? double.parse(item['sellingPrice']) * rate 
+        : (item['sellingPrice'].toDouble()) * rate;
+    
+    int quantity = (item['sellqty'] is String) 
+    ? double.parse(item['sellqty']).toInt()
+    : (item['sellqty'] is num)
+      ? (item['sellqty'] as num).toInt() : 0;
+    double totalPrice = itemTotal * quantity;
+    totalAmount += totalPrice;
+  }
+
+  await SunmiPrinter.printText("================================");
+  double change = amountPaid! - totalAmount;
+  await SunmiPrinter.setAlignment(SunmiPrintAlign.CENTER);
+  //await SunmiPrinter.setFontSize(SunmiFontSize.LG);
+  await SunmiPrinter.printText("TOTAL: $saleCurrency-\$${totalAmount.toStringAsFixed(2)}");
+  await SunmiPrinter.resetFontSize();
+  await SunmiPrinter.printText("================================");
+  await SunmiPrinter.printText("Paid: ${amountPaid!.toStringAsFixed(2)}");
+  await SunmiPrinter.printText("Change: ${change.toStringAsFixed(2)}");
+  await SunmiPrinter.printText("================================");
+  await SunmiPrinter.lineWrap(1);
+}
+
+Future<void> _finishPrintNonFiscal() async {
+  await SunmiPrinter.printText("================================");
+  await SunmiPrinter.printText("Powered by tigerweb.co.zw", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+  await SunmiPrinter.printText("================================");
+  await SunmiPrinter.lineWrap(3);
+  await SunmiPrinter.cutPaper();
+}
+
+
+
 Future<void> print58mmAdvanced(Map<String, dynamic> receiptJson, String qrUrl , String qrData) async {
   try {
     // More robust printer initialization
@@ -220,6 +350,7 @@ Future<void> print58mmAdvanced(Map<String, dynamic> receiptJson, String qrUrl , 
     int attempts = 0;
     String verificationCode = formatString(qrData);
     final receipt = receiptJson['receipt'];
+
 
     // Print receipt with better formatting
     await _printHeader();
@@ -515,15 +646,15 @@ Future<void> _finishPrint() async {
       taxCode = "B";
       itemTax = totalPrice * double.parse(taxPercent);
     } else if (productTax == "vat") {
-      taxID = 3;
+      taxID = 1;
       taxPercent = "15.00"; // Convert 15% to decimal
-      taxCode = "C";
+      taxCode = "A";
       itemTax = totalPrice * 0.15;
       salesAmountwithTax += totalPrice;
     } else {
-      taxID = 1;
+      taxID = 3;
       taxPercent = "0";
-      taxCode = "A";
+      taxCode = "C";
       itemTax = totalPrice * 0;
     }
 
@@ -865,7 +996,7 @@ List<Map<String, dynamic>> generateReceiptTaxes(List<dynamic> receiptItems) {
   return taxGroups.values.map((tax) {
     final taxID = tax["taxID"];
     final taxCode = tax["taxCode"];
-    final isGroupC = (taxCode == "A" || taxID == 1);
+    final isGroupC = (taxCode == "C" || taxID == 3);
     taxAmount = roundTo2(tax["taxAmount"]);
 
     double tax1 = (tax["salesAmountWithTax"] is String)
@@ -933,7 +1064,7 @@ String generateTaxSummary(List<dynamic> receiptItems) {
     final salesAmount = (salesAmountcents * 100).round().toString();
 
     // Omit taxPercent for taxCode A
-    if (taxCode == "A") {
+    if (taxCode == "C") {
       return "$taxCode$taxAmount$salesAmount";
     }
 
@@ -1020,7 +1151,7 @@ String generateTaxSummary(List<dynamic> receiptItems) {
   
   Future<String> ping() async {
     String apiEndpointPing =
-        "https://fdmsapitest.zimra.co.zw/Device/v1/$deviceID/Ping";
+        "https://fdmsapi.zimra.co.zw/Device/v1/$deviceID/Ping";
     const String deviceModelName = "Server";
     const String deviceModelVersion = "v1"; 
 
@@ -1114,7 +1245,7 @@ String generateTaxSummary(List<dynamic> receiptItems) {
       
     if(pingResponse=="200"){
       String apiEndpointSubmitReceipt =
-      "https://fdmsapitest.zimra.co.zw/Device/v1/$deviceID/SubmitReceipt";
+      "https://fdmsapi.zimra.co.zw/Device/v1/$deviceID/SubmitReceipt";
       const String deviceModelName = "Server";
       const String deviceModelVersion = "v1";  
 
@@ -1303,19 +1434,19 @@ String generateTaxSummary(List<dynamic> receiptItems) {
         //= selectedCustomer[0]['customerID']
         await dbHelper.saveSale(cartItems, totalAmount, totalTax , indiTax, customerID , saleCurrency, activeUser , rate);
         for (var item in cartItems){
-        int sellQty = (item['sellqty'] is String) 
-        ? double.parse(item['sellqty']).toInt()
-        : (item['sellqty'] is num)
-          ? (item['sellqty'] as num).toInt() : 0;
-        int productid = item['productid'];
-        final product = await dbHelper.getProductById(productid);
-        setState(() {
-          productOnSale = product;
-        });
-        int productOnSaleQty = productOnSale[0]['stockQty'];
-        int remainingStock = productOnSaleQty - sellQty;
-        dbHelper.updateProductStockQty(productid, remainingStock);
-      }
+          int sellQty = (item['sellqty'] is String) 
+          ? double.parse(item['sellqty']).toInt()
+          : (item['sellqty'] is num)
+            ? (item['sellqty'] as num).toInt() : 0;
+          int productid = item['productid'];
+          final product = await dbHelper.getProductById(productid);
+          setState(() {
+            productOnSale = product;
+          });
+          int productOnSaleQty = productOnSale[0]['stockQty'];
+          int remainingStock = productOnSaleQty - sellQty;
+          dbHelper.updateProductStockQty(productid, remainingStock);
+        }
       }
       else{
         customerID = selectedCustomer[0]['customerID'];
@@ -1350,9 +1481,6 @@ String generateTaxSummary(List<dynamic> receiptItems) {
         backgroundColor: Colors.red,
       );
     }
-    // Clear the cart
-    // Notify user
-    //ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Sale completed!")))
   }
 
   void clearCart(){
@@ -3189,7 +3317,7 @@ String generateTaxSummary(List<dynamic> receiptItems) {
                                             ],
                                             controller: paidController,
                                             decoration: InputDecoration(
-                                              labelText: 'Amount Paid',
+                                              labelText: 'Amount Pai d',
                                               labelStyle: TextStyle(color:Colors.grey.shade600 ),
                                               filled: true,
                                               fillColor: Colors.grey.shade300,
@@ -3277,11 +3405,38 @@ String generateTaxSummary(List<dynamic> receiptItems) {
                                             amountPaid = paid;
                                             String formattedDate = DateFormat("yyyy-MM-ddTHH:mm:ss").format(transactionTime);
                                             currentDateTime = DateTime.parse(formattedDate);
-                                            await addItem();
-                                            await generateFiscalJSON();
-                                            //generateHash();
-                                            bool isSubmitted = await submitReceipt();
-                                            if(isSubmitted == true){
+                                            if(isFiscal == true){
+                                              await addItem();
+                                              await generateFiscalJSON();
+                                              bool isSubmitted = await submitReceipt();
+                                              if(isSubmitted == true){
+                                                await completeSale();
+                                                setState(() {
+                                                  cartItems.clear();
+                                                  selectedPayMethod.clear();
+                                                  selectedCustomer.clear();
+                                                  paidController.clear();
+                                                });
+                                                Navigator.pop(context);
+                                                Navigator.pushReplacement(
+                                                  context,
+                                                  PageRouteBuilder(
+                                                  pageBuilder: (_, __, ___) => const Pos(),
+                                                  transitionDuration: Duration.zero,
+                                                  ),
+                                                );
+                                              }else{
+                                                Get.snackbar(
+                                                  "Error",
+                                                  "Failed to submit receipt. Please try again.",
+                                                  icon: Icon(Icons.error),
+                                                  colorText: Colors.white,
+                                                  backgroundColor: Colors.red,
+                                                  snackPosition: SnackPosition.TOP,
+                                                );
+                                              }
+                                            }else{
+                                              await printNonFiscalReceipt();
                                               await completeSale();
                                               setState(() {
                                                 cartItems.clear();
@@ -3297,16 +3452,9 @@ String generateTaxSummary(List<dynamic> receiptItems) {
                                                 transitionDuration: Duration.zero,
                                                 ),
                                               );
-                                            }else{
-                                              Get.snackbar(
-                                                "Error",
-                                                "Failed to submit receipt. Please try again.",
-                                                icon: Icon(Icons.error),
-                                                colorText: Colors.white,
-                                                backgroundColor: Colors.red,
-                                                snackPosition: SnackPosition.TOP,
-                                              );
                                             }
+                                            
+                                            
                                             } catch (e) {
                                               Get.snackbar(
                                                 "Error",

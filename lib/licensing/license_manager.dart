@@ -4,7 +4,7 @@ import 'package:path_provider/path_provider.dart';
 import 'package:crypto/crypto.dart';
 
 class LicenseManager {
-  static const String secret = "license@constraDepot123"; // must match Python
+  static const String secret = "license@salbnova123"; // must match Python
   static const String licenseFileName = "license.key";
 
   static Future<File> _getLicenseFile() async {
