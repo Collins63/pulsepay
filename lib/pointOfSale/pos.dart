@@ -33,6 +33,7 @@ import 'package:pulsepay/fiscalization/submitReceipts.dart';
 import 'package:pulsepay/forms/companyDetails.dart';
 import 'package:pulsepay/home/home_page.dart';
 import 'package:pulsepay/main.dart';
+import 'package:pulsepay/services/printerService.dart';
 import 'package:pulsepay/signatureGeneration.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sqflite/sqflite.dart';
@@ -144,7 +145,6 @@ class _PosState extends State<Pos>{
   int? isCashier ;
   bool isFiscaltag1 = false;
   bool isNonFiscal = false;
-
   bool isFiscal = false;
   bool barcodeOption = false;
   bool freePricingMode = false;
@@ -152,7 +152,10 @@ class _PosState extends State<Pos>{
   bool accountSale = false;
   bool priceDiscount = false;
   bool multiCurrencySale = false;
+  bool hasBluetoothPrinter = false;
   bool a4Invoice = false;
+  String Url = "https://fdmsapitest.zimra.co.zw/Device/v1/";
+  final printerService = PrinterService();
 
 
 
@@ -170,6 +173,7 @@ Future<void> getGeneralSettings() async {
     priceDiscount = prefs.getBool('hasInvoiceDiscount') ?? false;
     multiCurrencySale = prefs.getBool('hasMultiCurrencySale') ?? false;
     a4Invoice = prefs.getBool('hasA4Invoice') ?? false;
+    hasBluetoothPrinter = prefs.getBool('hasBluetoothPrinter') ?? false;
   });
 }
 
@@ -339,7 +343,78 @@ Future<void> _finishPrintNonFiscal() async {
   await SunmiPrinter.cutPaper();
 }
 
+Future<void> printBlueToothReceipt(Map<String, dynamic> receiptJson, String qrUrl , String qrData) async {
+  await printerService.loadSavedPrinter(); // ensures printer is loaded
+  final printer = printerService.printer;
+  String verificationCode = formatString(qrData);
+  final receipt = receiptJson['receipt'];
+  List receiptLines = receipt['receiptLines'];
+  final receiptTotal = receipt['receiptTotal'];
+  final receiptGlobalNo = receipt['receiptGlobalNo'];
 
+  printer.printNewLine();
+  printer.printCustom("FISCAL TAX INVOICE", 3, 1);
+  printer.printNewLine();
+  printer.printCustom("${taxPayerDetails[0]['taxPayerName']}", 1, 0);
+  printer.printCustom("${taxPayerDetails[0]['taxPayerVatNumber']}", 1, 0);
+  printer.printCustom("${companyDetails[0]['address']}", 1, 0);
+  printer.printCustom("${companyDetails[0]['tel']}", 1, 0);
+  printer.printCustom("================================", 1, 0);
+  printer.printNewLine();
+  printer.printCustom("CUSTOMER INFORMATION", 3, 1);
+  printer.printNewLine();
+  printer.printCustom("Name: ${receipt['buyerData']?['buyerTradeName'] ?? 'Walk-in Customer'}", 1, 0);
+  printer.printCustom("TIN: ${receipt['buyerData']?['buyerTIN'] ?? 'N/A'}", 1, 0);
+  printer.printCustom("VAT: ${receipt['buyerData']?['VATNumber'] ?? 'N/A'}", 1, 0);
+  printer.printCustom("================================", 1, 0);
+  printer.printNewLine();
+  printer.printCustom("INVOICE DETAILS", 3, 1);
+  printer.printNewLine();
+  printer.printCustom("Invoice No: ${receipt['invoiceNo']}", 1, 0);
+  printer.printCustom("Date: ${receipt['receiptDate']}", 1, 0);
+  printer.printCustom("Cashier: $activeUser", 1, 0);
+  printer.printCustom("Currency: ${receipt['receiptCurrency']}", 1, 0);
+  printer.printCustom("================================", 1, 0);
+  printer.printNewLine();
+  printer.printCustom("ITEMS", 3, 1);
+  printer.printNewLine();
+  for(var item in receiptLines){
+    String itemLine = "${item['receiptLineName']} x${item['receiptLineQuantity']}";
+    printer.printCustom(itemLine, 1, 0);
+    String priceLine = "@\$${item['receiptLinePrice']} = \$${item['receiptLineTotal'].toString()}";
+    printer.printCustom(priceLine, 1, 0);
+  }
+  printer.printCustom("================================", 1, 0);
+  printer.printNewLine();
+  double totalTax = 0;
+  final receiptTaxes = receipt['receiptTaxes'];
+  for(var tax in receiptTaxes){
+    double taxesTax = double.tryParse(tax['taxAmount'].toString())!;
+    totalTax += taxesTax;
+  }
+  double total = double.tryParse(receiptTotal.toString()) ?? 0.0;
+  double change = amountPaid! - total;
+  printer.printCustom("Tax Total: ${receipt['receiptCurrency']}-${totalTax.toStringAsFixed(2)}", 1, 0);
+  printer.printCustom("TOTAL: ${receipt['receiptCurrency']}-\$${total.toStringAsFixed(2)}", 1, 0);
+  printer.printCustom("================================", 1, 0);
+  printer.printCustom("Paid: ${amountPaid!.toStringAsFixed(2)}", 1, 0);
+  printer.printCustom("Change: ${change.toStringAsFixed(2)}", 1, 0);
+  printer.printCustom("================================", 1, 0);
+  printer.printNewLine();
+  printer.printCustom("VERIFICATION", 3, 1);
+  printer.printNewLine();
+  printer.printCustom("Verify at:", 1, 0);
+  printer.printCustom("https://fdms.zimra.co.zw", 1, 0);
+  printer.printCustom("Device ID: $deviceID", 1, 0);
+  printer.printCustom("Receipt No: ${receiptGlobalNo.toString().padLeft(10, '0')}", 1, 0);
+  printer.printCustom("Verification Code:", 1, 0);
+  printer.printCustom("$verificationCode", 1, 0);
+  printer.printCustom("Scan to Verify", 1, 0);
+  printer.printQRcode(qrUrl, 200, 200, 1);
+  printer.printNewLine();
+  printer.printCustom("Thank You!", 2, 1);
+  printer.paperCut();
+}
 
 Future<void> print58mmAdvanced(Map<String, dynamic> receiptJson, String qrUrl , String qrData) async {
   try {
@@ -350,8 +425,6 @@ Future<void> print58mmAdvanced(Map<String, dynamic> receiptJson, String qrUrl , 
     int attempts = 0;
     String verificationCode = formatString(qrData);
     final receipt = receiptJson['receipt'];
-
-
     // Print receipt with better formatting
     await _printHeader();
     await _printCustomerInfo(receipt);
@@ -794,7 +867,6 @@ Future<void> _finishPrint() async {
     };
   }
 
-
   Future<String> generateFiscalJSON() async {
     String encodedreceiptDeviceSignature_signature;
   try {
@@ -1151,7 +1223,7 @@ String generateTaxSummary(List<dynamic> receiptItems) {
   
   Future<String> ping() async {
     String apiEndpointPing =
-        "https://fdmsapi.zimra.co.zw/Device/v1/$deviceID/Ping";
+        "$Url$deviceID/Ping";
     const String deviceModelName = "Server";
     const String deviceModelVersion = "v1"; 
 
@@ -1245,7 +1317,7 @@ String generateTaxSummary(List<dynamic> receiptItems) {
       
     if(pingResponse=="200"){
       String apiEndpointSubmitReceipt =
-      "https://fdmsapi.zimra.co.zw/Device/v1/$deviceID/SubmitReceipt";
+      "$Url$deviceID/SubmitReceipt";
       const String deviceModelName = "Server";
       const String deviceModelVersion = "v1";  
 
@@ -1311,6 +1383,8 @@ String generateTaxSummary(List<dynamic> receiptItems) {
           //print("Data inserted successfully!");
           a4Invoice ?
           generateInvoiceFromJson(jsonData, qrurl) : null;
+          hasBluetoothPrinter ?
+          printBlueToothReceipt(jsonData, qrurl, receiptQrData) :
           print58mmAdvanced(jsonData, qrurl, receiptQrData);
         } catch (e) {
           Get.snackbar(" Db Error",
@@ -1406,7 +1480,9 @@ String generateTaxSummary(List<dynamic> receiptItems) {
          print("Data inserted successfully!");
          a4Invoice ?
         generateInvoiceFromJson(jsonData, qrurl) : null;
-        print58mmAdvanced(jsonData, qrurl , receiptQrData);
+        hasBluetoothPrinter ?
+          printBlueToothReceipt(jsonData, qrurl, receiptQrData) :
+          print58mmAdvanced(jsonData, qrurl, receiptQrData);
       } catch (e) {
           Get.snackbar("DB error Error",
             "$e",
@@ -1736,7 +1812,6 @@ String generateTaxSummary(List<dynamic> receiptItems) {
       }
     }
   }
-
 
   double calculateTotalTax() {
     double totalTax = 0.0;

@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:http/io_client.dart';
 import 'package:intl/intl.dart';
+import 'package:path/path.dart';
 import 'package:pulsepay/SQLite/database_helper.dart';
 import 'package:pulsepay/common/constants.dart';
 import 'package:pulsepay/common/custom_button.dart';
@@ -61,6 +62,7 @@ class _FiscalPageState extends State<FiscalPage> {
   String? receiptDeviceSignature_signature_hex ;
   String? first16Chars;
   String? receiptDeviceSignature_signature;
+  String Url = "https://fdmsapitest.zimra.co.zw/Device/v1/";
 
 
 
@@ -112,10 +114,10 @@ class _FiscalPageState extends State<FiscalPage> {
   final previousData = await dbHelper.getPreviousReceiptData();
   final previousFiscalDayNo = await dbHelper.getPreviousFiscalDayNo();
   final taxIDSetting = await getConfig();
-  String openDayEndPoint = "https://fdmsapi.zimra.co.zw/Device/v1/$deviceID/OpenDay";
+  String openDayEndPoint = "$Url$deviceID/OpenDay";
   const String deviceModelName = "Server";
   const String deviceModelVersion = "v1";  
-
+  print("previous day = $previousFiscalDayNo");
   int fiscalDayNo = (previousData["receiptCounter"] == 0 &&
           previousData["receiptGlobalNo"] == 0)
       ? 1
@@ -161,6 +163,11 @@ class _FiscalPageState extends State<FiscalPage> {
 
     if (response.statusCode == 200) {
       print("Open Day posted successfully!");
+      Get.snackbar("Success", "Fiscal day opened",
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+        icon: Icon(Icons.message , color: Colors.white,)
+      );
       await dbHelper.insertOpenDay(fiscalDayNo, "unprocessed", iso8601);
       return "Open Day Successfully Recorded!";
     } else {
@@ -174,7 +181,7 @@ class _FiscalPageState extends State<FiscalPage> {
 }
 
 Future<String> getConfig() async {
-  String apiEndpointGetConfig = "https://fdmsapi.zimra.co.zw/Device/v1/$deviceID/GetConfig"; // Replace with actual API endpoint
+  String apiEndpointGetConfig = "$Url$deviceID/GetConfig"; // Replace with actual API endpoint
   String responseMessage = "There was no response from the server. Check your connection !!";
 
   try {
@@ -305,7 +312,7 @@ Future<String> getConfig() async {
   
   Future<void> getStatus() async {
     String apiEndpointGetStatus =
-      "https://fdmsapi.zimra.co.zw/Device/v1/$deviceID/GetStatus";
+      "$Url$deviceID/GetStatus";
     const String deviceModelName = "Server";
     const String deviceModelVersion = "v1";
 
@@ -332,7 +339,7 @@ Future<String> getConfig() async {
 
   Future<String> ping() async {
   String apiEndpointPing =
-      "https://fdmsapi.zimra.co.zw/Device/v1/$deviceID/Ping";
+      "$Url$deviceID/Ping";
   const String deviceModelName = "Server";
   const String deviceModelVersion = "v1"; 
 
@@ -370,7 +377,7 @@ Future<String> getConfig() async {
     // Get the database instance
     final db = await dbHelper.initDB();
     String apiEndpointSubmitReceipt =
-      "https://fdmsapi.zimra.co.zw/Device/v1/$deviceID/SubmitReceipt";
+      "$Url$deviceID/SubmitReceipt";
     const String deviceModelName = "Server";
     const String deviceModelVersion = "v1"; 
     SSLContextProvider sslContextProvider = SSLContextProvider();
@@ -651,7 +658,7 @@ Future<int> getlatestFiscalDay() async {
                       }
       
                       String apiEndpointCloseDay =
-                        "https://fdmsapi.zimra.co.zw/Device/v1/$deviceID/CloseDay";
+                        "$url$deviceID/CloseDay";
                       const String deviceModelName = "Server";
                       const String deviceModelVersion = "v1";  
       

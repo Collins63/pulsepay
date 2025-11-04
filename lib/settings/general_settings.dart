@@ -23,6 +23,7 @@ class _GeneralSettingsState extends State<GeneralSettings> {
   bool priceDiscount = false;
   bool multiCurrencySale = false;
   bool a4Invoice = false;
+  bool hasBluetoothPrinter = false;
 
   @override
   void initState() {
@@ -42,6 +43,7 @@ class _GeneralSettingsState extends State<GeneralSettings> {
       priceDiscount = prefs.getBool('hasInvoiceDiscount') ?? false;
       multiCurrencySale = prefs.getBool('hasMultiCurrencySale') ?? false;
       a4Invoice = prefs.getBool('hasA4Invoice') ?? false;
+      hasBluetoothPrinter = prefs.getBool('hasBluetoothPrinter') ?? false;
     });
   }
 
@@ -49,6 +51,11 @@ class _GeneralSettingsState extends State<GeneralSettings> {
   Future<void> _saveFiscalSetting(bool value) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('isFiscal', value);
+  }
+
+  Future<void> _saveBluetoothPrinter(bool value) async{
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool("hasBluetoothPrinter", value);
   }
 
   Future<void> _saveMultiCurrencySetting(bool value) async {
@@ -236,6 +243,21 @@ class _GeneralSettingsState extends State<GeneralSettings> {
                       a4Invoice = value;
                     });
                      _saveA4InvoiceSetting(value);
+                  })
+                ],
+              ),
+              const SizedBox(height: 20,),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  ReusableText(text: "Has Bluetooth Printer", style: appStyle(14, Colors.grey, FontWeight.w500)),
+                  Switch(
+                    activeColor: Colors.blueAccent,
+                    value: hasBluetoothPrinter , onChanged: (value){
+                    setState(() {
+                      hasBluetoothPrinter = value;
+                    });
+                     _saveBluetoothPrinter(value);
                   })
                 ],
               ),
