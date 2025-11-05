@@ -20,6 +20,8 @@ import 'package:pulsepay/reports/fiscalizedCustomer.dart';
 import 'package:pulsepay/reports/periodicTax.dart';
 import 'package:pulsepay/reports/salesForProduct.dart';
 import 'package:pulsepay/reports/sales_report.dart';
+import 'package:pulsepay/services/printerService.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sunmi_printer_plus/core/enums/enums.dart';
 import 'package:sunmi_printer_plus/core/styles/sunmi_text_style.dart';
 import 'package:sunmi_printer_plus/core/sunmi/sunmi_printer.dart';
@@ -39,6 +41,7 @@ class _reportsState extends State<Reports>{
     getlatestFiscalDay();
     fetchCompanyDetails();
     getTaxPayerDetails();
+    getGeneralSettings();
   }
 
   bool _isConnected = false;
@@ -56,6 +59,7 @@ class _reportsState extends State<Reports>{
   String? modelName;
   List<Map<String , dynamic>> taxPayerDetails = [];
   List<Map<String , dynamic>> companyDetails = [];
+  final printerService = PrinterService();
   double GrossTotalZWG = 0;
     double TaxTotalZWG = 0;
     double NetVAT15TotalZWG = 0;
@@ -114,7 +118,6 @@ class _reportsState extends State<Reports>{
   	double CreditNotesTotalAmountUSD = 0;
   	int TotalDocumentsCountUSD = 0;
   	double TotalDocumentsTotalAmountUSD = 0;
-
     int InvoicesCountZAR = 0;
   	double InvoicesTotalAmountZAR = 0;
   	int CreditNotesCountZAR = 0; 
@@ -122,6 +125,7 @@ class _reportsState extends State<Reports>{
   	int TotalDocumentsCountZAR = 0;
   	double TotalDocumentsTotalAmountZAR = 0;
     DatabaseHelper dbHelper = DatabaseHelper();
+    bool hasBluetoothPrinter = false;
 
     Future<int> getlatestFiscalDay() async {
       int latestFiscDay = await dbHelper.getlatestFiscalDay();
@@ -131,20 +135,28 @@ class _reportsState extends State<Reports>{
       return latestFiscDay;
     }
 
+     Future<void> getGeneralSettings() async {
+      final prefs = await SharedPreferences.getInstance();
+      setState(() {
+        hasBluetoothPrinter = prefs.getBool('hasBluetoothPrinter') ?? false;
+      });
+    }
+
+
     void getTaxPayerDetails() async{
-    final data = await dbHelper.getTaxPayerDetails();
-    setState(() {
-      taxPayerDetails = data;
-      tradeName = data[0]['taxPayerName'];
-      taxPayerTIN = data[0]['taxPayerTin'];
-      taxPayerVatNumber = data[0]['taxPayerVatNumber'];
-      deviceID = data[0]['deviceID'];
-      serialNo = data[0]['deviceModelName'];
-      taxPayerAddress = data[0]['taxPayerAddress'];
-      taxPayerEmail = data[0]['taxPayerEmail'];
-      taxPayerPhone = data[0]['taxPayerPhone'];
-    });
-  }
+      final data = await dbHelper.getTaxPayerDetails();
+      setState(() {
+        taxPayerDetails = data;
+        tradeName = data[0]['taxPayerName'];
+        taxPayerTIN = data[0]['taxPayerTin'];
+        taxPayerVatNumber = data[0]['taxPayerVatNumber'];
+        deviceID = data[0]['deviceID'];
+        serialNo = data[0]['deviceModelName'];
+        taxPayerAddress = data[0]['taxPayerAddress'];
+        taxPayerEmail = data[0]['taxPayerEmail'];
+        taxPayerPhone = data[0]['taxPayerPhone'];
+      });
+    }
 
     Future<void> fetchCompanyDetails() async{
       List<Map<String, dynamic>> data = await dbHelper.getCompanyDetails();
@@ -227,6 +239,8 @@ class _reportsState extends State<Reports>{
         CreditNotesCountZWG = Creditnotes[0]['count']?? 0;
         CreditNotesTotalAmountZWG = CreditnotesTotals[0]['total']?? 0.0;
       });
+      TotalDocumentsCountZWG = InvoicesCountZWG + CreditNotesCountZWG;
+      TotalDocumentsTotalAmountZWG = InvoicesTotalAmountZWG + CreditNotesTotalAmountZWG;
     }
 
     Future<void> prepareUSDDocuments() async{
@@ -242,6 +256,8 @@ class _reportsState extends State<Reports>{
       });
       print("Invoices Count USD: $InvoicesCountUSD");
       print("Invoices Total Amount USD: $InvoicesTotalAmountUSD");
+      TotalDocumentsCountUSD = InvoicesCountUSD + CreditNotesCountUSD;
+      TotalDocumentsTotalAmountUSD = InvoicesTotalAmountUSD + CreditNotesTotalAmountUSD;
     }
 
     Future<void> prepareZARDocuments() async{
@@ -255,6 +271,8 @@ class _reportsState extends State<Reports>{
         CreditNotesCountZAR = Creditnotes[0]['count']?? 0;
         CreditNotesTotalAmountZAR = CreditnotesTotals[0]['total']?? 0.0;
       });
+      TotalDocumentsCountZAR = InvoicesCountZAR + CreditNotesCountZAR;
+      TotalDocumentsTotalAmountZAR = InvoicesTotalAmountZAR + CreditNotesTotalAmountZAR;
     }
 
 
@@ -292,6 +310,8 @@ class _reportsState extends State<Reports>{
   }
 
   void printZReport() async{
+    await printerService.loadSavedPrinter(); // ensures printer is loaded
+    final printer = printerService.printer;
     await prepareZWGZReportTotals();
     await prepareZWGDocuments();
     await prepareUSZreportTotals();
@@ -299,74 +319,180 @@ class _reportsState extends State<Reports>{
     await prepareZARZreportTotals();
     await prepareZARDocuments();
 
-    
-    SunmiPrintAlign.CENTER;
-    //await SunmiPrinter.setFontSize(SunmiFontSize.LG);
-    await SunmiPrinter.printText("Z REPORT" , style: SunmiTextStyle(bold: true, align: SunmiPrintAlign.CENTER));
-    await SunmiPrinter.lineWrap(3);
-    await SunmiPrinter.printText("${taxPayerDetails[0]['taxPayerName']}", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
-    await SunmiPrinter.resetFontSize();
-    await SunmiPrinter.printText("TIN: ${taxPayerDetails[0]['taxPayerTin']}" ,style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
-    await SunmiPrinter.printText("VAT: ${taxPayerDetails[0]['taxPayerVatNumber']}" ,style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
-    await SunmiPrinter.printText("${companyDetails[0]['address']}", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
-    await SunmiPrinter.printText("${companyDetails[0]['tel']}", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
-    await SunmiPrinter.printText("================================");
-    await SunmiPrinter.printText("Fiscal Day No: $currentFiscal");
-    await SunmiPrinter.printText("Fiscal Day Opened: $dayOpened");
-    await SunmiPrinter.printText("Device Serial No: $serialNo");
-    await SunmiPrinter.printText("Device Id: $deviceID");
-    await SunmiPrinter.printText("Fiscal Day No: $currentFiscal");
-    await SunmiPrinter.printText("Fiscal Day No: $currentFiscal");
-    await SunmiPrinter.printText("================================");
-    await SunmiPrinter.printText("Daily Totals", style: SunmiTextStyle( bold: true,align: SunmiPrintAlign.CENTER));
-    await SunmiPrinter.printText("ZWG" ,style: SunmiTextStyle( bold: true));
-    await SunmiPrinter.lineWrap(3);
-    await SunmiPrinter.printText("TOTAL NET SALES" ,style: SunmiTextStyle( bold: true));
-    await SunmiPrinter.printText("Net , VAT 15%: ${NetVAT15TotalZWG.toStringAsFixed(2)}");
-    await SunmiPrinter.printText("Net , Non-VAT 0%: ${NetNonVATTotalZWG.toStringAsFixed(2)}");
-    await SunmiPrinter.printText("Net , Exempt: ${NetExemptTotalZWG.toStringAsFixed(2)}");
-    await SunmiPrinter.printText("Total Net Amount: ${NetTotalZWG.toStringAsFixed(2)}");
-    await SunmiPrinter.lineWrap(3);
-    await SunmiPrinter.printText("TOTAL TAXES" ,style: SunmiTextStyle( bold: true));
-    await SunmiPrinter.printText("Tax , VAT 15 %: ${TaxVAT15ZWG.toStringAsFixed(2)}");
-    await SunmiPrinter.printText("Total tax amount: ${TaxTotalZWG.toStringAsFixed(2)}");
-    await SunmiPrinter.lineWrap(3);
-    await SunmiPrinter.printText("TOTAL GROSS SALES" ,style: SunmiTextStyle( bold: true));
-    await SunmiPrinter.printText("Total , VAT 15 %: ${GrossTotalVAT15ZWG.toStringAsFixed(2)}");
-    await SunmiPrinter.printText("Total , Non-VAT 0 %: ${GrossTotalNonVATZWG.toStringAsFixed(2)}");
-    await SunmiPrinter.printText("Total , Exempt: ${GrossTotalExemptZWG.toStringAsFixed(2)}");
-    await SunmiPrinter.printText("Total gross amount: ${GrossTotalZWG.toStringAsFixed(2)}");
-    await SunmiPrinter.lineWrap(3);
-    await SunmiPrinter.printText("Documents === Quantity === Total" ,style: SunmiTextStyle( bold: true));
-    await SunmiPrinter.printText("Invoices === ${InvoicesCountZWG.toStringAsFixed(2)} === ${InvoicesTotalAmountZWG.toStringAsFixed(2)} ");
-    await SunmiPrinter.printText("Credit notes === ${CreditNotesCountZWG.toStringAsFixed(2)} === ${CreditNotesTotalAmountZWG.toStringAsFixed(2)} ");
-    await SunmiPrinter.printText("Documents === ${TotalDocumentsCountZWG.toString()} === ${TotalDocumentsTotalAmountZWG.toString()} ");
-    await SunmiPrinter.lineWrap(3);
-    await SunmiPrinter.printText("================================");
-    await SunmiPrinter.printText("USD" ,style: SunmiTextStyle( bold: true));
-    await SunmiPrinter.lineWrap(3);
-    await SunmiPrinter.printText("TOTAL NET SALES" ,style: SunmiTextStyle( bold: true));
-    await SunmiPrinter.printText("Net , VAT 15%: ${NetVAT15TotalUSD.toStringAsFixed(2)}");
-    await SunmiPrinter.printText("Net , Non-VAT 0%: ${NetNonVATTotalUSD.toStringAsFixed(2)}");
-    await SunmiPrinter.printText("Net , Exempt: ${NetExemptTotalUSD.toStringAsFixed(2)}");
-    await SunmiPrinter.printText("Total Net Amount: ${NetTotalUSD.toStringAsFixed(2)}");
-    await SunmiPrinter.lineWrap(3);
-    await SunmiPrinter.printText("TOTAL TAXES" ,style: SunmiTextStyle( bold: true));
-    await SunmiPrinter.printText("Tax , VAT 15 %: ${TaxVAT15USD.toStringAsFixed(2)}");
-    await SunmiPrinter.printText("Total tax amount: ${TaxTotalUSD.toStringAsFixed(2)}");
-    await SunmiPrinter.lineWrap(3);
-    await SunmiPrinter.printText("TOTAL GROSS SALES" ,style: SunmiTextStyle( bold: true));
-    await SunmiPrinter.printText("Total , VAT 15 %: ${GrossTotalVAT15USD.toStringAsFixed(2)}");
-    await SunmiPrinter.printText("Total , Non-VAT 0 %: ${GrossTotalNonVATUSD.toStringAsFixed(2)}");
-    await SunmiPrinter.printText("Total , Exempt: ${GrossTotalExemptUSD.toStringAsFixed(2)}");
-    await SunmiPrinter.printText("Total gross amount: ${GrossTotalUSD.toStringAsFixed(2)}");
-    await SunmiPrinter.lineWrap(3);
-    await SunmiPrinter.printText("Documents === Quantit === Total" ,style: SunmiTextStyle( bold: true));
-    await SunmiPrinter.printText("Invoices === ${InvoicesCountUSD.toStringAsFixed(2)} === ${InvoicesTotalAmountZWG.toStringAsFixed(2)} ");
-    await SunmiPrinter.printText("Credit notes === ${CreditNotesCountUSD.toStringAsFixed(2)} === ${CreditNotesTotalAmountZWG.toStringAsFixed(2)} ");
-    await SunmiPrinter.printText("Documents === ${TotalDocumentsCountUSD.toString()} === ${TotalDocumentsTotalAmountZWG.toString()} ");
-    await SunmiPrinter.lineWrap(3);
-    await SunmiPrinter.cutPaper();
+    if(hasBluetoothPrinter = false){
+      SunmiPrintAlign.CENTER;
+      //await SunmiPrinter.setFontSize(SunmiFontSize.LG);
+      await SunmiPrinter.printText("Z REPORT" , style: SunmiTextStyle(bold: true, align: SunmiPrintAlign.CENTER));
+      await SunmiPrinter.lineWrap(3);
+      await SunmiPrinter.printText("${taxPayerDetails[0]['taxPayerName']}", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+      await SunmiPrinter.resetFontSize();
+      await SunmiPrinter.printText("TIN: ${taxPayerDetails[0]['taxPayerTin']}" ,style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+      await SunmiPrinter.printText("VAT: ${taxPayerDetails[0]['taxPayerVatNumber']}" ,style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+      await SunmiPrinter.printText("${companyDetails[0]['address']}", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+      await SunmiPrinter.printText("${companyDetails[0]['tel']}", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+      await SunmiPrinter.printText("================================");
+      await SunmiPrinter.printText("Fiscal Day No: $currentFiscal");
+      await SunmiPrinter.printText("Fiscal Day Opened: $dayOpened");
+      await SunmiPrinter.printText("Device Serial No: $serialNo");
+      await SunmiPrinter.printText("Device Id: $deviceID");
+      await SunmiPrinter.printText("================================");
+      await SunmiPrinter.printText("Daily Totals", style: SunmiTextStyle( bold: true,align: SunmiPrintAlign.CENTER));
+      await SunmiPrinter.printText("ZWG" ,style: SunmiTextStyle( bold: true));
+      await SunmiPrinter.lineWrap(3);
+      await SunmiPrinter.printText("TOTAL NET SALES" ,style: SunmiTextStyle( bold: true));
+      await SunmiPrinter.printText("Net , VAT 15%: ${NetVAT15TotalZWG.toStringAsFixed(2)}");
+      await SunmiPrinter.printText("Net , Non-VAT 0%: ${NetNonVATTotalZWG.toStringAsFixed(2)}");
+      await SunmiPrinter.printText("Net , Exempt: ${NetExemptTotalZWG.toStringAsFixed(2)}");
+      await SunmiPrinter.printText("Total Net Amount: ${NetTotalZWG.toStringAsFixed(2)}");
+      await SunmiPrinter.lineWrap(3);
+      await SunmiPrinter.printText("TOTAL TAXES" ,style: SunmiTextStyle( bold: true));
+      await SunmiPrinter.printText("Tax , VAT 15 %: ${TaxVAT15ZWG.toStringAsFixed(2)}");
+      await SunmiPrinter.printText("Total tax amount: ${TaxTotalZWG.toStringAsFixed(2)}");
+      await SunmiPrinter.lineWrap(3);
+      await SunmiPrinter.printText("TOTAL GROSS SALES" ,style: SunmiTextStyle( bold: true));
+      await SunmiPrinter.printText("Total , VAT 15 %: ${GrossTotalVAT15ZWG.toStringAsFixed(2)}");
+      await SunmiPrinter.printText("Total , Non-VAT 0 %: ${GrossTotalNonVATZWG.toStringAsFixed(2)}");
+      await SunmiPrinter.printText("Total , Exempt: ${GrossTotalExemptZWG.toStringAsFixed(2)}");
+      await SunmiPrinter.printText("Total gross amount: ${GrossTotalZWG.toStringAsFixed(2)}");
+      await SunmiPrinter.lineWrap(3);
+      await SunmiPrinter.printText("Documents === Quantity === Total" ,style: SunmiTextStyle( bold: true));
+      await SunmiPrinter.printText("Invoices === ${InvoicesCountZWG.toStringAsFixed(2)} === ${InvoicesTotalAmountZWG.toStringAsFixed(2)} ");
+      await SunmiPrinter.printText("Credit notes === ${CreditNotesCountZWG.toStringAsFixed(2)} === ${CreditNotesTotalAmountZWG.toStringAsFixed(2)}");
+      await SunmiPrinter.printText("Documents === ${TotalDocumentsCountZWG.toString()} === ${TotalDocumentsTotalAmountZWG.toString()} ");
+      await SunmiPrinter.lineWrap(3);
+      await SunmiPrinter.printText("================================");
+      await SunmiPrinter.printText("USD" ,style: SunmiTextStyle( bold: true));
+      await SunmiPrinter.lineWrap(3);
+      await SunmiPrinter.printText("TOTAL NET SALES" ,style: SunmiTextStyle( bold: true));
+      await SunmiPrinter.printText("Net , VAT 15%: ${NetVAT15TotalUSD.toStringAsFixed(2)}");
+      await SunmiPrinter.printText("Net , Non-VAT 0%: ${NetNonVATTotalUSD.toStringAsFixed(2)}");
+      await SunmiPrinter.printText("Net , Exempt: ${NetExemptTotalUSD.toStringAsFixed(2)}");
+      await SunmiPrinter.printText("Total Net Amount: ${NetTotalUSD.toStringAsFixed(2)}");
+      await SunmiPrinter.lineWrap(3);
+      await SunmiPrinter.printText("TOTAL TAXES" ,style: SunmiTextStyle( bold: true));
+      await SunmiPrinter.printText("Tax , VAT 15 %: ${TaxVAT15USD.toStringAsFixed(2)}");
+      await SunmiPrinter.printText("Total tax amount: ${TaxTotalUSD.toStringAsFixed(2)}");
+      await SunmiPrinter.lineWrap(3);
+      await SunmiPrinter.printText("TOTAL GROSS SALES" ,style: SunmiTextStyle( bold: true));
+      await SunmiPrinter.printText("Total , VAT 15 %: ${GrossTotalVAT15USD.toStringAsFixed(2)}");
+      await SunmiPrinter.printText("Total , Non-VAT 0 %: ${GrossTotalNonVATUSD.toStringAsFixed(2)}");
+      await SunmiPrinter.printText("Total , Exempt: ${GrossTotalExemptUSD.toStringAsFixed(2)}");
+      await SunmiPrinter.printText("Total gross amount: ${GrossTotalUSD.toStringAsFixed(2)}");
+      await SunmiPrinter.lineWrap(3);
+      await SunmiPrinter.printText("Documents === Quantit === Total" ,style: SunmiTextStyle( bold: true));
+      await SunmiPrinter.printText("Invoices === ${InvoicesCountUSD.toStringAsFixed(2)} === ${InvoicesTotalAmountUSD.toStringAsFixed(2)} ");
+      await SunmiPrinter.printText("Credit notes === ${CreditNotesCountUSD.toStringAsFixed(2)} === ${CreditNotesTotalAmountUSD.toStringAsFixed(2)} ");
+      await SunmiPrinter.printText("Documents === ${TotalDocumentsCountUSD.toString()} === ${TotalDocumentsTotalAmountUSD.toString()} ");
+      await SunmiPrinter.lineWrap(3);
+      await SunmiPrinter.printText("================================");
+      await SunmiPrinter.printText("ZAR" ,style: SunmiTextStyle( bold: true));
+      await SunmiPrinter.lineWrap(3);
+      await SunmiPrinter.printText("TOTAL NET SALES" ,style: SunmiTextStyle( bold: true));
+      await SunmiPrinter.printText("Net , VAT 15%: ${NetVAT15TotalZAR.toStringAsFixed(2)}");
+      await SunmiPrinter.printText("Net , Non-VAT 0%: ${NetNonVATTotalZAR.toStringAsFixed(2)}");
+      await SunmiPrinter.printText("Net , Exempt: ${NetExemptTotalZAR.toStringAsFixed(2)}");
+      await SunmiPrinter.printText("Total Net Amount: ${NetTotalZAR.toStringAsFixed(2)}");
+      await SunmiPrinter.lineWrap(3);
+      await SunmiPrinter.printText("TOTAL TAXES" ,style: SunmiTextStyle( bold: true));
+      await SunmiPrinter.printText("Tax , VAT 15 %: ${TaxVAT15ZAR.toStringAsFixed(2)}");
+      await SunmiPrinter.printText("Total tax amount: ${TaxTotalZAR.toStringAsFixed(2)}");
+      await SunmiPrinter.lineWrap(3);
+      await SunmiPrinter.printText("TOTAL GROSS SALES" ,style: SunmiTextStyle( bold: true));
+      await SunmiPrinter.printText("Total , VAT 15 %: ${GrossTotalVAT15ZAR.toStringAsFixed(2)}");
+      await SunmiPrinter.printText("Total , Non-VAT 0 %: ${GrossTotalNonVATZAR.toStringAsFixed(2)}");
+      await SunmiPrinter.printText("Total , Exempt: ${GrossTotalExemptZAR.toStringAsFixed(2)}");
+      await SunmiPrinter.printText("Total gross amount: ${GrossTotalZAR.toStringAsFixed(2)}");
+      await SunmiPrinter.lineWrap(3);
+      await SunmiPrinter.printText("Documents === Quantit === Total" ,style: SunmiTextStyle( bold: true));
+      await SunmiPrinter.printText("Invoices === ${InvoicesCountZAR.toStringAsFixed(2)} === ${InvoicesTotalAmountZAR.toStringAsFixed(2)} ");
+      await SunmiPrinter.printText("Credit notes === ${CreditNotesCountZAR.toStringAsFixed(2)} === ${CreditNotesTotalAmountZAR.toStringAsFixed(2)} ");
+      await SunmiPrinter.printText("Documents === ${TotalDocumentsCountZAR.toString()} === ${TotalDocumentsTotalAmountZAR.toString()} ");
+      await SunmiPrinter.cutPaper();
+    }else{
+      printer.printNewLine();
+      printer.printCustom("Z REPORT", 3, 1);
+      printer.printNewLine();
+      printer.printCustom("${taxPayerDetails[0]['taxPayerName']}", 1, 1);
+      printer.printCustom("${taxPayerDetails[0]['taxPayerVatNumber']}", 1, 1);
+      printer.printCustom("${companyDetails[0]['address']}", 1, 1);
+      printer.printCustom("${companyDetails[0]['tel']}", 1, 1);
+      printer.printCustom("================================", 1, 0);
+      printer.printCustom("Fiscal Day No: $currentFiscal", 1, 0);
+      printer.printCustom("Fiscal Day Opened: $dayOpened", 1, 0);
+      printer.printCustom("Device Serial No: $serialNo", 1, 0);
+      printer.printCustom("Device Id: $deviceID", 1, 0);
+      printer.printCustom("================================", 1, 0);
+      printer.printCustom("Daily Totals", 3, 1);
+      printer.printNewLine();
+      printer.printCustom("ZWG", 2, 0);
+      printer.printCustom("TOTAL NET SALES", 2, 0);
+      printer.printCustom("Net , VAT 15%: ${NetVAT15TotalZWG.toStringAsFixed(2)}", 1, 0);
+      printer.printCustom("Net , Non-VAT 0%: ${NetNonVATTotalZWG.toStringAsFixed(2)}", 1, 0);
+      printer.printCustom("Net , Exempt: ${NetExemptTotalZWG.toStringAsFixed(2)}", 1, 0);
+      printer.printCustom("Total Net Amount: ${NetTotalZWG.toStringAsFixed(2)}", 1, 0);
+      printer.printNewLine();
+      printer.printCustom("TOTAL TAXES", 2, 0);
+      printer.printCustom("Tax , VAT 15 %: ${TaxVAT15ZWG.toStringAsFixed(2)}", 1, 0);
+      printer.printCustom("Total tax amount: ${TaxTotalZWG.toStringAsFixed(2)}", 1, 0);
+      printer.printNewLine();
+      printer.printCustom("TOTAL GROSS SALES", 2, 0);
+      printer.printCustom("Total , VAT 15 %: ${GrossTotalVAT15ZWG.toStringAsFixed(2)}", 1, 0);
+      printer.printCustom("Total , Non-VAT 0 %: ${GrossTotalNonVATZWG.toStringAsFixed(2)}", 1, 0);
+      printer.printCustom("Total , Exempt: ${GrossTotalExemptZWG.toStringAsFixed(2)}", 1, 0);
+      printer.printCustom("Total gross amount: ${GrossTotalZWG.toStringAsFixed(2)}", 1, 0);
+      printer.printNewLine();
+      printer.printCustom("Documents === Quantity === Total", 1, 0);
+      printer.printCustom("Invoices === ${InvoicesCountZWG.toStringAsFixed(2)} === ${InvoicesTotalAmountZWG.toStringAsFixed(2)}", 1, 0);
+      printer.printCustom("Credit notes === ${CreditNotesCountZWG.toStringAsFixed(2)} === ${CreditNotesTotalAmountZWG.toStringAsFixed(2)}", 1, 0);
+      printer.printCustom("Documents === ${TotalDocumentsCountZWG.toString()} === ${TotalDocumentsTotalAmountZWG.toString()}", 1, 0);
+      printer.printNewLine();
+      printer.printCustom("================================", 1, 0);
+      printer.printCustom("USD", 2, 0);
+      printer.printCustom("TOTAL NET SALES", 2, 0);
+      printer.printCustom("Net , VAT 15%: ${NetVAT15TotalUSD.toStringAsFixed(2)}", 1, 0);
+      printer.printCustom("Net , Non-VAT 0%: ${NetNonVATTotalUSD.toStringAsFixed(2)}", 1, 0);
+      printer.printCustom("Net , Exempt: ${NetExemptTotalUSD.toStringAsFixed(2)}", 1, 0);
+      printer.printCustom("Total Net Amount: ${NetTotalUSD.toStringAsFixed(2)}", 1, 0);
+      printer.printNewLine();
+      printer.printCustom("TOTAL TAXES", 2, 0);
+      printer.printCustom("Tax , VAT 15 %: ${TaxVAT15USD.toStringAsFixed(2)}", 1, 0);
+      printer.printCustom("Total tax amount: ${TaxTotalUSD.toStringAsFixed(2)}", 1, 0);
+      printer.printNewLine();
+      printer.printCustom("TOTAL GROSS SALES", 2, 0);
+      printer.printCustom("Total , VAT 15 %: ${GrossTotalVAT15USD.toStringAsFixed(2)}", 1, 0);
+      printer.printCustom("Total , Non-VAT 0 %: ${GrossTotalNonVATUSD.toStringAsFixed(2)}", 1, 0);
+      printer.printCustom("Total , Exempt: ${GrossTotalExemptUSD.toStringAsFixed(2)}", 1, 0);
+      printer.printCustom("Total gross amount: ${GrossTotalUSD.toStringAsFixed(2)}", 1, 0);
+      printer.printNewLine();
+      printer.printCustom("Documents === Quantity === Total", 1, 0);
+      printer.printCustom("Invoices === ${InvoicesCountUSD.toStringAsFixed(2)} === ${InvoicesTotalAmountUSD.toStringAsFixed(2)}", 1, 0);
+      printer.printCustom("Credit notes === ${CreditNotesCountUSD.toStringAsFixed(2)} === ${CreditNotesTotalAmountUSD.toStringAsFixed(2)}", 1, 0);
+      printer.printCustom("Documents === ${TotalDocumentsCountUSD.toString()} === ${TotalDocumentsTotalAmountUSD.toString()}", 1, 0);
+      printer.printNewLine();
+      printer.printCustom("================================", 1, 0);
+      printer.printCustom("ZAR", 2, 0);
+      printer.printCustom("TOTAL NET SALES", 2, 0);
+      printer.printCustom("Net , VAT 15%: ${NetVAT15TotalZAR.toStringAsFixed(2)}", 1, 0);
+      printer.printCustom("Net , Non-VAT 0%: ${NetNonVATTotalZAR.toStringAsFixed(2)}", 1, 0);
+      printer.printCustom("Net , Exempt: ${NetExemptTotalZAR.toStringAsFixed(2)}", 1, 0);
+      printer.printCustom("Total Net Amount: ${NetTotalZAR.toStringAsFixed(2)}", 1, 0);
+      printer.printNewLine();
+      printer.printCustom("TOTAL TAXES", 2, 0);
+      printer.printCustom("Tax , VAT 15 %: ${TaxVAT15ZAR.toStringAsFixed(2)}", 1, 0);
+      printer.printCustom("Total tax amount: ${TaxTotalZAR.toStringAsFixed(2)}", 1, 0);
+      printer.printNewLine();
+      printer.printCustom("TOTAL GROSS SALES", 2, 0);
+      printer.printCustom("Total , VAT 15 %: ${GrossTotalVAT15ZAR.toStringAsFixed(2)}", 1, 0);
+      printer.printCustom("Total , Non-VAT 0 %: ${GrossTotalNonVATZAR.toStringAsFixed(2)}", 1, 0);
+      printer.printCustom("Total , Exempt: ${GrossTotalExemptZAR.toStringAsFixed(2)}", 1, 0);
+      printer.printCustom("Total gross amount: ${GrossTotalZAR.toStringAsFixed(2)}", 1, 0);
+      printer.printNewLine();
+      printer.printCustom("Documents === Quantity === Total", 1, 0);
+      printer.printCustom("Invoices === ${InvoicesCountZAR.toStringAsFixed(2)} === ${InvoicesTotalAmountZAR.toStringAsFixed(2)}", 1, 0);
+      printer.printCustom("Credit notes === ${CreditNotesCountZAR.toStringAsFixed(2)} === ${CreditNotesTotalAmountZAR.toStringAsFixed(2)}", 1, 0);
+      printer.printCustom("Documents === ${TotalDocumentsCountZAR.toString()} === ${TotalDocumentsTotalAmountZAR.toString()}", 1, 0);
+      printer.printNewLine();
+    }
   }
 
   @override

@@ -154,6 +154,7 @@ class _PosState extends State<Pos>{
   bool multiCurrencySale = false;
   bool hasBluetoothPrinter = false;
   bool a4Invoice = false;
+  bool isTabView = false;
   String Url = "https://fdmsapitest.zimra.co.zw/Device/v1/";
   final printerService = PrinterService();
 
@@ -174,7 +175,9 @@ Future<void> getGeneralSettings() async {
     multiCurrencySale = prefs.getBool('hasMultiCurrencySale') ?? false;
     a4Invoice = prefs.getBool('hasA4Invoice') ?? false;
     hasBluetoothPrinter = prefs.getBool('hasBluetoothPrinter') ?? false;
+    isTabView = prefs.getBool('isTabView') ?? false;
   });
+  print("has blue is $hasBluetoothPrinter");
 }
 
 String formatString(String input) {
@@ -218,6 +221,7 @@ String formatString(String input) {
   Future<void> printNonFiscalReceipt() async{
     try {
       await _printNonFiscalHeader();
+      print("customer done");
       await _printNonFiscalCustomerInfo();
       await _printNonFiscalInvoiceDetails();
       await _printItemsNonFiscal();
@@ -235,26 +239,51 @@ String formatString(String input) {
   }
 
   Future<void> _printNonFiscalHeader() async {
-  SunmiPrintAlign.CENTER;
-  //await SunmiPrinter.setFontSize(SunmiFontSize.LG);
-  await SunmiPrinter.printText("Transaction Receipt" , style: SunmiTextStyle(bold: true, align: SunmiPrintAlign.CENTER));
-  await SunmiPrinter.lineWrap(3);
-  await SunmiPrinter.printText("${companyDetails[0]['company']}", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
-  await SunmiPrinter.resetFontSize();
-  await SunmiPrinter.printText("${companyDetails[0]['address']}", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
-  await SunmiPrinter.printText("${companyDetails[0]['tel']}", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
-  await SunmiPrinter.printText("${companyDetails[0]['branchName']}" , style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
-  await SunmiPrinter.printText("================================");
-}
+    SunmiPrintAlign.CENTER;
+    await printerService.loadSavedPrinter(); // ensures printer is loaded
+    final printer = printerService.printer;
+    //await SunmiPrinter.setFontSize(SunmiFontSize.LG);
+    if(!hasBluetoothPrinter){
+      await SunmiPrinter.printText("Transaction Receipt" , style: SunmiTextStyle(bold: true, align: SunmiPrintAlign.CENTER));
+      await SunmiPrinter.lineWrap(3);
+      await SunmiPrinter.printText("${companyDetails[0]['company']}", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+      await SunmiPrinter.resetFontSize();
+      await SunmiPrinter.printText("${companyDetails[0]['address']}", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+      await SunmiPrinter.printText("${companyDetails[0]['tel']}", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+      await SunmiPrinter.printText("${companyDetails[0]['branchName']}" , style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+      await SunmiPrinter.printText("================================");
+    }else{
+      printer.printNewLine();
+      printer.printCustom("TRANSACTION RECEIPT", 1, 1);
+      printer.printCustom("${companyDetails[0]['company']}", 1, 1);
+      printer.printCustom("${companyDetails[0]['address']}", 1, 1);
+      printer.printCustom("${companyDetails[0]['tel']}", 1, 1);
+      printer.printCustom("${companyDetails[0]['branchName']}", 1, 1);
+      printer.printCustom("================================", 1, 0);
+    }
+  }
 
 Future<void> _printNonFiscalCustomerInfo() async {
-  await SunmiPrinter.setAlignment(SunmiPrintAlign.LEFT);
-  await SunmiPrinter.printText("CUSTOMER INFORMATION", style: SunmiTextStyle(bold: true, align: SunmiPrintAlign.CENTER));
-  await SunmiPrinter.printText("--------------------------------");
-  await SunmiPrinter.printText("Name: ${selectedCustomer[0]['tradeName'] ?? 'Walk-in Customer'}");
-  await SunmiPrinter.printText("Phone: ${selectedCustomer[0]['phoneNumber'] ?? 'N/A'}");
-  await SunmiPrinter.printText("--------------------------------");
-  await SunmiPrinter.lineWrap(1);
+  await printerService.loadSavedPrinter(); // ensures printer is loaded
+  final printer = printerService.printer;
+  final tradeName = selectedCustomer.isEmpty ? 'Walk-in Customer' : selectedCustomer[0]['tradeName'];
+  final phone = selectedCustomer.isEmpty ? 'N/A' :  selectedCustomer[0]['phoneNumber'];
+  print(tradeName);
+  if(!hasBluetoothPrinter){
+    await SunmiPrinter.setAlignment(SunmiPrintAlign.LEFT);
+    await SunmiPrinter.printText("CUSTOMER INFORMATION", style: SunmiTextStyle(bold: true, align: SunmiPrintAlign.CENTER));
+    await SunmiPrinter.printText("--------------------------------");
+    await SunmiPrinter.printText("Name: $tradeName");
+    await SunmiPrinter.printText("Phone: $phone");
+    await SunmiPrinter.printText("--------------------------------");
+    await SunmiPrinter.lineWrap(1);
+  }else{
+    printer.printCustom("CUSTOMER INFORMATION", 1, 1);
+    printer.printCustom("Name: $tradeName", 1, 0);
+    printer.printCustom("Phone: $phone", 1, 0);
+    printer.printCustom("================================", 1, 0);
+    printer.printNewLine();
+  }
 }
 
 Future<void> _printNonFiscalInvoiceDetails() async {
@@ -262,46 +291,87 @@ Future<void> _printNonFiscalInvoiceDetails() async {
   DateTime now = DateTime.now();
   String formattedDate = DateFormat("yyyy-MM-ddTHH:mm:ss").format(now);
   String saleCurrency = selectedPayMethod.isEmpty ? defaultCurrency.toString() : returnCurrency();
-  await SunmiPrinter.printText("INVOICE DETAILS", style: SunmiTextStyle(bold: true, align: SunmiPrintAlign.CENTER));
-  await SunmiPrinter.printText("--------------------------------");
-  await SunmiPrinter.printText("Invoice No: $nextInvoice");
-  await SunmiPrinter.printText("Date: $formattedDate");
-  await SunmiPrinter.printText("Cashier: $activeUser");
-  await SunmiPrinter.printText("Currency: $saleCurrency");
-  await SunmiPrinter.printText("--------------------------------");
-  await SunmiPrinter.lineWrap(1);
+  await printerService.loadSavedPrinter(); // ensures printer is loaded
+  final printer = printerService.printer;
+  
+  if(!hasBluetoothPrinter){
+    await SunmiPrinter.printText("INVOICE DETAILS", style: SunmiTextStyle(bold: true, align: SunmiPrintAlign.CENTER));
+    await SunmiPrinter.printText("--------------------------------");
+    await SunmiPrinter.printText("Invoice No: $nextInvoice");
+    await SunmiPrinter.printText("Date: $formattedDate");
+    await SunmiPrinter.printText("Cashier: $activeUser");
+    await SunmiPrinter.printText("Currency: $saleCurrency");
+    await SunmiPrinter.printText("--------------------------------");
+    await SunmiPrinter.lineWrap(1);
+  }else{
+    printer.printCustom("INVOICE DETAILS", 2, 1);
+    printer.printCustom("Invoice No: $nextInvoice", 1, 0);
+    printer.printCustom("Date: $formattedDate", 1, 0);
+    printer.printCustom("Cashier: $activeUser", 1, 0);
+    printer.printCustom("Currency: $saleCurrency", 1, 0);
+    printer.printCustom("================================", 1, 0);
+    printer.printNewLine();
+  }
+  
 }
 
 Future<void> _printItemsNonFiscal() async {
   String saleCurrency = selectedPayMethod.isEmpty ? defaultCurrency.toString() : returnCurrency();
   final fetchedCurrency = await dbHelper.getSelectedCurrency(saleCurrency);
   double rate = fetchedCurrency[0]['rate'] ?? 1.0;
+  await printerService.loadSavedPrinter(); // ensures printer is loaded
+  final printer = printerService.printer;
 
-  await SunmiPrinter.printText("ITEMS", style: SunmiTextStyle(bold: true, align: SunmiPrintAlign.CENTER));
-  await SunmiPrinter.printText("--------------------------------");
-  
-  for (var item in cartItems) {
-    double itemTotal = (item['sellingPrice'] is String) 
-      ? double.parse(item['sellingPrice']) * rate 
-      : (item['sellingPrice'].toDouble()) * rate;
-
-    int sellQty = (item['sellqty'] is String) 
-      ? double.parse(item['sellqty']).toInt()
-      : (item['sellqty'] is num)
-      ? (item['sellqty'] as num).toInt() : 0;
-
-    double totalPrice = itemTotal * sellQty;
-    // Format item name and quantity
-    String itemLine = "${item['description']}";
-    await SunmiPrinter.printText(itemLine , style: SunmiTextStyle(bold: true));
+  if(!hasBluetoothPrinter){
+    await SunmiPrinter.printText("ITEMS", style: SunmiTextStyle(bold: true, align: SunmiPrintAlign.CENTER));
+    await SunmiPrinter.printText("--------------------------------");
     
-    // Format price line with proper spacing
-    String priceLine = "@\$$itemTotal x$sellQty = \$${totalPrice.toStringAsFixed(2)}";
-    await SunmiPrinter.setAlignment(SunmiPrintAlign.RIGHT);
-    await SunmiPrinter.printText(priceLine, style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
-    await SunmiPrinter.setAlignment(SunmiPrintAlign.LEFT);
-    await SunmiPrinter.lineWrap(1);
+    for (var item in cartItems) {
+      double itemTotal = (item['sellingPrice'] is String) 
+        ? double.parse(item['sellingPrice']) * rate 
+        : (item['sellingPrice'].toDouble()) * rate;
+
+      int sellQty = (item['sellqty'] is String) 
+        ? double.parse(item['sellqty']).toInt()
+        : (item['sellqty'] is num)
+        ? (item['sellqty'] as num).toInt() : 0;
+
+      double totalPrice = itemTotal * sellQty;
+      // Format item name and quantity
+      String itemLine = "${item['description']}";
+      await SunmiPrinter.printText(itemLine , style: SunmiTextStyle(bold: true));
+      
+      // Format price line with proper spacing
+      String priceLine = "@\$$itemTotal x$sellQty = \$${totalPrice.toStringAsFixed(2)}";
+      await SunmiPrinter.setAlignment(SunmiPrintAlign.RIGHT);
+      await SunmiPrinter.printText(priceLine, style: SunmiTextStyle(align: SunmiPrintAlign.RIGHT));
+      await SunmiPrinter.setAlignment(SunmiPrintAlign.LEFT);
+      await SunmiPrinter.lineWrap(1);
+    }
+  }else{
+    printer.printCustom("ITEMS", 2, 1);
+    printer.printCustom("================================", 1, 0);
+    for (var item in cartItems) {
+      double itemTotal = (item['sellingPrice'] is String) 
+        ? double.parse(item['sellingPrice']) * rate 
+        : (item['sellingPrice'].toDouble()) * rate;
+
+      int sellQty = (item['sellqty'] is String) 
+        ? double.parse(item['sellqty']).toInt()
+        : (item['sellqty'] is num)
+        ? (item['sellqty'] as num).toInt() : 0;
+
+      double totalPrice = itemTotal * sellQty;
+      // Format item name and quantity
+      String itemLine = "${item['productName']}";
+      printer.printCustom(itemLine, 1, 0);
+      // Format price line with proper spacing
+      String priceLine = "@\$$itemTotal x$sellQty = \$${totalPrice.toStringAsFixed(2)}";
+      printer.printCustom(priceLine, 1, 2);
+      printer.printNewLine();
+    }
   }
+  
 }
 
 Future<void> _printTotalNonFiscal() async {
@@ -321,26 +391,49 @@ Future<void> _printTotalNonFiscal() async {
     double totalPrice = itemTotal * quantity;
     totalAmount += totalPrice;
   }
+  await printerService.loadSavedPrinter(); // ensures printer is loaded
+  final printer = printerService.printer;
 
-  await SunmiPrinter.printText("================================");
-  double change = amountPaid! - totalAmount;
-  await SunmiPrinter.setAlignment(SunmiPrintAlign.CENTER);
-  //await SunmiPrinter.setFontSize(SunmiFontSize.LG);
-  await SunmiPrinter.printText("TOTAL: $saleCurrency-\$${totalAmount.toStringAsFixed(2)}");
-  await SunmiPrinter.resetFontSize();
-  await SunmiPrinter.printText("================================");
-  await SunmiPrinter.printText("Paid: ${amountPaid!.toStringAsFixed(2)}");
-  await SunmiPrinter.printText("Change: ${change.toStringAsFixed(2)}");
-  await SunmiPrinter.printText("================================");
-  await SunmiPrinter.lineWrap(1);
+  if(!hasBluetoothPrinter){
+    await SunmiPrinter.printText("================================");
+    double change = amountPaid! - totalAmount;
+    await SunmiPrinter.setAlignment(SunmiPrintAlign.CENTER);
+    await SunmiPrinter.printText("TOTAL: $saleCurrency-\$${totalAmount.toStringAsFixed(2)}");
+    await SunmiPrinter.resetFontSize();
+    await SunmiPrinter.printText("================================");
+    await SunmiPrinter.printText("Paid: ${amountPaid!.toStringAsFixed(2)}");
+    await SunmiPrinter.printText("Change: ${change.toStringAsFixed(2)}");
+    await SunmiPrinter.printText("================================");
+    await SunmiPrinter.lineWrap(1);
+  }else{
+    double change = amountPaid! - totalAmount;
+    printer.printCustom("================================", 1, 0);
+    printer.printCustom("TOTAL: $saleCurrency-\$${totalAmount.toStringAsFixed(2)}", 1, 0);
+    printer.printCustom("================================", 1, 0);
+    printer.printCustom("Paid: ${amountPaid!.toStringAsFixed(2)}", 1, 0);
+    printer.printCustom("Change: ${change.toStringAsFixed(2)}", 1, 0);
+    printer.printCustom("================================", 1, 0);
+    printer.printNewLine();
+  }
 }
 
 Future<void> _finishPrintNonFiscal() async {
-  await SunmiPrinter.printText("================================");
-  await SunmiPrinter.printText("Powered by tigerweb.co.zw", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
-  await SunmiPrinter.printText("================================");
-  await SunmiPrinter.lineWrap(3);
-  await SunmiPrinter.cutPaper();
+  await printerService.loadSavedPrinter(); // ensures printer is loaded
+  final printer = printerService.printer;
+
+  if(!hasBluetoothPrinter){
+    await SunmiPrinter.printText("================================");
+    await SunmiPrinter.printText("Powered by tigerweb.co.zw", style: SunmiTextStyle(align: SunmiPrintAlign.CENTER));
+    await SunmiPrinter.printText("================================");
+    await SunmiPrinter.lineWrap(3);
+    await SunmiPrinter.cutPaper();
+  }else{
+    printer.printCustom("================================", 1, 0);
+    printer.printCustom("Powered by tigerweb.co.zw", 1, 1);
+    printer.printCustom("================================", 1, 0);
+    printer.paperCut();
+  }
+  
 }
 
 Future<void> printBlueToothReceipt(Map<String, dynamic> receiptJson, String qrUrl , String qrData) async {
@@ -355,19 +448,17 @@ Future<void> printBlueToothReceipt(Map<String, dynamic> receiptJson, String qrUr
   printer.printNewLine();
   printer.printCustom("FISCAL TAX INVOICE", 3, 1);
   printer.printNewLine();
-  printer.printCustom("${taxPayerDetails[0]['taxPayerName']}", 1, 0);
-  printer.printCustom("${taxPayerDetails[0]['taxPayerVatNumber']}", 1, 0);
-  printer.printCustom("${companyDetails[0]['address']}", 1, 0);
-  printer.printCustom("${companyDetails[0]['tel']}", 1, 0);
+  printer.printCustom("${taxPayerDetails[0]['taxPayerName']}", 1, 1);
+  printer.printCustom("${taxPayerDetails[0]['taxPayerVatNumber']}", 1, 1);
+  printer.printCustom("${companyDetails[0]['address']}", 1, 1);
+  printer.printCustom("${companyDetails[0]['tel']}", 1, 1);
   printer.printCustom("================================", 1, 0);
-  printer.printNewLine();
   printer.printCustom("CUSTOMER INFORMATION", 3, 1);
   printer.printNewLine();
   printer.printCustom("Name: ${receipt['buyerData']?['buyerTradeName'] ?? 'Walk-in Customer'}", 1, 0);
   printer.printCustom("TIN: ${receipt['buyerData']?['buyerTIN'] ?? 'N/A'}", 1, 0);
   printer.printCustom("VAT: ${receipt['buyerData']?['VATNumber'] ?? 'N/A'}", 1, 0);
   printer.printCustom("================================", 1, 0);
-  printer.printNewLine();
   printer.printCustom("INVOICE DETAILS", 3, 1);
   printer.printNewLine();
   printer.printCustom("Invoice No: ${receipt['invoiceNo']}", 1, 0);
@@ -375,14 +466,13 @@ Future<void> printBlueToothReceipt(Map<String, dynamic> receiptJson, String qrUr
   printer.printCustom("Cashier: $activeUser", 1, 0);
   printer.printCustom("Currency: ${receipt['receiptCurrency']}", 1, 0);
   printer.printCustom("================================", 1, 0);
-  printer.printNewLine();
   printer.printCustom("ITEMS", 3, 1);
   printer.printNewLine();
   for(var item in receiptLines){
     String itemLine = "${item['receiptLineName']} x${item['receiptLineQuantity']}";
     printer.printCustom(itemLine, 1, 0);
     String priceLine = "@\$${item['receiptLinePrice']} = \$${item['receiptLineTotal'].toString()}";
-    printer.printCustom(priceLine, 1, 0);
+    printer.printCustom(priceLine, 1, 2);
   }
   printer.printCustom("================================", 1, 0);
   printer.printNewLine();
@@ -400,18 +490,16 @@ Future<void> printBlueToothReceipt(Map<String, dynamic> receiptJson, String qrUr
   printer.printCustom("Paid: ${amountPaid!.toStringAsFixed(2)}", 1, 0);
   printer.printCustom("Change: ${change.toStringAsFixed(2)}", 1, 0);
   printer.printCustom("================================", 1, 0);
-  printer.printNewLine();
   printer.printCustom("VERIFICATION", 3, 1);
   printer.printNewLine();
-  printer.printCustom("Verify at:", 1, 0);
-  printer.printCustom("https://fdms.zimra.co.zw", 1, 0);
-  printer.printCustom("Device ID: $deviceID", 1, 0);
-  printer.printCustom("Receipt No: ${receiptGlobalNo.toString().padLeft(10, '0')}", 1, 0);
-  printer.printCustom("Verification Code:", 1, 0);
-  printer.printCustom("$verificationCode", 1, 0);
-  printer.printCustom("Scan to Verify", 1, 0);
+  printer.printCustom("Verify at:", 1, 1);
+  printer.printCustom("https://fdms.zimra.co.zw", 1, 1);
+  printer.printCustom("Device ID: $deviceID", 1, 1);
+  printer.printCustom("Receipt No: ${receiptGlobalNo.toString().padLeft(10, '0')}", 1, 1);
+  printer.printCustom("Verification Code:", 1, 1);
+  printer.printCustom("$verificationCode", 1, 1);
+  printer.printCustom("Scan to Verify", 1, 1);
   printer.printQRcode(qrUrl, 200, 200, 1);
-  printer.printNewLine();
   printer.printCustom("Thank You!", 2, 1);
   printer.paperCut();
 }
@@ -2803,8 +2891,10 @@ String generateTaxSummary(List<dynamic> receiptItems) {
           bottom: false,
           child: Padding(
             padding:const  EdgeInsets.symmetric(horizontal: 5.0 , vertical: 10.0) ,
-            child: Column(
-              children: [
+            child: 
+            !isTabView ?
+            Column(
+              children: [ 
                 isBarcodeEnabled ?
                 SizedBox(
                   height: 50,
@@ -3215,7 +3305,431 @@ String generateTaxSummary(List<dynamic> receiptItems) {
                   ),
                 )
               ],
-            ),
+            ) : 
+            ///=============================TAB VIEW LAYOUT CODE=============================================
+            Column(
+              children: [ 
+                isBarcodeEnabled ?
+                SizedBox(
+                  height: 50,
+                  width: 200,
+                  child: MobileScanner(
+                    onDetect: (barcodeCapture) async {
+                      final String? code= barcodeCapture.barcodes.first.rawValue;
+                      if(code != null){
+                        final now = DateTime.now();
+                        
+                        if (code == lastScannedCode && now.difference(lastScanTime) < Duration(seconds: 2)) {
+                          return;
+                        }
+
+                        lastScannedCode = code;
+                        lastScanTime = now;
+
+                        final product = await dbHelper.getProductByBarcode(code);
+                        if(product != null){
+                          
+                          setState(() {
+                            addToCart(product);
+                          });
+                          await playBeep();
+                        }else{
+                          Get.snackbar("Not Found","Pruct not found for barcode $code",
+                            snackPosition: SnackPosition.TOP,
+                            backgroundColor: Colors.amber,
+                            icon: const Icon(Icons.warning)
+                          );
+                        }
+                      }
+                    },
+                  ),
+                ) : SizedBox.shrink(),
+                const SizedBox(height: 20,),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      height: MediaQuery.of(context).size.height * 0.7,
+                      width: MediaQuery.of(context).size.width * 0.45,
+                      child: Column(
+                        children: [
+                          Container(
+                            height: 200,
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(10.0),
+                              border: Border.all(width: 1 , color: Colors.grey.shade400),
+                              color:Colors.grey.shade400,
+                            ),
+                            child: ListView.builder(
+                              itemCount: searchResults.length,
+                              itemBuilder: (context , index){
+                                final product = searchResults[index];
+                                return Container(
+                                  margin: const EdgeInsets.symmetric(vertical: 5.0, horizontal: 10.0),
+                                  decoration: BoxDecoration(
+                                    border: Border.all(color: Colors.grey, width: 1.0),
+                                    borderRadius: BorderRadius.circular(10.0), 
+                                    color: Colors.white, 
+                                  ),
+                                  child: ListTile(
+                                    title: Text(product['productName']),
+                                    subtitle: Text("Price: \$${product['sellingPrice']} Stock: ${product['stockQty']}"),
+                                    trailing: SizedBox(
+                                      width: 100,
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.start,
+                                        children: [
+                                          IconButton(onPressed: ()=>addToCart(product), icon:const Icon(Icons.add_circle_outline_sharp)),
+                                          freePricingMode ? IconButton(onPressed: ()=>freePriceDialog(product), icon:const Icon(Icons.accessibility_sharp)) :
+                                          const Icon(Icons.accessibility_sharp , color: Colors.red,),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }
+                              ),
+                          ),
+                          const SizedBox(height: 10,),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              barcodeOption ?
+                              Container(
+                                height: 50 ,
+                                width: 50,
+                                decoration: BoxDecoration(
+                                  color: isBarcodeEnabled?  Colors.green : Colors.white,
+                                  borderRadius: BorderRadius.circular(15.0),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.grey.withOpacity(0.2),
+                                      spreadRadius: 3,
+                                      blurRadius: 7,
+                  
+                                    )
+                                  ] 
+                                ),
+                                child: TextButton(onPressed: (){
+                                  //toggleBarcodeScanner;
+                                  if(isBarcodeEnabled){
+                                    setState(() {
+                                      isBarcodeEnabled = false;
+                                    });
+                                  }else{
+                                    setState(() {
+                                      isBarcodeEnabled = true;
+                                    });
+                                  }
+                                },
+                                child: Center(
+                                  child: isBarcodeEnabled? const Icon(Icons.barcode_reader , size: 25, color: Colors.white) : const Icon(Icons.barcode_reader , size: 25, color: Color.fromARGB(255, 14, 19, 29),) ,
+                                )),
+                              ): Container(
+                                height: 50,
+                                width: 50,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(15.0),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.grey.withOpacity(0.2),
+                                      spreadRadius: 3,
+                                      blurRadius: 7,
+                                    )
+                                  ] 
+                                ),
+                                child: const Center(
+                                  child: Icon(Icons.barcode_reader , size: 25, color: Colors.red,),
+                                ),
+                              ),
+                              //////////Button
+                              Container(
+                                height: 50 ,
+                                width: 50,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(15.0),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.grey.withOpacity(0.2),
+                                      spreadRadius: 3,
+                                      blurRadius: 7,
+                  
+                                    )
+                                  ] 
+                                ),
+                                child: TextButton(onPressed: (){
+                                  getNextCustomerID();
+                                  addCustomerDetails();
+                                },
+                                child: const Center(
+                                  child: Icon(Icons.person , size: 25, color: Color.fromARGB(255, 14, 19, 29),),
+                                )),
+                              ),
+                              //////////Button
+                              Container(
+                                height: 50 ,
+                                width: 50,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(15.0),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.grey.withOpacity(0.2),
+                                      spreadRadius: 3,
+                                      blurRadius: 7,
+                  
+                                    )
+                                  ] 
+                                ),
+                                child: TextButton(onPressed: (){
+                                  try {
+                                    fetchPayMethods();
+                                    addpaymethod();
+                                  } catch (e) {
+                                    Get.snackbar("Error","$e", icon: Icon(Icons.error ,) ,colorText: Colors.white, backgroundColor: Colors.red);
+                                  }
+                                  
+                                },
+                                child: const Center(
+                                  child: Icon(Icons.monetization_on , size: 25, color: Color.fromARGB(255, 14, 19, 29),),
+                                )),
+                              ),
+                              //////////Button
+                              Container(
+                                height: 50 ,
+                                width: 50,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(15.0),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.grey.withOpacity(0.2),
+                                      spreadRadius: 3,
+                                      blurRadius: 7,
+                  
+                                    )
+                                  ] 
+                                ),
+                                child: TextButton(onPressed: (){
+                                  saveQoutation();
+                                },
+                                child: const Center(
+                                  child: Icon(Icons.pending , size: 25, color: Color.fromARGB(255, 14, 19, 29),),
+                                )),
+                              ),
+                              //////////Button
+                              Container(
+                                height: 50 ,
+                                width: 50,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(15.0),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.grey.withOpacity(0.2),
+                                      spreadRadius: 3,
+                                      blurRadius: 7,
+                  
+                                    )
+                                  ] 
+                                ),
+                                child: TextButton(onPressed: (){
+                                  
+                                },
+                                child: const Center(
+                                  child: Icon(Icons.save , size: 25, color: Color.fromARGB(255, 14, 19, 29),),
+                                )),
+                              ),
+                              //////////Button
+                              accountSale ?
+                              Container(
+                                height: 50 ,
+                                width: 50,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(15.0),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.grey.withOpacity(0.2),
+                                      spreadRadius: 3,
+                                      blurRadius: 7,
+                  
+                                    )
+                                  ] 
+                                ),
+                                child: TextButton(onPressed: (){
+                                  
+                                },
+                                child: const Center(
+                                  child: Icon(Icons.account_balance , size: 25, color: Color.fromARGB(255, 14, 19, 29),),
+                                )),
+                              ): Container(
+                                height: 50,
+                                width: 50,
+                                decoration: BoxDecoration(
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(15.0),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.grey.withOpacity(0.2),
+                                      spreadRadius: 3,
+                                      blurRadius: 7,
+                                    )
+                                  ] 
+                                ),
+                                child: const Center(
+                                  child: Icon(Icons.account_balance , size: 25, color: Colors.red,),
+                                ),  
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10,),
+                          Container(
+                            height: 100,
+                            width: MediaQuery.of(context).size.width * 0.45,
+                            decoration: BoxDecoration(
+                              color: Colors.blue,
+                              borderRadius: BorderRadius.circular(10.0)
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: SingleChildScrollView(
+                                scrollDirection: Axis.vertical,
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Text("${defaultCurrency != null && selectedPayMethod.isEmpty ? '$defaultCurrency' : returnCurrency() }:\$${calculateTotalPrice().toStringAsFixed(2)}", style:const TextStyle(color: Colors.white , fontWeight: FontWeight.bold , fontSize: 20),),
+                                    //Text("\$${calculateTotalPrice().toStringAsFixed(2)}" , style: TextStyle(color: Colors.white , fontWeight: FontWeight.bold , fontSize: 20),),
+                                    Text("QTY: ${cartItems.length}" , style:const TextStyle(color: Colors.white , fontWeight: FontWeight.bold , fontSize: 20),),
+                                    const SizedBox(width: 20),
+                                    //Text("${cartItems.length}" , style: TextStyle(color: Colors.white , fontWeight: FontWeight.bold , fontSize: 20),),
+                                    Text("Tax: \$${calculateTotalTax().toStringAsFixed(2)}" , style:const TextStyle(color: Colors.white , fontWeight: FontWeight.bold , fontSize: 20),),
+                                    //Text("\$${calculateTotalTax().toStringAsFixed(2)}" , style: TextStyle(color: Colors.white , fontWeight: FontWeight.bold , fontSize: 20),),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          )
+                        ],
+                      ),
+                    ),
+                    Container(
+                      height: MediaQuery.of(context).size.height * 0.6,
+                      width: MediaQuery.of(context).size.width * 0.5,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(10.0),
+                        border: Border.all(width: 1 , color: Colors.grey.shade400),
+                        color: Colors.grey.shade400,
+                      ),
+                      child: cartItems.isEmpty ? Lottie.asset('assets/cart.json'): ListView.builder(
+                        itemCount: cartItems.length,
+                        itemBuilder: (context , index){
+                          final product = cartItems[index];
+                          return Dismissible(
+                            key: Key(product['productid'].toString()),
+                            background: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.green,
+                                borderRadius: BorderRadius.circular(10.0)
+                              ),
+                              alignment: Alignment.centerLeft,
+                              padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                              child: const Icon(Icons.add, color: Colors.white),
+                            ),
+                            secondaryBackground: Container(
+                              decoration: BoxDecoration(
+                                color: Colors.red,
+                                borderRadius: BorderRadius.circular(10.0)
+                              ),
+                              alignment: Alignment.centerRight,
+                              padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                              child: const Icon(Icons.delete, color: Colors.white),
+                            ),
+                            confirmDismiss: (direction) async {
+                              if (direction == DismissDirection.endToStart) {
+                                // Swipe to the right to delete
+                                bool confirm = await showDialog(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    title: const Text('Remove Item'),
+                                    content: const Text('Are you sure you want to remove this item?'),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.of(context).pop(false),
+                                        child: const Text('Cancel'),
+                                      ),
+                                      TextButton(
+                                        onPressed: () => Navigator.of(context).pop(true),
+                                        child: const Text('Remove'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                                return confirm;
+                              } else {
+                                  // Swipe to the left to add or subtract
+                                  //_showQuantityAdjustmentDialog(product);
+                                //return false; // Prevent dismissal
+                                addToCart(product);
+                              }
+                            },
+                            onDismissed: (direction) {
+                              //int cartItemQty = cartItems[index]['sellqty'];
+                              if (direction == DismissDirection.endToStart) {
+                                setState(() {
+                                  cartItems.removeAt(index);
+                                });
+                              }
+                              else{
+                                setState(() {
+                                  cartItems[index]['sellqty'] += 1;
+                                });
+                              }
+                            },
+                            child: Container(
+                              margin: const EdgeInsets.symmetric(vertical: 5.0, horizontal: 10.0),
+                              decoration: BoxDecoration(
+                                border: Border.all(color: Colors.grey, width: 1.0),
+                                borderRadius: BorderRadius.circular(10.0), 
+                                color: Colors.white, 
+                              ),
+                              child: ListTile(
+                                  title: Text(product['productName']),
+                                  subtitle: Text("Price: \$${product['sellingPrice']} - Tax: ${product['tax'].toUpperCase()}"),
+                                  trailing: IconButton(onPressed: (){
+                                    setState(() {
+                                      product['sellqty'] -= 1;
+                                    });
+                                  }, icon:const Icon(Icons.minimize_outlined)),
+                                  leading: Container(
+                                    width: 40,
+                                    height: 40,
+                                    decoration: BoxDecoration(
+                                      color: const Color.fromARGB(255, 14, 19, 29),
+                                      borderRadius: BorderRadius.circular(50.0)
+                                    ),
+                                    child:  Center(
+                                      child:  Text(
+                                        product['sellqty'].toString(),
+                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.white),
+                                      ),
+                                    ),
+            
+                                  ),
+                                ),
+                            ),
+                          );
+                        }
+                        ),
+                    ),
+                  ],
+                ),
+              ],
+            ) 
+            ,
             )
           ),
       ),
@@ -3336,7 +3850,7 @@ String generateTaxSummary(List<dynamic> receiptItems) {
                                       mainAxisAlignment: MainAxisAlignment.start,
                                         children: [
                                           Text(defaultCurrency != null && selectedPayMethod.isEmpty ? '$defaultCurrency' : returnCurrency() , style:const TextStyle(color: Colors.black , fontWeight: FontWeight.bold , fontSize: 20),),
-                                          Text(":\$${calculateTotalPrice().toStringAsFixed(2)}" , style:const TextStyle(color: Colors.black , fontWeight: FontWeight.bold , fontSize: 20),),
+                                          Text(":\$${calculateTotalPrice().toStringAsFixed(2)}" , style:const TextStyle(color: Colors.black , fontWeight: FontWeight.w500 , fontSize: 18),),
                                         ],
                                     ),
                                     const SizedBox(width: 20),
@@ -3392,7 +3906,7 @@ String generateTaxSummary(List<dynamic> receiptItems) {
                                             ],
                                             controller: paidController,
                                             decoration: InputDecoration(
-                                              labelText: 'Amount Pai d',
+                                              labelText: 'Amount Paid',
                                               labelStyle: TextStyle(color:Colors.grey.shade600 ),
                                               filled: true,
                                               fillColor: Colors.grey.shade300,
@@ -3592,7 +4106,7 @@ String generateTaxSummary(List<dynamic> receiptItems) {
                 children: [
                   Icon(Icons.summarize, color: Colors.white),
                   Text(
-                    "Reporting",
+                    "Void",
                     style: TextStyle(fontSize: 10, color: Colors.white),
                   )
                 ],
@@ -3601,38 +4115,34 @@ String generateTaxSummary(List<dynamic> receiptItems) {
             IconButton(
               onPressed: () async {
                 await showDialog(
-                            context: context,
-                            builder: (context) => AlertDialog(
-                              title: const Text('Clearing Cart!!'),
-                              content: const Text('Are you sure you want to cancel the sale'),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.of(context).pop(true),
-                                  child: const Text('Get Back'),
-                                ),
-                                TextButton(
-                                  onPressed: (){
-                                    setState(() {
-                                      cartItems.clear();
-                                    });
-                                    Navigator.of(context).pop(true);
-                                    Navigator.pushReplacement(
-                                              context,
-                                              PageRouteBuilder(
-                                              pageBuilder: (_, __, ___) => const Pos(),
-                                              transitionDuration: Duration.zero,
-                                              ),
-                                            );
-                                  },
-                                  child: const Text('Yes'),
-                                ),
-                              ],
-                            ),
-                          );
-               // Navigator.pushReplacement(
-                 // context,
-                 // MaterialPageRoute(builder: (context) => Profile()),
-               // );
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Clearing Cart!!'),
+                    content: const Text('Are you sure you want to cancel the sale'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(true),
+                        child: const Text('Get Back'),
+                      ),
+                      TextButton(
+                        onPressed: (){
+                          setState(() {
+                            cartItems.clear();
+                          });
+                          Navigator.of(context).pop(true);
+                          Navigator.pushReplacement(
+                                    context,
+                                    PageRouteBuilder(
+                                    pageBuilder: (_, __, ___) => const Pos(),
+                                    transitionDuration: Duration.zero,
+                                    ),
+                                  );
+                        },
+                        child: const Text('Yes'),
+                      ),
+                    ],
+                  ),
+                );
               },
               icon: const Column(
                 children: [

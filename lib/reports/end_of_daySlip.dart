@@ -10,6 +10,8 @@ import 'package:pulsepay/common/constants.dart';
 import 'package:pulsepay/common/custom_button.dart';
 import 'package:pulsepay/common/heading.dart';
 import 'package:pulsepay/common/reusable_text.dart';
+import 'package:pulsepay/services/printerService.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:sunmi_printer_plus/core/enums/enums.dart';
 import 'package:sunmi_printer_plus/core/styles/sunmi_text_style.dart';
 import 'package:sunmi_printer_plus/core/sunmi/sunmi_printer.dart';
@@ -33,6 +35,21 @@ class _EndOfDayslipState extends State<EndOfDayslip> {
   String? companyName;
   String? companyAddress;
   String? companyPhone;
+  bool hasBluetoothPrinter = false;
+  final printerService = PrinterService();
+
+  @override
+  void initState() {
+    // TODO: implement initState
+    super.initState();
+    _initializePrinter();
+    getDate();
+    getSalesData();
+    getCompanyDetails();
+    loadUsers();
+    getSoldProducts();
+    getGeneralSettings();
+  }
   
   // get today's date
   void getDate(){
@@ -41,6 +58,12 @@ class _EndOfDayslipState extends State<EndOfDayslip> {
     todayDate = formattedDate ;
   }
 
+  Future<void> getGeneralSettings() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      hasBluetoothPrinter = prefs.getBool('hasBluetoothPrinter') ?? false;
+    });
+  }
   //Get sales data summary
 
   void getSalesData()async{
@@ -99,40 +122,52 @@ class _EndOfDayslipState extends State<EndOfDayslip> {
     
     final zwgRate= await dbHelper.getCurrencyAndRate('ZWG');
     final zarRate = await dbHelper.getCurrencyAndRate('ZAR');
-
     double zwgRateValute = zwgRate[0]['rate'] ?? 0.0;
     //double zarRateValue = zarRate[0]['rate'] ?? 0.0;
-
     double zwgtoUsd = salesData['zwgTotal'] / zwgRateValute;
    // double zarToUsd = salesData['zarTotal'] / zarRateValue;
-
     double cashTotal = salesData['usdTotal'] + zwgtoUsd ;
+    await printerService.loadSavedPrinter(); // ensures printer is loaded
+    final printer = printerService.printer;
 
-    await SunmiPrinter.initPrinter();
-    await SunmiPrinter.startTransactionPrint(true);
-
-    await SunmiPrinter.setAlignment(SunmiPrintAlign.CENTER);
-    await SunmiPrinter.printText('$companyName\n', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
-    await SunmiPrinter.printText('$companyAddress\n', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
-    await SunmiPrinter.printText('$companyPhone\n', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
-    await SunmiPrinter.printText('--- End of Day Report ---\n', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
-
-    await SunmiPrinter.printText('-----------------------------\n');
-    await SunmiPrinter.setAlignment(SunmiPrintAlign.LEFT);
-    await SunmiPrinter.printText('Date: ${DateFormat('yyyy-MM-dd').format(DateTime.now())}\n', style: SunmiTextStyle(align: SunmiPrintAlign.LEFT, bold: true));
-    await SunmiPrinter.printText('-----------------------------\n');
-
-    await SunmiPrinter.printText('\nCash Summary All Users:\n', style: SunmiTextStyle(align: SunmiPrintAlign.LEFT, bold: true));
-    await SunmiPrinter.printText('USD: \$${salesData['usdTotal']}\n');
-    await SunmiPrinter.printText('ZWG: \$${salesData['zwgTotal']}\n');
-    //await SunmiPrinter.printText('ZAR: \$${salesData['zarTotal']}\n');
-    await SunmiPrinter.printText('-----------------------------\n');
-
-    await SunmiPrinter.printText('-----------------------------\n');
-    await SunmiPrinter.printText('Cash Total(USD) : $cashTotal}\n', style: SunmiTextStyle(align: SunmiPrintAlign.LEFT, bold: true));
-
-    await SunmiPrinter.lineWrap(2);
-    await SunmiPrinter.cutPaper();
+    if(hasBluetoothPrinter = false){
+      await SunmiPrinter.initPrinter();
+      await SunmiPrinter.startTransactionPrint(true);
+      await SunmiPrinter.setAlignment(SunmiPrintAlign.CENTER);
+      await SunmiPrinter.printText('$companyName\n', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
+      await SunmiPrinter.printText('$companyAddress\n', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
+      await SunmiPrinter.printText('$companyPhone\n', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
+      await SunmiPrinter.printText('--- End of Day Report ---\n', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
+      await SunmiPrinter.printText('-----------------------------\n');
+      await SunmiPrinter.setAlignment(SunmiPrintAlign.LEFT);
+      await SunmiPrinter.printText('Date: ${DateFormat('yyyy-MM-dd').format(DateTime.now())}\n', style: SunmiTextStyle(align: SunmiPrintAlign.LEFT, bold: true));
+      await SunmiPrinter.printText('-----------------------------\n');
+      await SunmiPrinter.printText('\nCash Summary All Users:\n', style: SunmiTextStyle(align: SunmiPrintAlign.LEFT, bold: true));
+      await SunmiPrinter.printText('USD: \$${salesData['usdTotal']}\n');
+      await SunmiPrinter.printText('ZWG: \$${salesData['zwgTotal']}\n');
+      //await SunmiPrinter.printText('ZAR: \$${salesData['zarTotal']}\n');
+      await SunmiPrinter.printText('-----------------------------\n');
+      await SunmiPrinter.printText('-----------------------------\n');
+      await SunmiPrinter.printText('Cash Total(USD) : $cashTotal}\n', style: SunmiTextStyle(align: SunmiPrintAlign.LEFT, bold: true));
+      await SunmiPrinter.lineWrap(2);
+      await SunmiPrinter.cutPaper();
+    }else{
+      printer.printNewLine();
+      printer.printCustom("$companyName", 2, 1);
+      printer.printCustom("$companyAddress", 2, 1);
+      printer.printCustom("$companyPhone", 2, 1);
+      printer.printCustom("================================", 1, 0);
+      printer.printCustom("---END OF DAY REPORT---", 3, 1);
+      printer.printCustom("Date: ${DateFormat('yyyy-MM-dd').format(DateTime.now())}", 1, 0);
+      printer.printCustom("================================", 1, 0);
+      printer.printCustom("Cash Summary All Users:", 3, 1);
+      printer.printCustom("USD: \$${salesData['usdTotal']}", 1, 0);
+      printer.printCustom("ZWG: \$${salesData['zwgTotal']}", 1, 0);
+      printer.printCustom("================================", 1, 0);
+      printer.printCustom("================================", 1, 0);
+      printer.printCustom("Cash Total(USD) : $cashTotal}", 1, 0);
+      printer.paperCut();
+    }
     //await SunmiPrinter.exitTransactionPrint(true);
   }
 
@@ -176,48 +211,59 @@ class _EndOfDayslipState extends State<EndOfDayslip> {
           (totalsByCurrency[currency]!['totalTax'] ?? 0) + tax;
     }
     print("Sales summary for user: $selectedUser\n");
-    await SunmiPrinter.initPrinter();
-    await SunmiPrinter.startTransactionPrint(true);
-    await SunmiPrinter.setAlignment(SunmiPrintAlign.CENTER);
-    await SunmiPrinter.printText('$companyName\n', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
-    await SunmiPrinter.printText('$companyAddress\n', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
-    await SunmiPrinter.printText('$companyPhone\n', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
-    await SunmiPrinter.printText('--- User Day Report ---\n', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
-    await SunmiPrinter.printText('-----------------------------\n');
-    await SunmiPrinter.printText('-----------------------------\n');
-    await SunmiPrinter.setAlignment(SunmiPrintAlign.LEFT);
-    await SunmiPrinter.printText('Date: ${DateFormat('yyyy-MM-dd').format(DateTime.now())}\n', style: SunmiTextStyle(align: SunmiPrintAlign.LEFT, bold: true));
-    await SunmiPrinter.printText('User: $selectedUser', style: SunmiTextStyle(align: SunmiPrintAlign.LEFT, bold: true));
-    await SunmiPrinter.printText('-----------------------------\n');
-    await SunmiPrinter.printText('-----------------------------\n');
-    await SunmiPrinter.printText('N0. of transactions: ${userSalesData.length}\n');
-    await SunmiPrinter.printText('-----------------------------\n');
-    await SunmiPrinter.printText('-----------------------------\n');
-    totalsByCurrency.forEach((currency, totals) async {
-      print('Currency: $currency');
-      print('  Total Amount: ${totals['totalAmount']?.toStringAsFixed(2)}');
-      print('  Total Tax: ${totals['totalTax']?.toStringAsFixed(2)}\n');
-      await SunmiPrinter.printText('Currency: $currency\n');
-      await SunmiPrinter.printText('Total Amount: $currency-${totals['totalAmount']?.toStringAsFixed(2)}\n');
-      await SunmiPrinter.printText('Total Tax: $currency-${totals['totalTax']?.toStringAsFixed(2)}\n');
+    await printerService.loadSavedPrinter(); // ensures printer is loaded
+    final printer = printerService.printer;
+
+    if(hasBluetoothPrinter = false){
+      await SunmiPrinter.initPrinter();
+      await SunmiPrinter.startTransactionPrint(true);
+      await SunmiPrinter.setAlignment(SunmiPrintAlign.CENTER);
+      await SunmiPrinter.printText('$companyName\n', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
+      await SunmiPrinter.printText('$companyAddress\n', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
+      await SunmiPrinter.printText('$companyPhone\n', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
+      await SunmiPrinter.printText('--- User Day Report ---\n', style: SunmiTextStyle(align: SunmiPrintAlign.CENTER, bold: true));
+      await SunmiPrinter.printText('-----------------------------\n');
+      await SunmiPrinter.printText('-----------------------------\n');
+      await SunmiPrinter.setAlignment(SunmiPrintAlign.LEFT);
+      await SunmiPrinter.printText('Date: ${DateFormat('yyyy-MM-dd').format(DateTime.now())}\n', style: SunmiTextStyle(align: SunmiPrintAlign.LEFT, bold: true));
+      await SunmiPrinter.printText('User: $selectedUser', style: SunmiTextStyle(align: SunmiPrintAlign.LEFT, bold: true));
+      await SunmiPrinter.printText('-----------------------------\n');
+      await SunmiPrinter.printText('-----------------------------\n');
+      await SunmiPrinter.printText('N0. of transactions: ${userSalesData.length}\n');
+      await SunmiPrinter.printText('-----------------------------\n');
+      await SunmiPrinter.printText('-----------------------------\n');
+      totalsByCurrency.forEach((currency, totals) async {
+        print('Currency: $currency');
+        print('  Total Amount: ${totals['totalAmount']?.toStringAsFixed(2)}');
+        print('  Total Tax: ${totals['totalTax']?.toStringAsFixed(2)}\n');
+        await SunmiPrinter.printText('Currency: $currency\n');
+        await SunmiPrinter.printText('Total Amount: $currency-${totals['totalAmount']?.toStringAsFixed(2)}\n');
+        await SunmiPrinter.printText('Total Tax: $currency-${totals['totalTax']?.toStringAsFixed(2)}\n');
+        await SunmiPrinter.lineWrap(2);
+        await SunmiPrinter.cutPaper();
+      });
       await SunmiPrinter.lineWrap(2);
       await SunmiPrinter.cutPaper();
-    });
-    await SunmiPrinter.lineWrap(2);
-    await SunmiPrinter.cutPaper();
+    }else{
+      printer.printNewLine();
+      printer.printCustom("$companyName", 2, 1);
+      printer.printCustom("$companyAddress", 2, 1);
+      printer.printCustom("$companyPhone", 2, 1);
+      printer.printCustom("================================", 1, 0);
+      printer.printCustom("---END OF DAY REPORT---", 3, 1);
+      printer.printCustom("Date: ${DateFormat('yyyy-MM-dd').format(DateTime.now())}", 1, 0);
+      printer.printCustom("User: $selectedUser", 1, 0);
+      printer.printCustom("N0. of transactions: ${userSalesData.length}", 1, 0);
+      printer.printCustom("================================", 1, 0);
+      totalsByCurrency.forEach((currency, totals) async{
+        printer.printCustom("Currency: $currency", 1, 0);
+        printer.printCustom("Total Amount: $currency-${totals['totalAmount']?.toStringAsFixed(2)}", 1, 0);
+        printer.printCustom("Total Tax: $currency-${totals['totalTax']?.toStringAsFixed(2)}", 1, 0);
+      });
+      printer.printCustom("================================", 1, 0);
+      printer.paperCut();
+    }
 
-  }
-
-  @override
-  void initState() {
-    // TODO: implement initState
-    super.initState();
-    _initializePrinter();
-    getDate();
-    getSalesData();
-    getCompanyDetails();
-    loadUsers();
-    getSoldProducts();
   }
 
   @override
@@ -279,7 +325,7 @@ class _EndOfDayslipState extends State<EndOfDayslip> {
               const SizedBox(height: 20,),
               Container(
                 height: 70,
-                width: 390,
+                width: MediaQuery.of(context).size.width,
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(10),

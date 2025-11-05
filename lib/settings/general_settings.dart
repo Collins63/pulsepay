@@ -24,6 +24,7 @@ class _GeneralSettingsState extends State<GeneralSettings> {
   bool multiCurrencySale = false;
   bool a4Invoice = false;
   bool hasBluetoothPrinter = false;
+  bool isTabView = false;
 
   @override
   void initState() {
@@ -44,6 +45,7 @@ class _GeneralSettingsState extends State<GeneralSettings> {
       multiCurrencySale = prefs.getBool('hasMultiCurrencySale') ?? false;
       a4Invoice = prefs.getBool('hasA4Invoice') ?? false;
       hasBluetoothPrinter = prefs.getBool('hasBluetoothPrinter') ?? false;
+      isTabView = prefs.getBool('isTabView') ?? false;
     });
   }
 
@@ -56,6 +58,11 @@ class _GeneralSettingsState extends State<GeneralSettings> {
   Future<void> _saveBluetoothPrinter(bool value) async{
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool("hasBluetoothPrinter", value);
+  }
+
+  Future<void> _saveViewSetting(bool value) async{
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool("isTabView", value);
   }
 
   Future<void> _saveMultiCurrencySetting(bool value) async {
@@ -125,6 +132,21 @@ class _GeneralSettingsState extends State<GeneralSettings> {
             mainAxisAlignment: MainAxisAlignment.start,
             children: [
               const Heading(text: "Point of Sale Terminal"),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  ReusableText(text: "Has Tab View", style: appStyle(14, Colors.grey, FontWeight.w500)),
+                  Switch(
+                    activeColor: Colors.blueAccent,
+                    value: isTabView , onChanged: (value){
+                    setState(() {
+                      isTabView = value;
+                    });
+                     _saveViewSetting(value);
+                  })
+                ],
+              ),
+              Divider(),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
